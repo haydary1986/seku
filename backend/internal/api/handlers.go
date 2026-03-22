@@ -290,59 +290,91 @@ func DeleteScanJob(c *fiber.Ctx) error {
 // --- Dashboard Stats ---
 
 func GetDashboardStats(c *fiber.Ctx) error {
+	orgID := GetUserOrgID(c)
+	role, _ := c.Locals("role").(string)
+	isAdmin := role == "admin"
+
 	var targetCount int64
-	config.DB.Model(&models.ScanTarget{}).Count(&targetCount)
+	if isAdmin {
+		config.DB.Model(&models.ScanTarget{}).Count(&targetCount)
+	} else {
+		config.DB.Model(&models.ScanTarget{}).Where("organization_id = ?", orgID).Count(&targetCount)
+	}
 
 	var jobCount int64
-	config.DB.Model(&models.ScanJob{}).Count(&jobCount)
+	if isAdmin {
+		config.DB.Model(&models.ScanJob{}).Count(&jobCount)
+	} else {
+		config.DB.Model(&models.ScanJob{}).Where("organization_id = ?", orgID).Count(&jobCount)
+	}
 
 	var completedJobs int64
-	config.DB.Model(&models.ScanJob{}).Where("status = ?", "completed").Count(&completedJobs)
-
-	// Get only the latest scan result per target (not all historical results)
-	var latestResults []models.ScanResult
-	config.DB.Raw(`
-		SELECT sr.* FROM scan_results sr
-		INNER JOIN (
-			SELECT scan_target_id, MAX(id) AS max_id
-			FROM scan_results
-			WHERE status = 'completed'
-			GROUP BY scan_target_id
-		) latest ON sr.id = latest.max_id
-		ORDER BY sr.overall_score DESC
-		LIMIT 20
-	`).Preload("ScanTarget").Find(&latestResults)
-
-	// Calculate average score from latest results only
-	var avgScore float64
-	config.DB.Raw(`
-		SELECT COALESCE(AVG(sr.overall_score), 0) FROM scan_results sr
-		INNER JOIN (
-			SELECT scan_target_id, MAX(id) AS max_id
-			FROM scan_results
-			WHERE status = 'completed'
-			GROUP BY scan_target_id
-		) latest ON sr.id = latest.max_id
-	`).Scan(&avgScore)
-
-	// Score distribution
-	type ScoreBucket struct {
-		Range string `json:"range"`
-		Count int64  `json:"count"`
+	if isAdmin {
+		config.DB.Model(&models.ScanJob{}).Where("status = ?", "completed").Count(&completedJobs)
+	} else {
+		config.DB.Model(&models.ScanJob{}).Where("organization_id = ? AND status = ?", orgID, "completed").Count(&completedJobs)
 	}
+
+	// Get latest scan results - scoped to org for non-admins
+	var latestResults []models.ScanResult
+	if isAdmin {
+		config.DB.Raw(`
+			SELECT sr.* FROM scan_results sr
+			INNER JOIN (
+				SELECT scan_target_id, MAX(id) AS max_id
+				FROM scan_results WHERE status = 'completed'
+				GROUP BY scan_target_id
+			) latest ON sr.id = latest.max_id
+			ORDER BY sr.overall_score DESC LIMIT 20
+		`).Preload("ScanTarget").Find(&latestResults)
+	} else {
+		config.DB.Raw(`
+			SELECT sr.* FROM scan_results sr
+			INNER JOIN scan_targets st ON st.id = sr.scan_target_id
+			INNER JOIN (
+				SELECT scan_target_id, MAX(id) AS max_id
+				FROM scan_results WHERE status = 'completed'
+				GROUP BY scan_target_id
+			) latest ON sr.id = latest.max_id
+			WHERE st.organization_id = ?
+			ORDER BY sr.overall_score DESC LIMIT 20
+		`, orgID).Preload("ScanTarget").Find(&latestResults)
+	}
+
+	// Average score
+	var avgScore float64
+	if isAdmin {
+		config.DB.Raw(`
+			SELECT COALESCE(AVG(sr.overall_score), 0) FROM scan_results sr
+			INNER JOIN (SELECT scan_target_id, MAX(id) AS max_id FROM scan_results WHERE status = 'completed' GROUP BY scan_target_id) latest ON sr.id = latest.max_id
+		`).Scan(&avgScore)
+	} else {
+		config.DB.Raw(`
+			SELECT COALESCE(AVG(sr.overall_score), 0) FROM scan_results sr
+			INNER JOIN scan_targets st ON st.id = sr.scan_target_id
+			INNER JOIN (SELECT scan_target_id, MAX(id) AS max_id FROM scan_results WHERE status = 'completed' GROUP BY scan_target_id) latest ON sr.id = latest.max_id
+			WHERE st.organization_id = ?
+		`, orgID).Scan(&avgScore)
+	}
+
+	// Score distribution - scoped
 	var excellent, good, average, poor, critical int64
-	config.DB.Model(&models.ScanResult{}).Where("status = ? AND overall_score >= 800", "completed").Count(&excellent)
-	config.DB.Model(&models.ScanResult{}).Where("status = ? AND overall_score >= 600 AND overall_score < 800", "completed").Count(&good)
-	config.DB.Model(&models.ScanResult{}).Where("status = ? AND overall_score >= 400 AND overall_score < 600", "completed").Count(&average)
-	config.DB.Model(&models.ScanResult{}).Where("status = ? AND overall_score >= 200 AND overall_score < 400", "completed").Count(&poor)
-	config.DB.Model(&models.ScanResult{}).Where("status = ? AND overall_score < 200", "completed").Count(&critical)
+	scoreQuery := config.DB.Model(&models.ScanResult{}).Where("status = ?", "completed")
+	if !isAdmin {
+		scoreQuery = scoreQuery.Where("scan_target_id IN (SELECT id FROM scan_targets WHERE organization_id = ?)", orgID)
+	}
+	scoreQuery.Where("overall_score >= 800").Count(&excellent)
+	scoreQuery.Where("overall_score >= 600 AND overall_score < 800").Count(&good)
+	scoreQuery.Where("overall_score >= 400 AND overall_score < 600").Count(&average)
+	scoreQuery.Where("overall_score >= 200 AND overall_score < 400").Count(&poor)
+	scoreQuery.Where("overall_score < 200").Count(&critical)
 
 	return c.JSON(fiber.Map{
-		"total_targets":  targetCount,
-		"total_scans":    jobCount,
+		"total_targets":   targetCount,
+		"total_scans":     jobCount,
 		"completed_scans": completedJobs,
-		"average_score":  avgScore,
-		"latest_results": latestResults,
+		"average_score":   avgScore,
+		"latest_results":  latestResults,
 		"score_distribution": []fiber.Map{
 			{"range": "Excellent (800-1000)", "count": excellent},
 			{"range": "Good (600-799)", "count": good},
@@ -387,21 +419,41 @@ func GetLeaderboard(c *fiber.Ctx) error {
 		ScannedAt    string  `json:"scanned_at"`
 	}
 
+	orgID := GetUserOrgID(c)
+	role, _ := c.Locals("role").(string)
+	isAdmin := role == "admin"
+
 	var ranked []RankedSite
-	config.DB.Raw(`
-		SELECT sr.scan_target_id, st.url, st.name, st.institution,
-			   sr.overall_score AS latest_score, sr.id AS scan_result_id,
-			   sr.ended_at AS scanned_at
-		FROM scan_results sr
-		INNER JOIN scan_targets st ON st.id = sr.scan_target_id
-		INNER JOIN (
-			SELECT scan_target_id, MAX(id) AS max_id
-			FROM scan_results
-			WHERE status = 'completed'
-			GROUP BY scan_target_id
-		) latest ON sr.id = latest.max_id
-		ORDER BY sr.overall_score DESC
-	`).Scan(&ranked)
+	if isAdmin {
+		config.DB.Raw(`
+			SELECT sr.scan_target_id, st.url, st.name, st.institution,
+				   sr.overall_score AS latest_score, sr.id AS scan_result_id,
+				   sr.ended_at AS scanned_at
+			FROM scan_results sr
+			INNER JOIN scan_targets st ON st.id = sr.scan_target_id
+			INNER JOIN (
+				SELECT scan_target_id, MAX(id) AS max_id
+				FROM scan_results WHERE status = 'completed'
+				GROUP BY scan_target_id
+			) latest ON sr.id = latest.max_id
+			ORDER BY sr.overall_score DESC
+		`).Scan(&ranked)
+	} else {
+		config.DB.Raw(`
+			SELECT sr.scan_target_id, st.url, st.name, st.institution,
+				   sr.overall_score AS latest_score, sr.id AS scan_result_id,
+				   sr.ended_at AS scanned_at
+			FROM scan_results sr
+			INNER JOIN scan_targets st ON st.id = sr.scan_target_id
+			INNER JOIN (
+				SELECT scan_target_id, MAX(id) AS max_id
+				FROM scan_results WHERE status = 'completed'
+				GROUP BY scan_target_id
+			) latest ON sr.id = latest.max_id
+			WHERE st.organization_id = ?
+			ORDER BY sr.overall_score DESC
+		`, orgID).Scan(&ranked)
+	}
 
 	// Category breakdown for each site
 	type CategoryScore struct {
