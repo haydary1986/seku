@@ -84,7 +84,37 @@ func UpdateTarget(c *fiber.Ctx) error {
 func GetScanJobs(c *fiber.Ctx) error {
 	var jobs []models.ScanJob
 	config.DB.Order("created_at desc").Find(&jobs)
-	return c.JSON(jobs)
+
+	// Add progress info to each job
+	var result []fiber.Map
+	for _, job := range jobs {
+		var total, completed, failed int64
+		config.DB.Model(&models.ScanResult{}).Where("scan_job_id = ?", job.ID).Count(&total)
+		config.DB.Model(&models.ScanResult{}).Where("scan_job_id = ? AND status = ?", job.ID, "completed").Count(&completed)
+		config.DB.Model(&models.ScanResult{}).Where("scan_job_id = ? AND status = ?", job.ID, "failed").Count(&failed)
+
+		progress := 0.0
+		if total > 0 {
+			progress = float64(completed+failed) / float64(total) * 100
+		}
+
+		result = append(result, fiber.Map{
+			"ID":         job.ID,
+			"CreatedAt":  job.CreatedAt,
+			"name":       job.Name,
+			"status":     job.Status,
+			"started_at": job.StartedAt,
+			"ended_at":   job.EndedAt,
+			"progress": fiber.Map{
+				"total":     total,
+				"completed": completed,
+				"failed":    failed,
+				"percent":   progress,
+			},
+		})
+	}
+
+	return c.JSON(result)
 }
 
 func GetScanJob(c *fiber.Ctx) error {
@@ -93,7 +123,50 @@ func GetScanJob(c *fiber.Ctx) error {
 	if err := config.DB.Preload("Results.ScanTarget").Preload("Results.Checks").First(&job, id).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Scan job not found"})
 	}
-	return c.JSON(job)
+
+	// Calculate progress
+	total := len(job.Results)
+	completed := 0
+	running := 0
+	pending := 0
+	failed := 0
+	for _, r := range job.Results {
+		switch r.Status {
+		case "completed":
+			completed++
+		case "running":
+			running++
+		case "failed":
+			failed++
+		default:
+			pending++
+		}
+	}
+
+	progress := 0.0
+	if total > 0 {
+		progress = float64(completed+failed) / float64(total) * 100
+	}
+
+	return c.JSON(fiber.Map{
+		"ID":         job.ID,
+		"CreatedAt":  job.CreatedAt,
+		"UpdatedAt":  job.UpdatedAt,
+		"name":       job.Name,
+		"status":     job.Status,
+		"started_at": job.StartedAt,
+		"ended_at":   job.EndedAt,
+		"user_id":    job.UserID,
+		"results":    job.Results,
+		"progress": fiber.Map{
+			"total":     total,
+			"completed": completed,
+			"running":   running,
+			"pending":   pending,
+			"failed":    failed,
+			"percent":   progress,
+		},
+	})
 }
 
 type StartScanRequest struct {

@@ -160,38 +160,98 @@ onMounted(loadData)
 
     <!-- Scan Jobs List -->
     <div v-else class="space-y-4">
-      <div v-for="job in jobs" :key="job.ID" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="text-lg font-semibold text-gray-900">{{ job.name || 'Unnamed Scan' }}</h3>
-            <p class="text-sm text-gray-500 mt-1">Created: {{ formatDate(job.CreatedAt) }}</p>
-            <div class="flex items-center gap-4 mt-2 text-sm text-gray-500">
-              <span v-if="job.started_at">Started: {{ formatDate(job.started_at) }}</span>
-              <span v-if="job.ended_at">Ended: {{ formatDate(job.ended_at) }}</span>
+      <div v-for="job in jobs" :key="job.ID" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <!-- Progress bar at top for running scans -->
+        <div v-if="job.status === 'running' && job.progress" class="h-1.5 bg-gray-100">
+          <div
+            class="h-full bg-gradient-to-r from-indigo-500 to-blue-500 transition-all duration-700 ease-out"
+            :style="{ width: Math.round(job.progress.percent) + '%' }"
+          ></div>
+        </div>
+        <div v-else-if="job.status === 'completed'" class="h-1.5 bg-green-500"></div>
+        <div v-else-if="job.status === 'failed'" class="h-1.5 bg-red-500"></div>
+
+        <div class="p-6">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-gray-900">{{ job.name || 'Unnamed Scan' }}</h3>
+              <p class="text-sm text-gray-500 mt-1">Created: {{ formatDate(job.CreatedAt) }}</p>
+              <div class="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                <span v-if="job.started_at">Started: {{ formatDate(job.started_at) }}</span>
+                <span v-if="job.ended_at">Ended: {{ formatDate(job.ended_at) }}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+              <span :class="[
+                'px-3 py-1 rounded-full text-sm font-medium',
+                job.status === 'completed' ? 'bg-green-100 text-green-700' :
+                job.status === 'running' ? 'bg-blue-100 text-blue-700' :
+                job.status === 'failed' ? 'bg-red-100 text-red-700' :
+                'bg-gray-100 text-gray-700'
+              ]">
+                {{ job.status === 'running' ? 'Scanning...' : job.status }}
+              </span>
+              <button
+                @click="router.push(`/scans/${job.ID}`)"
+                class="px-3 py-1 text-sm text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50"
+              >
+                View Details
+              </button>
+              <button
+                @click="removeJob(job.ID)"
+                class="px-3 py-1 text-sm text-red-500 border border-red-300 rounded-lg hover:bg-red-50"
+              >
+                Delete
+              </button>
             </div>
           </div>
-          <div class="flex items-center gap-3">
-            <span :class="[
-              'px-3 py-1 rounded-full text-sm font-medium',
-              job.status === 'completed' ? 'bg-green-100 text-green-700' :
-              job.status === 'running' ? 'bg-blue-100 text-blue-700 animate-pulse' :
-              job.status === 'failed' ? 'bg-red-100 text-red-700' :
-              'bg-gray-100 text-gray-700'
-            ]">
-              {{ job.status }}
-            </span>
-            <button
-              @click="router.push(`/scans/${job.ID}`)"
-              class="px-3 py-1 text-sm text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50"
-            >
-              View Details
-            </button>
-            <button
-              @click="removeJob(job.ID)"
-              class="px-3 py-1 text-sm text-red-500 border border-red-300 rounded-lg hover:bg-red-50"
-            >
-              Delete
-            </button>
+
+          <!-- Progress Section for running/completed scans -->
+          <div v-if="job.progress && job.progress.total > 0" class="mt-4">
+            <!-- Progress bar -->
+            <div v-if="job.status === 'running'" class="mb-3">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-sm font-medium text-gray-700">
+                  Scanning {{ job.progress.total }} websites...
+                </span>
+                <span class="text-sm font-bold text-indigo-600">{{ Math.round(job.progress.percent) }}%</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div
+                  class="h-full rounded-full bg-gradient-to-r from-indigo-500 via-blue-500 to-indigo-600 transition-all duration-700 ease-out relative"
+                  :style="{ width: Math.round(job.progress.percent) + '%' }"
+                >
+                  <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stats badges -->
+            <div class="flex flex-wrap items-center gap-2">
+              <span v-if="job.progress.completed > 0"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                {{ job.progress.completed }} completed
+              </span>
+              <span v-if="job.progress.running > 0"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 animate-pulse">
+                <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                {{ job.progress.running }} scanning
+              </span>
+              <span v-if="job.progress.pending > 0"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                <div class="w-2 h-2 rounded-full bg-gray-400"></div>
+                {{ job.progress.pending }} pending
+              </span>
+              <span v-if="job.progress.failed > 0"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                {{ job.progress.failed }} failed
+              </span>
+              <span class="text-xs text-gray-400 mr-2">
+                {{ job.progress.completed + (job.progress.failed || 0) }} / {{ job.progress.total }} sites
+              </span>
+            </div>
           </div>
         </div>
       </div>
