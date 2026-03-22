@@ -37,18 +37,18 @@ onMounted(async () => {
 })
 
 function getScoreColor(score) {
-  if (score >= 80) return 'text-green-600'
-  if (score >= 60) return 'text-blue-600'
-  if (score >= 40) return 'text-yellow-600'
-  if (score >= 20) return 'text-orange-600'
+  if (score >= 800) return 'text-green-600'
+  if (score >= 600) return 'text-blue-600'
+  if (score >= 400) return 'text-yellow-600'
+  if (score >= 200) return 'text-orange-600'
   return 'text-red-600'
 }
 
 function getScoreLabel(score) {
-  if (score >= 80) return 'Excellent'
-  if (score >= 60) return 'Good'
-  if (score >= 40) return 'Average'
-  if (score >= 20) return 'Poor'
+  if (score >= 800) return 'Excellent'
+  if (score >= 600) return 'Good'
+  if (score >= 400) return 'Average'
+  if (score >= 200) return 'Poor'
   return 'Critical'
 }
 </script>
@@ -114,7 +114,7 @@ function getScoreLabel(score) {
             <div>
               <p class="text-sm text-gray-500">Average Score</p>
               <p :class="['text-3xl font-bold mt-1', getScoreColor(stats.average_score)]">
-                {{ Math.round(stats.average_score) }}%
+                {{ Math.round(stats.average_score) }}/1000
               </p>
               <p class="text-xs text-gray-400 mt-1">{{ getScoreLabel(stats.average_score) }}</p>
             </div>
@@ -157,7 +157,7 @@ function getScoreLabel(score) {
                   </td>
                   <td class="py-3 px-2 text-center">
                     <span :class="['font-bold', getScoreColor(result.overall_score)]">
-                      {{ Math.round(result.overall_score) }}%
+                      {{ Math.round(result.overall_score) }}/1000
                     </span>
                   </td>
                   <td class="py-3 px-2 text-center">

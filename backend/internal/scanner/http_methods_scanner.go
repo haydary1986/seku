@@ -61,20 +61,38 @@ func (s *HTTPMethodsScanner) Scan(url string) []models.CheckResult {
 		Weight:    4.0,
 	}
 
-	if len(allowedDangerous) > 0 {
-		check.Status = "fail"
-		check.Score = 20
-		check.Severity = "high"
-		check.Details = toJSON(map[string]interface{}{
-			"message":          "Dangerous HTTP methods are enabled",
-			"allowed_methods":  allowedDangerous,
-		})
-	} else {
+	if len(allowedDangerous) == 0 {
 		check.Status = "pass"
-		check.Score = 100
+		check.Score = 1000
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{
 			"message": "Dangerous HTTP methods (TRACE, DELETE, PUT, PATCH) are properly disabled",
+		})
+	} else if len(allowedDangerous) == 1 {
+		// Single dangerous method enabled - bad but not catastrophic
+		check.Status = "fail"
+		check.Score = 275
+		check.Severity = "high"
+		check.Details = toJSON(map[string]interface{}{
+			"message":         "A dangerous HTTP method is enabled",
+			"allowed_methods": allowedDangerous,
+		})
+	} else if len(allowedDangerous) == 2 {
+		check.Status = "fail"
+		check.Score = 175
+		check.Severity = "high"
+		check.Details = toJSON(map[string]interface{}{
+			"message":         "Multiple dangerous HTTP methods are enabled",
+			"allowed_methods": allowedDangerous,
+		})
+	} else {
+		// 3 or more dangerous methods
+		check.Status = "fail"
+		check.Score = 75
+		check.Severity = "critical"
+		check.Details = toJSON(map[string]interface{}{
+			"message":         "Many dangerous HTTP methods are enabled",
+			"allowed_methods": allowedDangerous,
 		})
 	}
 	results = append(results, check)
@@ -92,17 +110,51 @@ func (s *HTTPMethodsScanner) Scan(url string) []models.CheckResult {
 		if err == nil {
 			defer resp.Body.Close()
 			allow := resp.Header.Get("Allow")
-			if allow != "" && (strings.Contains(allow, "TRACE") || strings.Contains(allow, "DELETE")) {
-				optCheck.Status = "warning"
-				optCheck.Score = 40
-				optCheck.Severity = "medium"
-				optCheck.Details = toJSON(map[string]string{
-					"message":         "OPTIONS response discloses available methods including dangerous ones",
-					"allowed_methods": allow,
-				})
+			if allow != "" {
+				hasDangerous := strings.Contains(allow, "TRACE") || strings.Contains(allow, "DELETE")
+				hasPut := strings.Contains(allow, "PUT") || strings.Contains(allow, "PATCH")
+
+				if hasDangerous && hasPut {
+					// Discloses multiple dangerous methods
+					optCheck.Status = "fail"
+					optCheck.Score = 225
+					optCheck.Severity = "high"
+					optCheck.Details = toJSON(map[string]string{
+						"message":         "OPTIONS response discloses many dangerous methods",
+						"allowed_methods": allow,
+					})
+				} else if hasDangerous {
+					// Discloses TRACE or DELETE
+					optCheck.Status = "warn"
+					optCheck.Score = 375
+					optCheck.Severity = "medium"
+					optCheck.Details = toJSON(map[string]string{
+						"message":         "OPTIONS response discloses dangerous methods including TRACE/DELETE",
+						"allowed_methods": allow,
+					})
+				} else if hasPut {
+					// Discloses PUT/PATCH only
+					optCheck.Status = "warn"
+					optCheck.Score = 450
+					optCheck.Severity = "medium"
+					optCheck.Details = toJSON(map[string]string{
+						"message":         "OPTIONS response discloses PUT/PATCH methods",
+						"allowed_methods": allow,
+					})
+				} else {
+					// OPTIONS responds with Allow header but only safe methods
+					optCheck.Status = "pass"
+					optCheck.Score = 925
+					optCheck.Severity = "info"
+					optCheck.Details = toJSON(map[string]string{
+						"message": "OPTIONS response lists only safe methods",
+						"allow":   allow,
+					})
+				}
 			} else {
+				// OPTIONS accessible but no Allow header
 				optCheck.Status = "pass"
-				optCheck.Score = 100
+				optCheck.Score = 1000
 				optCheck.Severity = "info"
 				optCheck.Details = toJSON(map[string]string{
 					"message": "OPTIONS method properly configured",
@@ -111,7 +163,7 @@ func (s *HTTPMethodsScanner) Scan(url string) []models.CheckResult {
 			}
 		} else {
 			optCheck.Status = "pass"
-			optCheck.Score = 100
+			optCheck.Score = 1000
 			optCheck.Severity = "info"
 			optCheck.Details = toJSON(map[string]string{"message": "OPTIONS method not accessible"})
 		}

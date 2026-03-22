@@ -15,7 +15,7 @@ const chartData = ref({ labels: [], datasets: [] })
 const chartOptions = {
   responsive: true,
   indexAxis: 'y',
-  scales: { x: { min: 0, max: 100, title: { display: true, text: 'Security Score (%)' } } },
+  scales: { x: { min: 0, max: 1000, title: { display: true, text: 'Security Score (/1000)' } } },
   plugins: { legend: { display: false } },
 }
 
@@ -25,18 +25,18 @@ function getGradeColor(grade) {
 }
 
 function getScoreColor(score) {
-  if (score >= 80) return 'text-green-600'
-  if (score >= 60) return 'text-blue-600'
-  if (score >= 40) return 'text-yellow-600'
-  if (score >= 20) return 'text-orange-600'
+  if (score >= 800) return 'text-green-600'
+  if (score >= 600) return 'text-blue-600'
+  if (score >= 400) return 'text-yellow-600'
+  if (score >= 200) return 'text-orange-600'
   return 'text-red-600'
 }
 
 function getBarColor(score) {
-  if (score >= 80) return '#10b981'
-  if (score >= 60) return '#3b82f6'
-  if (score >= 40) return '#f59e0b'
-  if (score >= 20) return '#f97316'
+  if (score >= 800) return '#10b981'
+  if (score >= 600) return '#3b82f6'
+  if (score >= 400) return '#f59e0b'
+  if (score >= 200) return '#f97316'
   return '#ef4444'
 }
 
@@ -132,7 +132,7 @@ onMounted(async () => {
                 <span :class="['text-2xl font-bold', getScoreColor(site.latest_score)]">
                   {{ Math.round(site.latest_score) }}
                 </span>
-                <span class="text-gray-400 text-sm">/100</span>
+                <span class="text-gray-400 text-sm">/1000</span>
               </td>
               <td class="py-4 px-4 text-center">
                 <button

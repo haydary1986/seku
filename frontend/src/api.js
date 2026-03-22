@@ -52,6 +52,9 @@ export const getScanResult = (id) => api.get(`/results/${id}`)
 export const getDashboardStats = () => api.get('/dashboard')
 export const getLeaderboard = () => api.get('/leaderboard')
 
+// Public: Scan Criteria / Methodology
+export const getScanCriteria = () => api.get('/criteria')
+
 // AI Analysis
 export const analyzeResult = (id) => api.post(`/ai/analyze/${id}`)
 export const getAIAnalysis = (id) => api.get(`/ai/analysis/${id}`)

@@ -62,8 +62,8 @@ func (s *DirectoryScanner) Scan(url string) []models.CheckResult {
 		checkURL := baseURL + sp.path
 		resp, err := client.Get(checkURL)
 		if err != nil {
-			check.Status = "info"
-			check.Score = 100
+			check.Status = "pass"
+			check.Score = 1000
 			check.Severity = "info"
 			check.Details = toJSON(map[string]string{
 				"path":    sp.path,
@@ -81,15 +81,29 @@ func (s *DirectoryScanner) Scan(url string) []models.CheckResult {
 		if resp.StatusCode == 200 {
 			// Check if it's actually exposing sensitive data
 			if sp.path == "/robots.txt" {
-				check.Status = "info"
-				check.Score = 90
-				check.Severity = "info"
-				check.Details = toJSON(map[string]string{
-					"path":    sp.path,
-					"message": "robots.txt found - review for sensitive path disclosure",
-					"preview": truncate(bodyStr, 200),
-				})
+				// robots.txt is expected, but could disclose sensitive paths
+				hasDisallow := strings.Contains(bodyStr, "Disallow")
+				if hasDisallow {
+					check.Status = "pass"
+					check.Score = 875
+					check.Severity = "info"
+					check.Details = toJSON(map[string]string{
+						"path":    sp.path,
+						"message": "robots.txt found with disallow rules - review for sensitive path disclosure",
+						"preview": truncate(bodyStr, 200),
+					})
+				} else {
+					check.Status = "pass"
+					check.Score = 925
+					check.Severity = "info"
+					check.Details = toJSON(map[string]string{
+						"path":    sp.path,
+						"message": "robots.txt found with minimal content",
+						"preview": truncate(bodyStr, 200),
+					})
+				}
 			} else if strings.Contains(bodyStr, "Index of") || strings.Contains(bodyStr, "Directory listing") {
+				// Directory listing enabled - worst case
 				check.Status = "fail"
 				check.Score = 0
 				check.Severity = sp.severity
@@ -98,8 +112,19 @@ func (s *DirectoryScanner) Scan(url string) []models.CheckResult {
 					"message": fmt.Sprintf("Directory listing enabled at %s", sp.path),
 				})
 			} else {
+				// Sensitive path accessible but no directory listing
+				// Score varies by how critical the path is
+				var score float64
+				switch sp.severity {
+				case "critical":
+					score = 50
+				case "high":
+					score = 125
+				default:
+					score = 175
+				}
 				check.Status = "fail"
-				check.Score = 10
+				check.Score = score
 				check.Severity = sp.severity
 				check.Details = toJSON(map[string]string{
 					"path":    sp.path,
@@ -107,8 +132,9 @@ func (s *DirectoryScanner) Scan(url string) []models.CheckResult {
 				})
 			}
 		} else if resp.StatusCode == 403 {
-			check.Status = "warning"
-			check.Score = 70
+			// Path exists but forbidden - decent protection but path is confirmed
+			check.Status = "warn"
+			check.Score = 725
 			check.Severity = "low"
 			check.Details = toJSON(map[string]string{
 				"path":    sp.path,
@@ -116,7 +142,7 @@ func (s *DirectoryScanner) Scan(url string) []models.CheckResult {
 			})
 		} else {
 			check.Status = "pass"
-			check.Score = 100
+			check.Score = 1000
 			check.Severity = "info"
 			check.Details = toJSON(map[string]string{
 				"path":        sp.path,

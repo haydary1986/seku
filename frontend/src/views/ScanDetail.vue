@@ -21,10 +21,10 @@ const chartData = computed(() => {
       label: 'Security Score',
       data: completed.map(r => Math.round(r.overall_score)),
       backgroundColor: completed.map(r => {
-        if (r.overall_score >= 80) return '#10b981'
-        if (r.overall_score >= 60) return '#3b82f6'
-        if (r.overall_score >= 40) return '#f59e0b'
-        if (r.overall_score >= 20) return '#f97316'
+        if (r.overall_score >= 800) return '#10b981'
+        if (r.overall_score >= 600) return '#3b82f6'
+        if (r.overall_score >= 400) return '#f59e0b'
+        if (r.overall_score >= 200) return '#f97316'
         return '#ef4444'
       }),
       borderRadius: 6,
@@ -36,24 +36,24 @@ const chartOptions = {
   responsive: true,
   indexAxis: 'y',
   scales: {
-    x: { min: 0, max: 100, title: { display: true, text: 'Score (%)' } },
+    x: { min: 0, max: 1000, title: { display: true, text: 'Score (/1000)' } },
   },
   plugins: { legend: { display: false } },
 }
 
 function getScoreColor(score) {
-  if (score >= 80) return 'text-green-600'
-  if (score >= 60) return 'text-blue-600'
-  if (score >= 40) return 'text-yellow-600'
-  if (score >= 20) return 'text-orange-600'
+  if (score >= 800) return 'text-green-600'
+  if (score >= 600) return 'text-blue-600'
+  if (score >= 400) return 'text-yellow-600'
+  if (score >= 200) return 'text-orange-600'
   return 'text-red-600'
 }
 
 function getScoreBg(score) {
-  if (score >= 80) return 'bg-green-100'
-  if (score >= 60) return 'bg-blue-100'
-  if (score >= 40) return 'bg-yellow-100'
-  if (score >= 20) return 'bg-orange-100'
+  if (score >= 800) return 'bg-green-100'
+  if (score >= 600) return 'bg-blue-100'
+  if (score >= 400) return 'bg-yellow-100'
+  if (score >= 200) return 'bg-orange-100'
   return 'bg-red-100'
 }
 

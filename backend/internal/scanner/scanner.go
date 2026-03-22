@@ -1,12 +1,16 @@
 package scanner
 
 import (
+	"math"
 	"sync"
 	"time"
 
 	"vscan-mohesr/internal/config"
 	"vscan-mohesr/internal/models"
 )
+
+// MaxScore is the maximum score for any check (1000-point scale)
+const MaxScore = 1000.0
 
 // Scanner interface that all security scanners must implement
 type Scanner interface {
@@ -52,7 +56,7 @@ func (e *Engine) RunScan(job *models.ScanJob) {
 	config.DB.Where("scan_job_id = ?", job.ID).Preload("ScanTarget").Find(&results)
 
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 5) // limit concurrency to 5
+	sem := make(chan struct{}, 5)
 
 	for i := range results {
 		wg.Add(1)
@@ -94,7 +98,7 @@ func (e *Engine) scanTarget(result *models.ScanResult) {
 		config.DB.Create(&allChecks)
 	}
 
-	// Calculate overall score
+	// Calculate overall score (0-1000)
 	for _, check := range allChecks {
 		if check.Weight > 0 {
 			totalScore += check.Score * check.Weight
@@ -103,7 +107,7 @@ func (e *Engine) scanTarget(result *models.ScanResult) {
 	}
 
 	if totalWeight > 0 {
-		result.OverallScore = totalScore / totalWeight
+		result.OverallScore = math.Round(totalScore / totalWeight)
 	}
 
 	ended := time.Now()

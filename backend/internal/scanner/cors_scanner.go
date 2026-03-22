@@ -56,8 +56,8 @@ func (s *CORSScanner) checkCORSWildcard(url string) models.CheckResult {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		check.Status = "info"
-		check.Score = 80
+		check.Status = "pass"
+		check.Score = 825
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{"message": "Could not perform CORS check", "error": err.Error()})
 		return check
@@ -71,23 +71,27 @@ func (s *CORSScanner) checkCORSWildcard(url string) models.CheckResult {
 	}
 
 	if acao == "*" {
-		check.Status = "warning"
-		check.Score = 40
+		// Wildcard origin - problematic but less severe than reflecting arbitrary origins
+		check.Status = "warn"
+		check.Score = 375
 		check.Severity = "medium"
 		details["message"] = "CORS allows all origins (*) - may expose data to any domain"
 	} else if acao == "https://evil-attacker.com" {
+		// Reflects arbitrary origins - critical vulnerability
 		check.Status = "fail"
 		check.Score = 0
 		check.Severity = "critical"
 		details["message"] = "CORS reflects arbitrary origins - highly insecure"
 	} else if acao == "" {
+		// No CORS header to foreign origins - most secure
 		check.Status = "pass"
-		check.Score = 100
+		check.Score = 1000
 		check.Severity = "info"
 		details["message"] = "No CORS header exposed to foreign origins"
 	} else {
+		// Specific origin configured - good practice
 		check.Status = "pass"
-		check.Score = 90
+		check.Score = 925
 		check.Severity = "info"
 		details["message"] = "CORS is configured with specific allowed origin"
 	}
@@ -125,8 +129,8 @@ func (s *CORSScanner) checkCORSCredentials(url string) models.CheckResult {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		check.Status = "info"
-		check.Score = 80
+		check.Status = "pass"
+		check.Score = 825
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{"message": "Could not perform CORS credentials check"})
 		return check
@@ -142,18 +146,26 @@ func (s *CORSScanner) checkCORSCredentials(url string) models.CheckResult {
 	}
 
 	if acac == "true" && (acao == "*" || acao == "https://evil-attacker.com") {
+		// Credentials with wildcard/reflected origin - critical
 		check.Status = "fail"
 		check.Score = 0
 		check.Severity = "critical"
 		details["message"] = "CORS allows credentials with wildcard/reflected origin - critical vulnerability"
-	} else if acac == "true" {
-		check.Status = "warning"
-		check.Score = 60
+	} else if acac == "true" && acao != "" {
+		// Credentials allowed with a specific origin - worth reviewing
+		check.Status = "warn"
+		check.Score = 575
 		check.Severity = "medium"
 		details["message"] = "CORS allows credentials - ensure origins are properly restricted"
+	} else if acac == "true" && acao == "" {
+		// Credentials header present but no origin reflected
+		check.Status = "warn"
+		check.Score = 725
+		check.Severity = "low"
+		details["message"] = "CORS credentials header present but origin not reflected"
 	} else {
 		check.Status = "pass"
-		check.Score = 100
+		check.Score = 1000
 		check.Severity = "info"
 		details["message"] = "CORS credentials configuration is secure"
 	}

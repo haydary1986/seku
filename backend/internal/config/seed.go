@@ -20,13 +20,18 @@ func SeedUniversities() {
 		return
 	}
 
+	// Get default org
+	var org models.Organization
+	DB.First(&org)
+
 	targets := getUniversityList()
 
 	for _, t := range targets {
 		target := models.ScanTarget{
-			URL:         t.URL,
-			Name:        t.Name,
-			Institution: t.Institution,
+			OrganizationID: org.ID,
+			URL:            t.URL,
+			Name:           t.Name,
+			Institution:    t.Institution,
 		}
 		DB.Create(&target)
 	}

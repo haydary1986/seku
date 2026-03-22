@@ -60,8 +60,9 @@ func (s *DNSScanner) checkDNSSEC(host string) models.CheckResult {
 	}
 
 	// Check for DNSKEY record existence via TXT lookup approach
-	check.Status = "info"
-	check.Score = 70
+	// Without deep DNSSEC validation, we note DNS resolves but full verification needs external tools
+	check.Status = "warn"
+	check.Score = 650
 	check.Severity = "low"
 	check.Details = toJSON(map[string]string{
 		"message": "DNS resolves successfully. DNSSEC validation requires external tools for full verification.",
@@ -80,9 +81,9 @@ func (s *DNSScanner) checkSPF(host string) models.CheckResult {
 
 	txtRecords, err := net.LookupTXT(host)
 	if err != nil {
-		check.Status = "warning"
-		check.Score = 30
-		check.Severity = "medium"
+		check.Status = "warn"
+		check.Score = 275
+		check.Severity = "high"
 		check.Details = toJSON(map[string]string{
 			"message": "Cannot lookup TXT records: " + err.Error(),
 		})
@@ -106,18 +107,27 @@ func (s *DNSScanner) checkSPF(host string) models.CheckResult {
 		}
 
 		if strings.Contains(spfRecord, "-all") {
+			// Strict SPF - best practice
 			check.Status = "pass"
-			check.Score = 100
+			check.Score = 1000
 			check.Severity = "info"
 			details["policy"] = "Strict (-all): unauthorized senders are rejected"
 		} else if strings.Contains(spfRecord, "~all") {
-			check.Status = "warning"
-			check.Score = 70
+			// Soft fail - decent but not ideal
+			check.Status = "warn"
+			check.Score = 725
 			check.Severity = "low"
 			details["policy"] = "Soft fail (~all): unauthorized senders are marked but not rejected"
+		} else if strings.Contains(spfRecord, "?all") {
+			// Neutral - basically no enforcement
+			check.Status = "warn"
+			check.Score = 450
+			check.Severity = "medium"
+			details["policy"] = "Neutral (?all): no enforcement on unauthorized senders"
 		} else {
-			check.Status = "warning"
-			check.Score = 50
+			// Permissive or unclear
+			check.Status = "warn"
+			check.Score = 525
 			check.Severity = "medium"
 			details["policy"] = "Permissive: consider using -all for strict enforcement"
 		}
@@ -125,7 +135,7 @@ func (s *DNSScanner) checkSPF(host string) models.CheckResult {
 	} else {
 		check.Status = "fail"
 		check.Score = 0
-		check.Severity = "high"
+		check.Severity = "critical"
 		check.Details = toJSON(map[string]string{
 			"message": "No SPF record found - emails can be spoofed from this domain",
 		})
@@ -146,7 +156,7 @@ func (s *DNSScanner) checkDMARC(host string) models.CheckResult {
 	if err != nil {
 		check.Status = "fail"
 		check.Score = 0
-		check.Severity = "high"
+		check.Severity = "critical"
 		check.Details = toJSON(map[string]string{
 			"message": "No DMARC record found - domain is vulnerable to email spoofing",
 		})
@@ -169,27 +179,37 @@ func (s *DNSScanner) checkDMARC(host string) models.CheckResult {
 			"record":  dmarcRecord,
 		}
 
-		if strings.Contains(strings.ToLower(dmarcRecord), "p=reject") {
+		lower := strings.ToLower(dmarcRecord)
+		if strings.Contains(lower, "p=reject") {
+			// Reject policy - strongest DMARC enforcement
 			check.Status = "pass"
-			check.Score = 100
+			check.Score = 1000
 			check.Severity = "info"
 			details["policy"] = "Reject: spoofed emails are rejected"
-		} else if strings.Contains(strings.ToLower(dmarcRecord), "p=quarantine") {
+		} else if strings.Contains(lower, "p=quarantine") {
+			// Quarantine - good but not the strongest
 			check.Status = "pass"
-			check.Score = 80
+			check.Score = 825
 			check.Severity = "info"
 			details["policy"] = "Quarantine: spoofed emails are sent to spam"
-		} else {
-			check.Status = "warning"
-			check.Score = 40
+		} else if strings.Contains(lower, "p=none") {
+			// Monitor only - provides visibility but no protection
+			check.Status = "warn"
+			check.Score = 375
 			check.Severity = "medium"
 			details["policy"] = "None/Monitor: spoofed emails are not blocked"
+		} else {
+			// Unknown or missing policy
+			check.Status = "warn"
+			check.Score = 325
+			check.Severity = "medium"
+			details["policy"] = "DMARC record present but policy is unclear"
 		}
 		check.Details = toJSON(details)
 	} else {
 		check.Status = "fail"
 		check.Score = 0
-		check.Severity = "high"
+		check.Severity = "critical"
 		check.Details = toJSON(map[string]string{
 			"message": "No DMARC record found",
 		})
@@ -205,20 +225,21 @@ func (s *DNSScanner) checkCAA(host string) models.CheckResult {
 		Weight:    2.0,
 	}
 
-	// Go's net package doesn't support CAA directly, use CNAME/NS as proxy
+	// Go's net package doesn't support CAA directly, use NS lookup as a proxy
+	// to verify DNS is working, then provide guidance
 	_, err := net.LookupNS(host)
 	if err != nil {
-		check.Status = "info"
-		check.Score = 60
-		check.Severity = "low"
+		check.Status = "warn"
+		check.Score = 525
+		check.Severity = "medium"
 		check.Details = toJSON(map[string]string{
 			"message": "Cannot verify CAA records directly. Consider adding CAA records to restrict which CAs can issue certificates for your domain.",
 		})
 		return check
 	}
 
-	check.Status = "info"
-	check.Score = 70
+	check.Status = "warn"
+	check.Score = 675
 	check.Severity = "low"
 	check.Details = toJSON(map[string]string{
 		"message": "DNS is properly configured. Consider adding CAA records (e.g., 0 issue \"letsencrypt.org\") to restrict certificate issuance.",

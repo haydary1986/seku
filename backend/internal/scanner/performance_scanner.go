@@ -3,6 +3,7 @@ package scanner
 import (
 	"crypto/tls"
 	"fmt"
+	"math"
 	"net"
 	"net/http"
 	"net/http/httptrace"
@@ -21,6 +22,94 @@ func (s *PerformanceScanner) Name() string     { return "Performance Scanner" }
 func (s *PerformanceScanner) Category() string { return "performance" }
 func (s *PerformanceScanner) Weight() float64  { return 15.0 }
 
+// linearScore calculates a linearly interpolated score between two score boundaries
+// based on where value falls within the [minVal, maxVal] range.
+// When value == minVal, returns maxScore. When value == maxVal, returns minScore.
+func linearScore(value, minVal, maxVal float64, maxScore, minScore float64) float64 {
+	if maxVal == minVal {
+		return maxScore
+	}
+	t := (value - minVal) / (maxVal - minVal)
+	return maxScore + t*(minScore-maxScore)
+}
+
+// scoreResponseTime returns a 0-1000 score for total response time using
+// piecewise linear decay across defined brackets.
+func scoreResponseTime(ms float64) float64 {
+	switch {
+	case ms <= 200:
+		return 1000
+	case ms <= 500:
+		return linearScore(ms, 200, 500, 1000, 900)
+	case ms <= 1000:
+		return linearScore(ms, 500, 1000, 900, 750)
+	case ms <= 2000:
+		return linearScore(ms, 1000, 2000, 750, 500)
+	case ms <= 5000:
+		return linearScore(ms, 2000, 5000, 500, 200)
+	case ms <= 10000:
+		return linearScore(ms, 5000, 10000, 200, 50)
+	default:
+		return 0
+	}
+}
+
+// scoreTTFB returns a 0-1000 score for time-to-first-byte using
+// piecewise linear decay across defined brackets.
+func scoreTTFB(ms float64) float64 {
+	switch {
+	case ms <= 100:
+		return 1000
+	case ms <= 200:
+		return linearScore(ms, 100, 200, 1000, 920)
+	case ms <= 500:
+		return linearScore(ms, 200, 500, 920, 750)
+	case ms <= 1000:
+		return linearScore(ms, 500, 1000, 750, 450)
+	case ms <= 2000:
+		return linearScore(ms, 1000, 2000, 450, 200)
+	case ms <= 5000:
+		return linearScore(ms, 2000, 5000, 200, 50)
+	default:
+		return 0
+	}
+}
+
+// scoreTLSHandshake returns a 0-1000 score for TLS handshake duration using
+// piecewise linear decay across defined brackets.
+func scoreTLSHandshake(ms float64) float64 {
+	switch {
+	case ms <= 50:
+		return 1000
+	case ms <= 100:
+		return linearScore(ms, 50, 100, 1000, 920)
+	case ms <= 300:
+		return linearScore(ms, 100, 300, 920, 750)
+	case ms <= 700:
+		return linearScore(ms, 300, 700, 750, 450)
+	case ms <= 1500:
+		return linearScore(ms, 700, 1500, 450, 150)
+	default:
+		return 50
+	}
+}
+
+// gradeFromScore returns a letter grade and severity from a 0-1000 score.
+func gradeFromScore(score float64) (grade string, status string, severity string) {
+	switch {
+	case score >= 900:
+		return "A", "pass", "info"
+	case score >= 750:
+		return "B", "pass", "info"
+	case score >= 500:
+		return "C", "warning", "low"
+	case score >= 200:
+		return "D", "warning", "medium"
+	default:
+		return "F", "fail", "high"
+	}
+}
+
 func (s *PerformanceScanner) Scan(url string) []models.CheckResult {
 	var results []models.CheckResult
 
@@ -35,7 +124,7 @@ func (s *PerformanceScanner) checkResponseTime(url string) models.CheckResult {
 	check := models.CheckResult{
 		Category:  s.Category(),
 		CheckName: "Response Time",
-		Weight:    5.0,
+		Weight:    50.0,
 	}
 
 	client := &http.Client{
@@ -66,47 +155,20 @@ func (s *PerformanceScanner) checkResponseTime(url string) models.CheckResult {
 	}
 	defer resp.Body.Close()
 
-	ms := elapsed.Milliseconds()
+	ms := float64(elapsed.Milliseconds())
+	score := math.Round(scoreResponseTime(ms))
+	grade, status, severity := gradeFromScore(score)
 
-	details := map[string]interface{}{
-		"response_time_ms": ms,
+	check.Score = score
+	check.Status = status
+	check.Severity = severity
+	check.Details = toJSON(map[string]interface{}{
+		"response_time_ms": int64(ms),
 		"status_code":      resp.StatusCode,
-	}
+		"message":          fmt.Sprintf("Response time: %dms (score: %.0f/1000)", int64(ms), score),
+		"grade":            grade,
+	})
 
-	switch {
-	case ms < 500:
-		check.Status = "pass"
-		check.Score = 100
-		check.Severity = "info"
-		details["message"] = fmt.Sprintf("Excellent response time: %dms", ms)
-		details["grade"] = "A"
-	case ms < 1000:
-		check.Status = "pass"
-		check.Score = 85
-		check.Severity = "info"
-		details["message"] = fmt.Sprintf("Good response time: %dms", ms)
-		details["grade"] = "B"
-	case ms < 2000:
-		check.Status = "warning"
-		check.Score = 65
-		check.Severity = "low"
-		details["message"] = fmt.Sprintf("Average response time: %dms", ms)
-		details["grade"] = "C"
-	case ms < 5000:
-		check.Status = "warning"
-		check.Score = 40
-		check.Severity = "medium"
-		details["message"] = fmt.Sprintf("Slow response time: %dms", ms)
-		details["grade"] = "D"
-	default:
-		check.Status = "fail"
-		check.Score = 15
-		check.Severity = "high"
-		details["message"] = fmt.Sprintf("Very slow response time: %dms", ms)
-		details["grade"] = "F"
-	}
-
-	check.Details = toJSON(details)
 	return check
 }
 
@@ -114,7 +176,7 @@ func (s *PerformanceScanner) checkTTFB(url string) models.CheckResult {
 	check := models.CheckResult{
 		Category:  s.Category(),
 		CheckName: "Time to First Byte (TTFB)",
-		Weight:    5.0,
+		Weight:    50.0,
 	}
 
 	var ttfb time.Duration
@@ -175,48 +237,21 @@ func (s *PerformanceScanner) checkTTFB(url string) models.CheckResult {
 		ttfb = gotFirstByte.Sub(start)
 	}
 
-	ms := ttfb.Milliseconds()
+	ms := float64(ttfb.Milliseconds())
+	score := math.Round(scoreTTFB(ms))
+	grade, status, severity := gradeFromScore(score)
 
-	details := map[string]interface{}{
-		"ttfb_ms":        ms,
-		"dns_time_ms":    dnsTime.Milliseconds(),
+	check.Score = score
+	check.Status = status
+	check.Severity = severity
+	check.Details = toJSON(map[string]interface{}{
+		"ttfb_ms":         int64(ms),
+		"dns_time_ms":     dnsTime.Milliseconds(),
 		"connect_time_ms": connectTime.Milliseconds(),
-	}
+		"message":         fmt.Sprintf("TTFB: %dms (score: %.0f/1000)", int64(ms), score),
+		"grade":           grade,
+	})
 
-	switch {
-	case ms < 200:
-		check.Status = "pass"
-		check.Score = 100
-		check.Severity = "info"
-		details["message"] = fmt.Sprintf("Excellent TTFB: %dms", ms)
-		details["grade"] = "A"
-	case ms < 500:
-		check.Status = "pass"
-		check.Score = 85
-		check.Severity = "info"
-		details["message"] = fmt.Sprintf("Good TTFB: %dms", ms)
-		details["grade"] = "B"
-	case ms < 1000:
-		check.Status = "warning"
-		check.Score = 60
-		check.Severity = "low"
-		details["message"] = fmt.Sprintf("Average TTFB: %dms", ms)
-		details["grade"] = "C"
-	case ms < 2000:
-		check.Status = "warning"
-		check.Score = 35
-		check.Severity = "medium"
-		details["message"] = fmt.Sprintf("Slow TTFB: %dms", ms)
-		details["grade"] = "D"
-	default:
-		check.Status = "fail"
-		check.Score = 10
-		check.Severity = "high"
-		details["message"] = fmt.Sprintf("Very slow TTFB: %dms", ms)
-		details["grade"] = "F"
-	}
-
-	check.Details = toJSON(details)
 	return check
 }
 
@@ -224,7 +259,7 @@ func (s *PerformanceScanner) checkTLSHandshake(url string) models.CheckResult {
 	check := models.CheckResult{
 		Category:  s.Category(),
 		CheckName: "TLS Handshake Time",
-		Weight:    5.0,
+		Weight:    50.0,
 	}
 
 	host := extractHost(url)
@@ -250,45 +285,18 @@ func (s *PerformanceScanner) checkTLSHandshake(url string) models.CheckResult {
 	}
 	defer conn.Close()
 
-	ms := elapsed.Milliseconds()
+	ms := float64(elapsed.Milliseconds())
+	score := math.Round(scoreTLSHandshake(ms))
+	grade, status, severity := gradeFromScore(score)
 
-	details := map[string]interface{}{
-		"tls_handshake_ms": ms,
-	}
+	check.Score = score
+	check.Status = status
+	check.Severity = severity
+	check.Details = toJSON(map[string]interface{}{
+		"tls_handshake_ms": int64(ms),
+		"message":          fmt.Sprintf("TLS handshake: %dms (score: %.0f/1000)", int64(ms), score),
+		"grade":            grade,
+	})
 
-	switch {
-	case ms < 100:
-		check.Status = "pass"
-		check.Score = 100
-		check.Severity = "info"
-		details["message"] = fmt.Sprintf("Excellent TLS handshake: %dms", ms)
-		details["grade"] = "A"
-	case ms < 300:
-		check.Status = "pass"
-		check.Score = 85
-		check.Severity = "info"
-		details["message"] = fmt.Sprintf("Good TLS handshake: %dms", ms)
-		details["grade"] = "B"
-	case ms < 700:
-		check.Status = "warning"
-		check.Score = 60
-		check.Severity = "low"
-		details["message"] = fmt.Sprintf("Average TLS handshake: %dms", ms)
-		details["grade"] = "C"
-	case ms < 1500:
-		check.Status = "warning"
-		check.Score = 35
-		check.Severity = "medium"
-		details["message"] = fmt.Sprintf("Slow TLS handshake: %dms", ms)
-		details["grade"] = "D"
-	default:
-		check.Status = "fail"
-		check.Score = 10
-		check.Severity = "high"
-		details["message"] = fmt.Sprintf("Very slow TLS handshake: %dms", ms)
-		details["grade"] = "F"
-	}
-
-	check.Details = toJSON(details)
 	return check
 }

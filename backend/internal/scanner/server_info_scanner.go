@@ -40,7 +40,7 @@ func (s *ServerInfoScanner) Scan(url string) []models.CheckResult {
 				Status:    "error",
 				Score:     0,
 				Weight:    s.Weight(),
-				Severity:  "high",
+				Severity:  "critical",
 				Details:   toJSON(map[string]string{"error": "Cannot reach website: " + err.Error()}),
 			}}
 		}
@@ -69,17 +69,42 @@ func (s *ServerInfoScanner) checkServerHeader(resp *http.Response) models.CheckR
 	server := resp.Header.Get("Server")
 	if server == "" {
 		check.Status = "pass"
-		check.Score = 100
+		check.Score = 1000
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{"message": "Server header is not exposed"})
 	} else {
-		check.Status = "warning"
-		check.Score = 40
-		check.Severity = "medium"
-		check.Details = toJSON(map[string]string{
-			"message": "Server header exposes software information",
-			"server":  server,
-		})
+		// Server header is exposed; severity depends on how detailed it is
+		lower := strings.ToLower(server)
+		hasVersion := strings.ContainsAny(server, "0123456789./")
+
+		if hasVersion {
+			// Exposes server name AND version - more dangerous
+			check.Status = "fail"
+			check.Score = 250
+			check.Severity = "high"
+			check.Details = toJSON(map[string]string{
+				"message": "Server header exposes software name and version",
+				"server":  server,
+			})
+		} else if strings.Contains(lower, "apache") || strings.Contains(lower, "nginx") || strings.Contains(lower, "iis") {
+			// Exposes known server name but no version
+			check.Status = "warn"
+			check.Score = 450
+			check.Severity = "medium"
+			check.Details = toJSON(map[string]string{
+				"message": "Server header exposes software name",
+				"server":  server,
+			})
+		} else {
+			// Generic or obscured server name
+			check.Status = "warn"
+			check.Score = 550
+			check.Severity = "medium"
+			check.Details = toJSON(map[string]string{
+				"message": "Server header is present with generic value",
+				"server":  server,
+			})
+		}
 	}
 
 	return check
@@ -95,17 +120,29 @@ func (s *ServerInfoScanner) checkPoweredBy(resp *http.Response) models.CheckResu
 	poweredBy := resp.Header.Get("X-Powered-By")
 	if poweredBy == "" {
 		check.Status = "pass"
-		check.Score = 100
+		check.Score = 1000
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{"message": "X-Powered-By header is not exposed"})
 	} else {
-		check.Status = "fail"
-		check.Score = 20
-		check.Severity = "high"
-		check.Details = toJSON(map[string]string{
-			"message":    "X-Powered-By header exposes technology stack",
-			"powered_by": poweredBy,
-		})
+		// X-Powered-By with version info is worse
+		hasVersion := strings.ContainsAny(poweredBy, "0123456789./")
+		if hasVersion {
+			check.Status = "fail"
+			check.Score = 125
+			check.Severity = "high"
+			check.Details = toJSON(map[string]string{
+				"message":    "X-Powered-By header exposes technology stack with version",
+				"powered_by": poweredBy,
+			})
+		} else {
+			check.Status = "fail"
+			check.Score = 225
+			check.Severity = "high"
+			check.Details = toJSON(map[string]string{
+				"message":    "X-Powered-By header exposes technology stack",
+				"powered_by": poweredBy,
+			})
+		}
 	}
 
 	return check
@@ -169,16 +206,31 @@ func (s *ServerInfoScanner) detectCMS(resp *http.Response, url string) models.Ch
 	}
 
 	if detected {
-		check.Status = "info"
-		check.Score = 70
-		check.Severity = "low"
+		// CMS detected - not necessarily bad, but reduces obscurity
+		// Well-known CMS like WordPress is frequently targeted
+		var score float64
+		switch cms {
+		case "WordPress":
+			score = 550 // Most targeted CMS
+		case "Joomla":
+			score = 600
+		case "Drupal":
+			score = 650 // Generally considered more secure
+		case "Moodle":
+			score = 625
+		default:
+			score = 600
+		}
+		check.Status = statusFromScore(score)
+		check.Score = score
+		check.Severity = severityFromScore(score)
 		check.Details = toJSON(map[string]string{
 			"message": fmt.Sprintf("CMS detected: %s", cms),
 			"cms":     cms,
 		})
 	} else {
-		check.Status = "info"
-		check.Score = 100
+		check.Status = "pass"
+		check.Score = 1000
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{
 			"message": "No common CMS detected",

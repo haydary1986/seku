@@ -68,7 +68,7 @@ const radarData = computed(() => {
 const radarOptions = {
   responsive: true,
   scales: {
-    r: { min: 0, max: 100, ticks: { stepSize: 20 } },
+    r: { min: 0, max: 1000, ticks: { stepSize: 200 } },
   },
   plugins: { legend: { display: false } },
 }
@@ -108,18 +108,18 @@ function parseDetails(details) {
 }
 
 function getScoreColor(score) {
-  if (score >= 80) return 'text-green-600'
-  if (score >= 60) return 'text-blue-600'
-  if (score >= 40) return 'text-yellow-600'
-  if (score >= 20) return 'text-orange-600'
+  if (score >= 800) return 'text-green-600'
+  if (score >= 600) return 'text-blue-600'
+  if (score >= 400) return 'text-yellow-600'
+  if (score >= 200) return 'text-orange-600'
   return 'text-red-600'
 }
 
 function getScoreBg(score) {
-  if (score >= 80) return 'bg-green-500'
-  if (score >= 60) return 'bg-blue-500'
-  if (score >= 40) return 'bg-yellow-500'
-  if (score >= 20) return 'bg-orange-500'
+  if (score >= 800) return 'bg-green-500'
+  if (score >= 600) return 'bg-blue-500'
+  if (score >= 400) return 'bg-yellow-500'
+  if (score >= 200) return 'bg-orange-500'
   return 'bg-red-500'
 }
 
@@ -251,7 +251,7 @@ onMounted(async () => {
                 <span class="text-sm font-medium text-gray-700">{{ categoryLabels[catKey] || catKey }}</span>
               </div>
               <span :class="['text-2xl font-bold', getScoreColor(getCategoryScore(catKey))]">
-                {{ getCategoryScore(catKey) }}%
+                {{ getCategoryScore(catKey) }}/1000
               </span>
             </button>
           </div>
@@ -286,7 +286,7 @@ onMounted(async () => {
                     <span :class="['px-2 py-0.5 rounded text-xs', getSeverityColor(check.severity)]">
                       {{ check.severity }}
                     </span>
-                    <span :class="['font-bold', getScoreColor(check.score)]">{{ Math.round(check.score) }}%</span>
+                    <span :class="['font-bold', getScoreColor(check.score)]">{{ Math.round(check.score) }}/1000</span>
                   </div>
                 </div>
 

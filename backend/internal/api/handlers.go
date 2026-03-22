@@ -190,11 +190,11 @@ func GetDashboardStats(c *fiber.Ctx) error {
 		Count int64  `json:"count"`
 	}
 	var excellent, good, average, poor, critical int64
-	config.DB.Model(&models.ScanResult{}).Where("status = ? AND overall_score >= 80", "completed").Count(&excellent)
-	config.DB.Model(&models.ScanResult{}).Where("status = ? AND overall_score >= 60 AND overall_score < 80", "completed").Count(&good)
-	config.DB.Model(&models.ScanResult{}).Where("status = ? AND overall_score >= 40 AND overall_score < 60", "completed").Count(&average)
-	config.DB.Model(&models.ScanResult{}).Where("status = ? AND overall_score >= 20 AND overall_score < 40", "completed").Count(&poor)
-	config.DB.Model(&models.ScanResult{}).Where("status = ? AND overall_score < 20", "completed").Count(&critical)
+	config.DB.Model(&models.ScanResult{}).Where("status = ? AND overall_score >= 800", "completed").Count(&excellent)
+	config.DB.Model(&models.ScanResult{}).Where("status = ? AND overall_score >= 600 AND overall_score < 800", "completed").Count(&good)
+	config.DB.Model(&models.ScanResult{}).Where("status = ? AND overall_score >= 400 AND overall_score < 600", "completed").Count(&average)
+	config.DB.Model(&models.ScanResult{}).Where("status = ? AND overall_score >= 200 AND overall_score < 400", "completed").Count(&poor)
+	config.DB.Model(&models.ScanResult{}).Where("status = ? AND overall_score < 200", "completed").Count(&critical)
 
 	return c.JSON(fiber.Map{
 		"total_targets":  targetCount,
@@ -203,11 +203,11 @@ func GetDashboardStats(c *fiber.Ctx) error {
 		"average_score":  avgScore,
 		"latest_results": latestResults,
 		"score_distribution": []fiber.Map{
-			{"range": "Excellent (80-100)", "count": excellent},
-			{"range": "Good (60-79)", "count": good},
-			{"range": "Average (40-59)", "count": average},
-			{"range": "Poor (20-39)", "count": poor},
-			{"range": "Critical (0-19)", "count": critical},
+			{"range": "Excellent (800-1000)", "count": excellent},
+			{"range": "Good (600-799)", "count": good},
+			{"range": "Average (400-599)", "count": average},
+			{"range": "Poor (200-399)", "count": poor},
+			{"range": "Critical (0-199)", "count": critical},
 		},
 	})
 }
@@ -332,15 +332,15 @@ func GetLeaderboard(c *fiber.Ctx) error {
 
 func scoreToGrade(score float64) string {
 	switch {
-	case score >= 90:
+	case score >= 900:
 		return "A+"
-	case score >= 80:
+	case score >= 800:
 		return "A"
-	case score >= 70:
+	case score >= 700:
 		return "B"
-	case score >= 60:
+	case score >= 600:
 		return "C"
-	case score >= 50:
+	case score >= 500:
 		return "D"
 	default:
 		return "F"

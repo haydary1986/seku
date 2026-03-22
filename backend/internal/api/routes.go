@@ -1,25 +1,38 @@
 package api
 
 import (
+	"os"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 func SetupRoutes(app *fiber.App) {
 	// Middleware
+	app.Use(recover.New())
 	app.Use(logger.New())
+
+	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+	if allowedOrigins == "" {
+		allowedOrigins = "*"
+	}
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
+		AllowOrigins: allowedOrigins,
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
 	}))
+
+	// Health check (public)
+	app.Get("/health", HealthCheck)
 
 	// API routes
 	api := app.Group("/api")
 
 	// Public routes (no auth required)
 	api.Post("/auth/login", Login)
+	api.Get("/criteria", GetScanCriteria) // public page: scan criteria & scoring
 
 	// Protected routes
 	protected := api.Group("", AuthRequired())

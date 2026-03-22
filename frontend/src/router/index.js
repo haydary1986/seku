@@ -8,9 +8,11 @@ import ResultDetail from '../views/ResultDetail.vue'
 import Leaderboard from '../views/Leaderboard.vue'
 import Users from '../views/Users.vue'
 import Settings from '../views/Settings.vue'
+import Methodology from '../views/Methodology.vue'
 
 const routes = [
   { path: '/login', name: 'Login', component: Login, meta: { public: true } },
+  { path: '/methodology', name: 'Methodology', component: Methodology, meta: { public: true } },
   { path: '/', name: 'Dashboard', component: Dashboard },
   { path: '/targets', name: 'Targets', component: Targets },
   { path: '/scans', name: 'Scans', component: Scans },

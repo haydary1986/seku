@@ -68,18 +68,39 @@ func (s *MixedContentScanner) checkMixedScripts(body string) models.CheckResult 
 	scriptPattern := regexp.MustCompile(`(?i)(src|href)\s*=\s*["']http://[^"']+\.(js|css)["']`)
 	matches := scriptPattern.FindAllString(body, -1)
 
-	if len(matches) > 0 {
+	if len(matches) > 5 {
+		// Many mixed active content resources - extremely dangerous
 		check.Status = "fail"
 		check.Score = 0
 		check.Severity = "critical"
 		check.Details = toJSON(map[string]interface{}{
-			"message":    "Mixed active content found - HTTP scripts/CSS loaded on HTTPS page",
-			"count":      len(matches),
-			"examples":   matches[:min(len(matches), 5)],
+			"message":  "Extensive mixed active content found - many HTTP scripts/CSS loaded on HTTPS page",
+			"count":    len(matches),
+			"examples": matches[:min(len(matches), 5)],
+		})
+	} else if len(matches) > 2 {
+		// Several mixed active content resources
+		check.Status = "fail"
+		check.Score = 75
+		check.Severity = "critical"
+		check.Details = toJSON(map[string]interface{}{
+			"message":  "Multiple mixed active content resources found - HTTP scripts/CSS loaded on HTTPS page",
+			"count":    len(matches),
+			"examples": matches[:min(len(matches), 5)],
+		})
+	} else if len(matches) > 0 {
+		// A few mixed active content resources
+		check.Status = "fail"
+		check.Score = 150
+		check.Severity = "high"
+		check.Details = toJSON(map[string]interface{}{
+			"message":  "Mixed active content found - HTTP scripts/CSS loaded on HTTPS page",
+			"count":    len(matches),
+			"examples": matches[:min(len(matches), 5)],
 		})
 	} else {
 		check.Status = "pass"
-		check.Score = 100
+		check.Score = 1000
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{
 			"message": "No mixed active content (scripts/CSS) detected",
@@ -99,18 +120,39 @@ func (s *MixedContentScanner) checkMixedImages(body string) models.CheckResult {
 	imgPattern := regexp.MustCompile(`(?i)(src)\s*=\s*["']http://[^"']+\.(jpg|jpeg|png|gif|svg|webp|mp4|mp3)["']`)
 	matches := imgPattern.FindAllString(body, -1)
 
-	if len(matches) > 0 {
-		check.Status = "warning"
-		check.Score = 40
+	if len(matches) > 10 {
+		// Many mixed passive resources
+		check.Status = "warn"
+		check.Score = 275
+		check.Severity = "high"
+		check.Details = toJSON(map[string]interface{}{
+			"message":  "Extensive mixed passive content - many HTTP images/media on HTTPS page",
+			"count":    len(matches),
+			"examples": matches[:min(len(matches), 5)],
+		})
+	} else if len(matches) > 3 {
+		// Several mixed passive resources
+		check.Status = "warn"
+		check.Score = 375
 		check.Severity = "medium"
 		check.Details = toJSON(map[string]interface{}{
-			"message":    "Mixed passive content found - HTTP images/media on HTTPS page",
-			"count":      len(matches),
-			"examples":   matches[:min(len(matches), 5)],
+			"message":  "Multiple mixed passive content found - HTTP images/media on HTTPS page",
+			"count":    len(matches),
+			"examples": matches[:min(len(matches), 5)],
+		})
+	} else if len(matches) > 0 {
+		// A few mixed passive resources - less severe than active content
+		check.Status = "warn"
+		check.Score = 475
+		check.Severity = "medium"
+		check.Details = toJSON(map[string]interface{}{
+			"message":  "Mixed passive content found - HTTP images/media on HTTPS page",
+			"count":    len(matches),
+			"examples": matches[:min(len(matches), 5)],
 		})
 	} else {
 		check.Status = "pass"
-		check.Score = 100
+		check.Score = 1000
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{
 			"message": "No mixed passive content detected",
@@ -130,29 +172,47 @@ func (s *MixedContentScanner) checkMixedForms(body string) models.CheckResult {
 	formPattern := regexp.MustCompile(`(?i)action\s*=\s*["']http://[^"']+["']`)
 	matches := formPattern.FindAllString(body, -1)
 
-	// Also check for forms without action (they submit to current page, which is fine)
-	// But check for password fields with http action
+	// Also check for password fields with http action
 	hasPasswordField := strings.Contains(strings.ToLower(body), `type="password"`) || strings.Contains(strings.ToLower(body), `type='password'`)
 
 	if len(matches) > 0 {
-		severity := "high"
-		score := 10.0
 		if hasPasswordField {
-			severity = "critical"
-			score = 0
+			// Insecure form with password field - critical vulnerability
+			check.Status = "fail"
+			check.Score = 0
+			check.Severity = "critical"
+			check.Details = toJSON(map[string]interface{}{
+				"message":            "Forms with password fields submit data over insecure HTTP",
+				"count":              len(matches),
+				"has_password_field": hasPasswordField,
+				"examples":           matches[:min(len(matches), 3)],
+			})
+		} else if len(matches) > 3 {
+			// Many insecure forms without passwords
+			check.Status = "fail"
+			check.Score = 75
+			check.Severity = "critical"
+			check.Details = toJSON(map[string]interface{}{
+				"message":            "Many forms submit data over insecure HTTP",
+				"count":              len(matches),
+				"has_password_field": hasPasswordField,
+				"examples":           matches[:min(len(matches), 3)],
+			})
+		} else {
+			// A few insecure forms without passwords
+			check.Status = "fail"
+			check.Score = 150
+			check.Severity = "high"
+			check.Details = toJSON(map[string]interface{}{
+				"message":            "Forms submit data over insecure HTTP",
+				"count":              len(matches),
+				"has_password_field": hasPasswordField,
+				"examples":           matches[:min(len(matches), 3)],
+			})
 		}
-		check.Status = "fail"
-		check.Score = score
-		check.Severity = severity
-		check.Details = toJSON(map[string]interface{}{
-			"message":           "Forms submit data over insecure HTTP",
-			"count":             len(matches),
-			"has_password_field": hasPasswordField,
-			"examples":          matches[:min(len(matches), 3)],
-		})
 	} else {
 		check.Status = "pass"
-		check.Score = 100
+		check.Score = 1000
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{
 			"message": "No insecure form actions detected",

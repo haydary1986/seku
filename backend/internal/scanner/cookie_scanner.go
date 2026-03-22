@@ -37,7 +37,7 @@ func (s *CookieScanner) Scan(url string) []models.CheckResult {
 				Status:    "error",
 				Score:     0,
 				Weight:    s.Weight(),
-				Severity:  "high",
+				Severity:  "critical",
 				Details:   toJSON(map[string]string{"error": "Cannot reach website: " + err.Error()}),
 			}}
 		}
@@ -50,8 +50,8 @@ func (s *CookieScanner) Scan(url string) []models.CheckResult {
 		return []models.CheckResult{{
 			Category:  s.Category(),
 			CheckName: "Cookie Security",
-			Status:    "info",
-			Score:     100,
+			Status:    "pass",
+			Score:     1000,
 			Weight:    s.Weight(),
 			Severity:  "info",
 			Details:   toJSON(map[string]string{"message": "No cookies set on initial response"}),
@@ -62,19 +62,22 @@ func (s *CookieScanner) Scan(url string) []models.CheckResult {
 	weightPerCookie := s.Weight() / float64(len(cookies))
 
 	for _, cookie := range cookies {
-		score := 100.0
+		score := 1000.0
 		issues := []string{}
 
+		// Missing Secure flag is a significant issue (allows cookie over HTTP)
 		if !cookie.Secure {
-			score -= 34
+			score -= 350
 			issues = append(issues, "Missing Secure flag")
 		}
+		// Missing HttpOnly exposes cookie to JavaScript (XSS risk)
 		if !cookie.HttpOnly {
-			score -= 33
+			score -= 325
 			issues = append(issues, "Missing HttpOnly flag")
 		}
+		// Missing SameSite leaves cookie vulnerable to CSRF
 		if cookie.SameSite == http.SameSiteDefaultMode || cookie.SameSite == 0 {
-			score -= 33
+			score -= 325
 			issues = append(issues, "Missing SameSite attribute")
 		}
 
@@ -82,15 +85,8 @@ func (s *CookieScanner) Scan(url string) []models.CheckResult {
 			score = 0
 		}
 
-		status := "pass"
-		severity := "info"
-		if score < 50 {
-			status = "fail"
-			severity = "high"
-		} else if score < 100 {
-			status = "warning"
-			severity = "medium"
-		}
+		status := statusFromScore(score)
+		severity := severityFromScore(score)
 
 		details := map[string]interface{}{
 			"cookie_name": cookie.Name,
