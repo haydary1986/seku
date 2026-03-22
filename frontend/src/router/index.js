@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import Landing from '../views/Landing.vue'
 import Login from '../views/Login.vue'
 import Dashboard from '../views/Dashboard.vue'
 import Targets from '../views/Targets.vue'
@@ -9,11 +10,17 @@ import Leaderboard from '../views/Leaderboard.vue'
 import Users from '../views/Users.vue'
 import Settings from '../views/Settings.vue'
 import Methodology from '../views/Methodology.vue'
+import MethodologyAr from '../views/MethodologyAr.vue'
 
 const routes = [
+  // Public pages
+  { path: '/', name: 'Landing', component: Landing, meta: { public: true, landing: true } },
   { path: '/login', name: 'Login', component: Login, meta: { public: true } },
   { path: '/methodology', name: 'Methodology', component: Methodology, meta: { public: true } },
-  { path: '/', name: 'Dashboard', component: Dashboard },
+  { path: '/methodology-ar', name: 'MethodologyAr', component: MethodologyAr, meta: { public: true } },
+
+  // Protected pages (require login)
+  { path: '/dashboard', name: 'Dashboard', component: Dashboard },
   { path: '/targets', name: 'Targets', component: Targets },
   { path: '/scans', name: 'Scans', component: Scans },
   { path: '/scans/:id', name: 'ScanDetail', component: ScanDetail },
@@ -26,15 +33,27 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior() {
+    return { top: 0 }
+  },
 })
 
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
-  if (!to.meta.public && !token) {
-    next('/login')
-  } else {
-    next()
+
+  // If logged in and visiting landing, go to dashboard
+  if (to.meta.landing && token) {
+    next('/dashboard')
+    return
   }
+
+  // If not logged in and page requires auth, go to landing
+  if (!to.meta.public && !token) {
+    next('/')
+    return
+  }
+
+  next()
 })
 
 export default router

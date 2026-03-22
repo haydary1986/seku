@@ -15,7 +15,7 @@ async function handleLogin() {
     const { data } = await login(form.value)
     localStorage.setItem('token', data.token)
     localStorage.setItem('user', JSON.stringify(data.user))
-    router.push('/')
+    router.push('/dashboard')
   } catch (e) {
     error.value = e.response?.data?.error || 'Login failed'
   } finally {
