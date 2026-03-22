@@ -250,12 +250,31 @@ func GetDashboardStats(c *fiber.Ctx) error {
 	var completedJobs int64
 	config.DB.Model(&models.ScanJob{}).Where("status = ?", "completed").Count(&completedJobs)
 
+	// Get only the latest scan result per target (not all historical results)
 	var latestResults []models.ScanResult
-	config.DB.Order("created_at desc").Limit(20).Preload("ScanTarget").Find(&latestResults)
+	config.DB.Raw(`
+		SELECT sr.* FROM scan_results sr
+		INNER JOIN (
+			SELECT scan_target_id, MAX(id) AS max_id
+			FROM scan_results
+			WHERE status = 'completed'
+			GROUP BY scan_target_id
+		) latest ON sr.id = latest.max_id
+		ORDER BY sr.overall_score DESC
+		LIMIT 20
+	`).Preload("ScanTarget").Find(&latestResults)
 
-	// Calculate average score
+	// Calculate average score from latest results only
 	var avgScore float64
-	config.DB.Model(&models.ScanResult{}).Where("status = ?", "completed").Select("COALESCE(AVG(overall_score), 0)").Scan(&avgScore)
+	config.DB.Raw(`
+		SELECT COALESCE(AVG(sr.overall_score), 0) FROM scan_results sr
+		INNER JOIN (
+			SELECT scan_target_id, MAX(id) AS max_id
+			FROM scan_results
+			WHERE status = 'completed'
+			GROUP BY scan_target_id
+		) latest ON sr.id = latest.max_id
+	`).Scan(&avgScore)
 
 	// Score distribution
 	type ScoreBucket struct {
@@ -326,12 +345,12 @@ func GetLeaderboard(c *fiber.Ctx) error {
 			   sr.ended_at AS scanned_at
 		FROM scan_results sr
 		INNER JOIN scan_targets st ON st.id = sr.scan_target_id
-		WHERE sr.status = 'completed'
-		AND sr.id = (
-			SELECT sr2.id FROM scan_results sr2
-			WHERE sr2.scan_target_id = sr.scan_target_id AND sr2.status = 'completed'
-			ORDER BY sr2.created_at DESC LIMIT 1
-		)
+		INNER JOIN (
+			SELECT scan_target_id, MAX(id) AS max_id
+			FROM scan_results
+			WHERE status = 'completed'
+			GROUP BY scan_target_id
+		) latest ON sr.id = latest.max_id
 		ORDER BY sr.overall_score DESC
 	`).Scan(&ranked)
 
