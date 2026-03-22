@@ -23,6 +23,23 @@ func init() {
 	jwtSecret = []byte(secret)
 }
 
+type RegisterRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	FullName string `json:"full_name"`
+	Email    string `json:"email"`
+	Phone    string `json:"phone"`
+	OrgName  string `json:"org_name"`
+	OrgType  string `json:"org_type"` // university, government, company, other
+	Country  string `json:"country"`
+}
+
+type RegisterResponse struct {
+	Token        string              `json:"token"`
+	User         models.User         `json:"user"`
+	Organization models.Organization `json:"organization"`
+}
+
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -69,6 +86,115 @@ func Login(c *fiber.Ctx) error {
 		Token: tokenString,
 		User:  user,
 	})
+}
+
+func Register(c *fiber.Ctx) error {
+	var req RegisterRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	// Validate required fields
+	if req.Username == "" || req.Password == "" || req.Email == "" || req.OrgName == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Username, password, email, and organization name are required"})
+	}
+
+	if len(req.Password) < 6 {
+		return c.Status(400).JSON(fiber.Map{"error": "Password must be at least 6 characters"})
+	}
+
+	// Check username not taken
+	var existing models.User
+	if config.DB.Where("username = ?", req.Username).First(&existing).Error == nil {
+		return c.Status(409).JSON(fiber.Map{"error": "Username already exists"})
+	}
+
+	// Check email not taken
+	var existingEmail models.User
+	if config.DB.Where("email = ?", req.Email).First(&existingEmail).Error == nil {
+		return c.Status(409).JSON(fiber.Map{"error": "Email already registered"})
+	}
+
+	// Hash password
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to hash password"})
+	}
+
+	// Generate slug from org name
+	slug := strings.ToLower(strings.ReplaceAll(req.OrgName, " ", "-"))
+	// Ensure slug is unique
+	var slugCount int64
+	config.DB.Model(&models.Organization{}).Where("slug = ?", slug).Count(&slugCount)
+	if slugCount > 0 {
+		slug = slug + "-" + time.Now().Format("20060102150405")
+	}
+
+	// Create Organization with free plan
+	org := models.Organization{
+		Name:       req.OrgName,
+		Slug:       slug,
+		Plan:       "free",
+		MaxTargets: 5,
+		MaxScans:   10,
+		IsActive:   true,
+	}
+	if err := config.DB.Create(&org).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create organization"})
+	}
+
+	// Create User with role="admin" (admin of their org, not system admin)
+	user := models.User{
+		Username: req.Username,
+		Password: string(hashed),
+		FullName: req.FullName,
+		Email:    req.Email,
+		Role:     "user",
+		IsActive: true,
+	}
+	if err := config.DB.Create(&user).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create user"})
+	}
+
+	// Create OrgMembership with role="owner"
+	membership := models.OrgMembership{
+		UserID:         user.ID,
+		OrganizationID: org.ID,
+		Role:           "owner",
+	}
+	config.DB.Create(&membership)
+
+	// Generate JWT token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id":  user.ID,
+		"username": user.Username,
+		"role":     user.Role,
+		"exp":      time.Now().Add(72 * time.Hour).Unix(),
+	})
+
+	tokenString, err := token.SignedString(jwtSecret)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate token"})
+	}
+
+	return c.Status(201).JSON(RegisterResponse{
+		Token:        tokenString,
+		User:         user,
+		Organization: org,
+	})
+}
+
+func GetMyOrganization(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uint)
+	var membership models.OrgMembership
+	if err := config.DB.Where("user_id = ?", userID).First(&membership).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "No organization found"})
+	}
+	var org models.Organization
+	if err := config.DB.First(&org, membership.OrganizationID).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Organization not found"})
+	}
+	return c.JSON(org)
 }
 
 func GetProfile(c *fiber.Ctx) error {

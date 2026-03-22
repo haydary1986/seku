@@ -56,7 +56,7 @@ const router = useRouter()
           </p>
 
           <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <router-link to="/login" class="px-8 py-3.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300">
+            <router-link to="/register" class="px-8 py-3.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300">
               ابدأ الفحص مجاناً
             </router-link>
             <router-link to="/methodology-ar" class="px-8 py-3.5 bg-white text-gray-700 font-semibold rounded-xl border border-gray-300 hover:border-indigo-300 hover:text-indigo-600 transition-all">

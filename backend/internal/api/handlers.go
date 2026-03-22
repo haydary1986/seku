@@ -180,6 +180,31 @@ func StartScan(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
+	userID := c.Locals("user_id").(uint)
+
+	// Get user's organization via OrgMembership
+	var membership models.OrgMembership
+	var org models.Organization
+	plan := "enterprise" // default for users without org (e.g. legacy admin)
+
+	if err := config.DB.Where("user_id = ?", userID).First(&membership).Error; err == nil {
+		if err := config.DB.First(&org, membership.OrganizationID).Error; err == nil {
+			plan = org.Plan
+
+			// Check target count against org.MaxTargets
+			var targetCount int64
+			config.DB.Model(&models.ScanTarget{}).Where("organization_id = ?", org.ID).Count(&targetCount)
+			if int(targetCount) >= org.MaxTargets {
+				return c.Status(403).JSON(fiber.Map{
+					"error": "Target limit reached for your plan. Please upgrade.",
+					"limit": org.MaxTargets,
+					"current": targetCount,
+					"plan":  org.Plan,
+				})
+			}
+		}
+	}
+
 	// If no target IDs provided, scan all targets
 	var targets []models.ScanTarget
 	if len(req.TargetIDs) > 0 {
@@ -196,6 +221,7 @@ func StartScan(c *fiber.Ctx) error {
 	job := models.ScanJob{
 		Name:   req.Name,
 		Status: "pending",
+		UserID: userID,
 	}
 	if job.Name == "" {
 		job.Name = "Scan " + time.Now().Format("2006-01-02 15:04")
@@ -212,8 +238,8 @@ func StartScan(c *fiber.Ctx) error {
 		config.DB.Create(&result)
 	}
 
-	// Run scan in background
-	engine := scanner.NewEngine()
+	// Run scan in background using plan-based engine
+	engine := scanner.NewEngineForPlan(plan)
 	go engine.RunScan(&job)
 
 	return c.Status(201).JSON(job)

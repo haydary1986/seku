@@ -36,6 +36,7 @@ func InitDatabase() {
 		&models.ScheduledScan{},
 		&models.Subscription{},
 		&models.NotificationPreference{},
+		&models.UpgradeRequest{},
 	)
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)

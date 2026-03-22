@@ -75,6 +75,12 @@ async function handleLogin() {
             {{ loading ? 'Signing in...' : 'Sign In' }}
           </button>
         </form>
+        <!-- Link to register -->
+        <div class="mt-6 text-center">
+          <router-link to="/register" class="text-indigo-300 hover:text-indigo-100 text-sm transition-colors">
+            ليس لديك حساب؟ سجّل الآن
+          </router-link>
+        </div>
       </div>
 
       <p class="text-center text-indigo-400 text-xs mt-6">Ministry of Higher Education & Scientific Research</p>

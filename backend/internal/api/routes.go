@@ -32,6 +32,7 @@ func SetupRoutes(app *fiber.App) {
 
 	// Public routes (no auth required)
 	api.Post("/auth/login", Login)
+	api.Post("/auth/register", Register)
 	api.Get("/criteria", GetScanCriteria) // public page: scan criteria & scoring
 	api.Get("/plans", GetPlans)           // public: plan details with scan categories
 
@@ -40,7 +41,12 @@ func SetupRoutes(app *fiber.App) {
 
 	// Profile
 	protected.Get("/auth/profile", GetProfile)
+	protected.Get("/auth/organization", GetMyOrganization)
 	protected.Put("/auth/password", ChangePassword)
+
+	// Upgrade Requests
+	protected.Post("/upgrade/request", RequestUpgrade)
+	protected.Get("/upgrade/requests", GetMyUpgradeRequests)
 
 	// Targets
 	targets := protected.Group("/targets")
@@ -94,4 +100,9 @@ func SetupRoutes(app *fiber.App) {
 	// Settings
 	admin.Get("/settings", GetSettings)
 	admin.Put("/settings", UpdateSettings)
+
+	// Upgrade Request Management (admin)
+	admin.Get("/upgrade/all", GetAllUpgradeRequests)
+	admin.Put("/upgrade/:id/approve", ApproveUpgrade)
+	admin.Put("/upgrade/:id/reject", RejectUpgrade)
 }

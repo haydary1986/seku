@@ -1,14 +1,17 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Landing from '../views/Landing.vue'
 import Login from '../views/Login.vue'
+import Register from '../views/Register.vue'
 import Dashboard from '../views/Dashboard.vue'
 import Targets from '../views/Targets.vue'
 import Scans from '../views/Scans.vue'
 import ScanDetail from '../views/ScanDetail.vue'
 import ResultDetail from '../views/ResultDetail.vue'
 import Leaderboard from '../views/Leaderboard.vue'
+import Upgrade from '../views/Upgrade.vue'
 import Users from '../views/Users.vue'
 import Settings from '../views/Settings.vue'
+import Subscriptions from '../views/Subscriptions.vue'
 import Schedules from '../views/Schedules.vue'
 import Methodology from '../views/Methodology.vue'
 import MethodologyAr from '../views/MethodologyAr.vue'
@@ -18,6 +21,7 @@ const routes = [
   // Public pages
   { path: '/', name: 'Landing', component: Landing, meta: { public: true, landing: true } },
   { path: '/login', name: 'Login', component: Login, meta: { public: true } },
+  { path: '/register', name: 'Register', component: Register, meta: { public: true } },
   { path: '/methodology', name: 'Methodology', component: Methodology, meta: { public: true } },
   { path: '/methodology-ar', name: 'MethodologyAr', component: MethodologyAr, meta: { public: true } },
   { path: '/pricing', name: 'Pricing', component: Pricing, meta: { public: true } },
@@ -29,9 +33,11 @@ const routes = [
   { path: '/scans/:id', name: 'ScanDetail', component: ScanDetail },
   { path: '/results/:id', name: 'ResultDetail', component: ResultDetail },
   { path: '/leaderboard', name: 'Leaderboard', component: Leaderboard },
+  { path: '/upgrade', name: 'Upgrade', component: Upgrade },
   { path: '/schedules', name: 'Schedules', component: Schedules },
   { path: '/users', name: 'Users', component: Users, meta: { admin: true } },
   { path: '/settings', name: 'Settings', component: Settings, meta: { admin: true } },
+  { path: '/subscriptions', name: 'Subscriptions', component: Subscriptions, meta: { admin: true } },
 ]
 
 const router = createRouter({

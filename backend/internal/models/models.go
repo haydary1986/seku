@@ -147,6 +147,21 @@ type CheckResult struct {
 	Severity     string  `json:"severity"`
 }
 
+// --- Upgrade Requests ---
+
+type UpgradeRequest struct {
+	gorm.Model
+	OrganizationID uint   `json:"organization_id"`
+	RequestedPlan  string `json:"requested_plan"` // basic, pro, enterprise
+	ContactName    string `json:"contact_name"`
+	ContactEmail   string `json:"contact_email"`
+	ContactPhone   string `json:"contact_phone"`
+	Message        string `json:"message"`
+	Status         string `json:"status" gorm:"default:pending"` // pending, approved, rejected
+	AdminNotes     string `json:"admin_notes"`
+	Organization   Organization `json:"organization,omitempty" gorm:"foreignKey:OrganizationID"`
+}
+
 // --- Automation ---
 
 type ScheduledScan struct {

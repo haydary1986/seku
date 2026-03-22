@@ -18,7 +18,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && !['/', '/login', '/methodology', '/methodology-ar'].includes(window.location.pathname)) {
+    if (error.response?.status === 401 && !['/', '/login', '/register', '/methodology', '/methodology-ar'].includes(window.location.pathname)) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/'
@@ -29,7 +29,9 @@ api.interceptors.response.use(
 
 // Auth
 export const login = (data) => api.post('/auth/login', data)
+export const register = (data) => api.post('/auth/register', data)
 export const getProfile = () => api.get('/auth/profile')
+export const getMyOrganization = () => api.get('/auth/organization')
 export const changePassword = (data) => api.put('/auth/password', data)
 
 // Targets
@@ -71,6 +73,13 @@ export const deleteUser = (id) => api.delete(`/users/${id}`)
 // Admin: Settings
 export const getSettings = () => api.get('/settings')
 export const updateSettings = (data) => api.put('/settings', data)
+
+// Upgrade Requests
+export const requestUpgrade = (data) => api.post('/upgrade/request', data)
+export const getMyUpgradeRequests = () => api.get('/upgrade/requests')
+export const getAllUpgradeRequests = () => api.get('/upgrade/all')
+export const approveUpgrade = (id, notes) => api.put(`/upgrade/${id}/approve`, { admin_notes: notes })
+export const rejectUpgrade = (id, notes) => api.put(`/upgrade/${id}/reject`, { admin_notes: notes })
 
 // Scheduled Scans
 export const getSchedules = () => api.get('/schedules')
