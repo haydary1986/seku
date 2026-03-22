@@ -542,30 +542,3 @@ func isPermissivePP(value string) bool {
 	return false
 }
 
-// statusFromScore maps a 0-1000 score to a human-readable status.
-func statusFromScore(score float64) string {
-	switch {
-	case score >= 900:
-		return "pass"
-	case score >= 500:
-		return "warn"
-	default:
-		return "fail"
-	}
-}
-
-// severityFromScore maps a 0-1000 score to a severity label.
-func severityFromScore(score float64) string {
-	switch {
-	case score >= 900:
-		return "info"
-	case score >= 700:
-		return "low"
-	case score >= 400:
-		return "medium"
-	case score >= 200:
-		return "high"
-	default:
-		return "critical"
-	}
-}

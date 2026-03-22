@@ -112,13 +112,13 @@ func (s *AdvancedSecurityScanner) checkCOEP(headers http.Header) models.CheckRes
 	}
 
 	if value == "" {
-		result.Score = 200
-		result.Status = statusFromScore(result.Score)
-		result.Severity = severityFromScore(result.Score)
+		result.Score = 500
+		result.Status = "warn"
+		result.Severity = "low"
 		result.Details = toJSON(map[string]string{
 			"header":      headerName,
 			"description": "Controls whether a document can load cross-origin resources that have not granted permission",
-			"message":     "Cross-Origin-Embedder-Policy header is missing (not critical but modern best practice)",
+			"message":     "Cross-Origin-Embedder-Policy header is missing (optional advanced header, not practical for sites using external resources)",
 		})
 		return result
 	}
@@ -170,13 +170,13 @@ func (s *AdvancedSecurityScanner) checkCOOP(headers http.Header) models.CheckRes
 	}
 
 	if value == "" {
-		result.Score = 200
-		result.Status = statusFromScore(result.Score)
-		result.Severity = severityFromScore(result.Score)
+		result.Score = 500
+		result.Status = "warn"
+		result.Severity = "low"
 		result.Details = toJSON(map[string]string{
 			"header":      headerName,
 			"description": "Isolates the browsing context to prevent cross-origin attacks like Spectre",
-			"message":     "Cross-Origin-Opener-Policy header is missing",
+			"message":     "Cross-Origin-Opener-Policy header is missing (optional advanced header, not practical for sites using external resources)",
 		})
 		return result
 	}
@@ -228,13 +228,13 @@ func (s *AdvancedSecurityScanner) checkCORP(headers http.Header) models.CheckRes
 	}
 
 	if value == "" {
-		result.Score = 250
-		result.Status = statusFromScore(result.Score)
-		result.Severity = severityFromScore(result.Score)
+		result.Score = 500
+		result.Status = "warn"
+		result.Severity = "low"
 		result.Details = toJSON(map[string]string{
 			"header":      headerName,
 			"description": "Restricts which origins can load this resource",
-			"message":     "Cross-Origin-Resource-Policy header is missing",
+			"message":     "Cross-Origin-Resource-Policy header is missing (optional advanced header, not practical for sites using external resources)",
 		})
 		return result
 	}

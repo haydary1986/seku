@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { getScanJobs, getTargets, startScan, deleteScanJob } from '../api'
 
@@ -9,6 +9,8 @@ const targets = ref([])
 const loading = ref(true)
 const showStartForm = ref(false)
 const scanning = ref(false)
+
+const pollInterval = ref(null)
 
 const scanForm = ref({
   name: '',
@@ -50,18 +52,26 @@ async function runScan() {
 }
 
 function pollJob(jobId) {
-  const interval = setInterval(async () => {
+  pollInterval.value = setInterval(async () => {
     try {
       await loadData()
       const job = jobs.value.find(j => j.ID === jobId)
       if (job && (job.status === 'completed' || job.status === 'failed')) {
-        clearInterval(interval)
+        clearInterval(pollInterval.value)
+        pollInterval.value = null
       }
     } catch {
-      clearInterval(interval)
+      clearInterval(pollInterval.value)
+      pollInterval.value = null
     }
   }, 3000)
 }
+
+onBeforeUnmount(() => {
+  if (pollInterval.value) {
+    clearInterval(pollInterval.value)
+  }
+})
 
 async function removeJob(id) {
   if (!confirm('Delete this scan job and all its results?')) return

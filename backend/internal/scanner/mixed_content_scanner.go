@@ -222,9 +222,3 @@ func (s *MixedContentScanner) checkMixedForms(body string) models.CheckResult {
 	return check
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

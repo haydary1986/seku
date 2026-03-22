@@ -90,6 +90,9 @@ onMounted(async () => {
       'DNS Security',
       'Mixed Content',
       'Info Disclosure',
+      'Hosting Quality',
+      'Content Optimization',
+      'Advanced Security',
     ]
 
     // Attempt to derive meaningful per-category estimates from available data

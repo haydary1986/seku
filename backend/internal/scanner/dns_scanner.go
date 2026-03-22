@@ -31,51 +31,11 @@ func (s *DNSScanner) Scan(url string) []models.CheckResult {
 	return results
 }
 
-func (s *DNSScanner) checkDNSSEC(host string) models.CheckResult {
-	check := models.CheckResult{
-		Category:  s.Category(),
-		CheckName: "DNSSEC",
-		Weight:    2.0,
-	}
-
-	resolver := &net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			d := net.Dialer{Timeout: 5 * time.Second}
-			return d.DialContext(ctx, "udp", "8.8.8.8:53")
-		},
-	}
-
-	_, err := resolver.LookupHost(context.Background(), host)
-	if err != nil {
-		check.Status = "error"
-		check.Score = 0
-		check.Severity = "medium"
-		check.Details = toJSON(map[string]string{
-			"error":   err.Error(),
-			"message": "Cannot resolve domain",
-		})
-		return check
-	}
-
-	// Check for DNSKEY record existence via TXT lookup approach
-	// Without deep DNSSEC validation, we note DNS resolves but full verification needs external tools
-	check.Status = "warn"
-	check.Score = 650
-	check.Severity = "low"
-	check.Details = toJSON(map[string]string{
-		"message": "DNS resolves successfully. DNSSEC validation requires external tools for full verification.",
-		"host":    host,
-	})
-
-	return check
-}
-
 func (s *DNSScanner) checkSPF(host string) models.CheckResult {
 	check := models.CheckResult{
 		Category:  s.Category(),
 		CheckName: "SPF Record (Email Security)",
-		Weight:    2.0,
+		Weight:    3.0,
 	}
 
 	txtRecords, err := net.LookupTXT(host)
@@ -147,7 +107,7 @@ func (s *DNSScanner) checkDMARC(host string) models.CheckResult {
 	check := models.CheckResult{
 		Category:  s.Category(),
 		CheckName: "DMARC Record (Email Security)",
-		Weight:    2.0,
+		Weight:    3.0,
 	}
 
 	dmarcHost := fmt.Sprintf("_dmarc.%s", host)
