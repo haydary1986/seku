@@ -36,6 +36,9 @@ const categoryOptions = [
   { id: 'advanced_security', label: 'Advanced Security' },
   { id: 'malware', label: 'Malware & Threats' },
   { id: 'threat_intel', label: 'Threat Intelligence' },
+  { id: 'seo', label: 'SEO & Technical Health' },
+  { id: 'third_party', label: 'Third-Party Scripts' },
+  { id: 'js_libraries', label: 'JavaScript Libraries' },
 ]
 
 const categoryLabelMap = Object.fromEntries(categoryOptions.map(c => [c.id, c.label]))

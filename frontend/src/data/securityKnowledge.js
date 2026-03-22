@@ -101,6 +101,24 @@ export const categoryInfo = {
     importance: 'critical',
     attackScenario: 'Compromised sites may silently mine cryptocurrency using visitor CPU, communicate with C2 servers to receive attack commands, or be listed on blacklists indicating prior malicious activity. New or recently registered domains hosting important services may indicate domain hijacking.',
   },
+  seo: {
+    title: 'SEO & Technical Health',
+    description: 'Evaluates search engine optimization and technical health indicators including meta tags, Open Graph, sitemap, robots.txt quality, structured data, and mobile friendliness.',
+    importance: 'medium',
+    attackScenario: 'Poor SEO configuration can lead to search engine de-indexing, content scraping, and phishing sites outranking the legitimate site. Missing canonical URLs allow duplicate content attacks.',
+  },
+  third_party: {
+    title: 'Third-Party Scripts Risk',
+    description: 'Assesses the risk of external JavaScript and CSS loaded from third-party sources. Checks script count, Subresource Integrity (SRI), source trustworthiness, and external CSS dependencies.',
+    importance: 'high',
+    attackScenario: 'Compromised third-party scripts (supply chain attacks) can steal user data, inject malware, or redirect users. The Magecart attacks on e-commerce sites were all via compromised third-party scripts.',
+  },
+  js_libraries: {
+    title: 'JavaScript Library Vulnerabilities',
+    description: 'Detects outdated JavaScript libraries with known security vulnerabilities (CVEs). Checks jQuery, Angular, Bootstrap, Lodash, Moment.js, Vue, React versions and inline script patterns.',
+    importance: 'high',
+    attackScenario: 'Outdated jQuery (< 3.5.0) has known XSS vulnerabilities (CVE-2020-11022). Attackers scan for sites using vulnerable library versions and exploit known CVEs automatically.',
+  },
   malware: {
     title: 'Malware & Threats',
     description: 'Scans the website for malware indicators including malicious JavaScript, hidden iframes, cryptocurrency miners, suspicious redirects, and known malware signatures.',

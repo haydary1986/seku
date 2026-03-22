@@ -95,6 +95,9 @@ onMounted(async () => {
       'Advanced Security',
       'Malware & Threats',
       'Threat Intelligence',
+      'SEO & Technical Health',
+      'Third-Party Scripts',
+      'JavaScript Libraries',
     ]
 
     // Attempt to derive meaningful per-category estimates from available data

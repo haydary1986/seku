@@ -26,14 +26,14 @@ type Scanner interface {
 // Pro: 14 categories (advanced security)
 // Enterprise: 17 categories (full scan)
 var PlanScanners = map[string][]string{
-	"free": {
+	"free": { // 5 categories - basic security
 		"ssl",
 		"headers",
 		"cookies",
 		"performance",
 		"mixed_content",
 	},
-	"basic": {
+	"basic": { // 12 categories - standard security
 		"ssl",
 		"headers",
 		"cookies",
@@ -44,8 +44,10 @@ var PlanScanners = map[string][]string{
 		"cors",
 		"http_methods",
 		"dns",
+		"mixed_content",
+		"seo",
 	},
-	"pro": {
+	"pro": { // 17 categories - advanced security
 		"ssl",
 		"headers",
 		"cookies",
@@ -60,8 +62,11 @@ var PlanScanners = map[string][]string{
 		"info_disclosure",
 		"content",
 		"hosting",
+		"seo",
+		"third_party",
+		"js_libraries",
 	},
-	"enterprise": {
+	"enterprise": { // 20 categories - full scan
 		"ssl",
 		"headers",
 		"cookies",
@@ -79,6 +84,9 @@ var PlanScanners = map[string][]string{
 		"advanced_security",
 		"malware",
 		"threat_intel",
+		"seo",
+		"third_party",
+		"js_libraries",
 	},
 }
 
@@ -88,7 +96,7 @@ type Engine struct {
 	plan     string
 }
 
-// allScanners returns all 17 registered scanners
+// allScanners returns all 20 registered scanners
 func allScanners() []Scanner {
 	return []Scanner{
 		NewSSLScanner(),
@@ -108,6 +116,9 @@ func allScanners() []Scanner {
 		NewAdvancedSecurityScanner(),
 		NewMalwareScanner(),
 		NewThreatIntelScanner(),
+		NewSEOScanner(),
+		NewThirdPartyScanner(),
+		NewJSLibScanner(),
 	}
 }
 

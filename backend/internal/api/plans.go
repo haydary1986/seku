@@ -25,6 +25,9 @@ var categoryDisplayNames = map[string]string{
 	"advanced_security": "Advanced Security",
 	"malware":           "Malware & Threats",
 	"threat_intel":      "Threat Intelligence",
+	"seo":               "SEO & Technical Health",
+	"third_party":       "Third-Party Scripts Risk",
+	"js_libraries":      "JavaScript Libraries",
 }
 
 func GetPlans(c *fiber.Ctx) error {
