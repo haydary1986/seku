@@ -47,13 +47,16 @@ export const deleteScanJob = (id) => api.delete(`/scans/${id}`)
 
 // Results
 export const getScanResult = (id) => api.get(`/results/${id}`)
+export const downloadReport = (id) => api.get(`/results/${id}/pdf`, { responseType: 'blob' })
+export const getScoreHistory = (id) => api.get(`/targets/${id}/history`)
 
 // Dashboard & Leaderboard
 export const getDashboardStats = () => api.get('/dashboard')
 export const getLeaderboard = () => api.get('/leaderboard')
 
-// Public: Scan Criteria / Methodology
+// Public: Scan Criteria / Methodology / Plans
 export const getScanCriteria = () => api.get('/criteria')
+export const getPlans = () => api.get('/plans')
 
 // AI Analysis
 export const analyzeResult = (id) => api.post(`/ai/analyze/${id}`)
@@ -68,5 +71,12 @@ export const deleteUser = (id) => api.delete(`/users/${id}`)
 // Admin: Settings
 export const getSettings = () => api.get('/settings')
 export const updateSettings = (data) => api.put('/settings', data)
+
+// Scheduled Scans
+export const getSchedules = () => api.get('/schedules')
+export const createSchedule = (data) => api.post('/schedules', data)
+export const updateSchedule = (id, data) => api.put(`/schedules/${id}`, data)
+export const deleteSchedule = (id) => api.delete(`/schedules/${id}`)
+export const toggleSchedule = (id) => api.put(`/schedules/${id}/toggle`)
 
 export default api

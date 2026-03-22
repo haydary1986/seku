@@ -7,6 +7,7 @@ import (
 
 	"vscan-mohesr/internal/api"
 	"vscan-mohesr/internal/config"
+	"vscan-mohesr/internal/scheduler"
 )
 
 func main() {
@@ -15,6 +16,9 @@ func main() {
 
 	// Seed universities from MOHESR list
 	config.SeedUniversities()
+
+	// Start scheduler
+	scheduler.Start()
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{

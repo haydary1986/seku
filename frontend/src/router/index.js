@@ -9,8 +9,10 @@ import ResultDetail from '../views/ResultDetail.vue'
 import Leaderboard from '../views/Leaderboard.vue'
 import Users from '../views/Users.vue'
 import Settings from '../views/Settings.vue'
+import Schedules from '../views/Schedules.vue'
 import Methodology from '../views/Methodology.vue'
 import MethodologyAr from '../views/MethodologyAr.vue'
+import Pricing from '../views/Pricing.vue'
 
 const routes = [
   // Public pages
@@ -18,6 +20,7 @@ const routes = [
   { path: '/login', name: 'Login', component: Login, meta: { public: true } },
   { path: '/methodology', name: 'Methodology', component: Methodology, meta: { public: true } },
   { path: '/methodology-ar', name: 'MethodologyAr', component: MethodologyAr, meta: { public: true } },
+  { path: '/pricing', name: 'Pricing', component: Pricing, meta: { public: true } },
 
   // Protected pages (require login)
   { path: '/dashboard', name: 'Dashboard', component: Dashboard },
@@ -26,6 +29,7 @@ const routes = [
   { path: '/scans/:id', name: 'ScanDetail', component: ScanDetail },
   { path: '/results/:id', name: 'ResultDetail', component: ResultDetail },
   { path: '/leaderboard', name: 'Leaderboard', component: Leaderboard },
+  { path: '/schedules', name: 'Schedules', component: Schedules },
   { path: '/users', name: 'Users', component: Users, meta: { admin: true } },
   { path: '/settings', name: 'Settings', component: Settings, meta: { admin: true } },
 ]

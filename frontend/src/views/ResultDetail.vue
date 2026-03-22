@@ -1,12 +1,12 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getScanResult, analyzeResult, getAIAnalysis } from '../api'
+import { getScanResult, analyzeResult, getAIAnalysis, downloadReport, getScoreHistory } from '../api'
 import { categoryInfo, getCheckExplanation } from '../data/securityKnowledge'
-import { Radar } from 'vue-chartjs'
-import { Chart as ChartJS, RadialLinearScale, PointElement, LineElement, Filler, Tooltip } from 'chart.js'
+import { Radar, Line } from 'vue-chartjs'
+import { Chart as ChartJS, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, CategoryScale, LinearScale } from 'chart.js'
 
-ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip)
+ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, CategoryScale, LinearScale)
 
 const route = useRoute()
 const router = useRouter()
@@ -17,6 +17,66 @@ const activeCategory = ref(null)
 const aiAnalysis = ref(null)
 const aiLoading = ref(false)
 const showAI = ref(false)
+const pdfLoading = ref(false)
+const scoreHistory = ref([])
+const historyLoading = ref(false)
+
+const historyChartData = computed(() => {
+  if (scoreHistory.value.length < 2) return null
+  return {
+    labels: scoreHistory.value.map(p => {
+      const d = new Date(p.scanned_at)
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }),
+    datasets: [{
+      label: 'Score',
+      data: scoreHistory.value.map(p => Math.round(p.score)),
+      borderColor: 'rgb(99, 102, 241)',
+      backgroundColor: 'rgba(99, 102, 241, 0.1)',
+      pointBackgroundColor: 'rgb(99, 102, 241)',
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      tension: 0.3,
+      fill: true,
+    }],
+  }
+})
+
+const historyChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  scales: {
+    y: { min: 0, max: 1000, ticks: { stepSize: 200 } },
+    x: { grid: { display: false } },
+  },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (ctx) => `Score: ${ctx.parsed.y}/1000`,
+      },
+    },
+  },
+}
+
+async function downloadPDF() {
+  pdfLoading.value = true
+  try {
+    const { data } = await downloadReport(route.params.id)
+    const url = window.URL.createObjectURL(new Blob([data], { type: 'application/pdf' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `vscan-report-${route.params.id}.pdf`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (e) {
+    alert(e.response?.data?.error || 'Failed to download PDF report')
+  } finally {
+    pdfLoading.value = false
+  }
+}
 
 const categoryLabels = {
   ssl: 'SSL/TLS',
@@ -166,6 +226,15 @@ onMounted(async () => {
     const cats = Object.keys(data.categories)
     if (cats.length) activeCategory.value = cats[0]
     await loadExistingAnalysis()
+    // Load score history
+    if (data.result.scan_target_id) {
+      historyLoading.value = true
+      try {
+        const histRes = await getScoreHistory(data.result.scan_target_id)
+        scoreHistory.value = histRes.data || []
+      } catch { /* no history available */ }
+      historyLoading.value = false
+    }
   } catch (e) {
     console.error('Failed to load result:', e)
   } finally {
@@ -204,6 +273,13 @@ onMounted(async () => {
             <p class="text-sm text-gray-500 mt-2">Overall Score</p>
           </div>
           <div class="mt-4 flex gap-2">
+            <button @click="downloadPDF" :disabled="pdfLoading"
+              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2 text-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              {{ pdfLoading ? 'Generating...' : 'Download PDF' }}
+            </button>
             <button @click="runAIAnalysis" :disabled="aiLoading"
               class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2 text-sm">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -234,6 +310,20 @@ onMounted(async () => {
         </div>
         <div v-else-if="aiAnalysis?.analysis" class="prose prose-sm max-w-none text-gray-800 whitespace-pre-wrap" dir="ltr" style="text-align: left;">
           {{ aiAnalysis.analysis }}
+        </div>
+      </div>
+
+      <!-- Score History -->
+      <div v-if="historyChartData" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-center gap-2 mb-4">
+          <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+          </svg>
+          <h3 class="text-lg font-semibold text-gray-900">Score History</h3>
+          <span class="text-xs text-gray-500">({{ scoreHistory.length }} scans)</span>
+        </div>
+        <div style="height: 250px;">
+          <Line :data="historyChartData" :options="historyChartOptions" />
         </div>
       </div>
 

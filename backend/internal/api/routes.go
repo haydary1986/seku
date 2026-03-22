@@ -33,6 +33,7 @@ func SetupRoutes(app *fiber.App) {
 	// Public routes (no auth required)
 	api.Post("/auth/login", Login)
 	api.Get("/criteria", GetScanCriteria) // public page: scan criteria & scoring
+	api.Get("/plans", GetPlans)           // public: plan details with scan categories
 
 	// Protected routes
 	protected := api.Group("", AuthRequired())
@@ -49,6 +50,9 @@ func SetupRoutes(app *fiber.App) {
 	targets.Put("/:id", UpdateTarget)
 	targets.Delete("/:id", DeleteTarget)
 
+	// Score History
+	protected.Get("/targets/:id/history", GetScoreHistory)
+
 	// Scan Jobs
 	scans := protected.Group("/scans")
 	scans.Get("/", GetScanJobs)
@@ -59,6 +63,7 @@ func SetupRoutes(app *fiber.App) {
 	// Scan Results
 	results := protected.Group("/results")
 	results.Get("/:id", GetScanResult)
+	results.Get("/:id/pdf", GeneratePDFReport)
 
 	// AI Analysis
 	protected.Post("/ai/analyze/:id", AnalyzeScanResult)
@@ -67,6 +72,14 @@ func SetupRoutes(app *fiber.App) {
 	// Dashboard & Leaderboard
 	protected.Get("/dashboard", GetDashboardStats)
 	protected.Get("/leaderboard", GetLeaderboard)
+
+	// Scheduled Scans
+	schedules := protected.Group("/schedules")
+	schedules.Get("/", GetSchedules)
+	schedules.Post("/", CreateSchedule)
+	schedules.Put("/:id", UpdateSchedule)
+	schedules.Delete("/:id", DeleteSchedule)
+	schedules.Put("/:id/toggle", ToggleSchedule)
 
 	// Admin-only routes
 	admin := protected.Group("", AdminRequired())

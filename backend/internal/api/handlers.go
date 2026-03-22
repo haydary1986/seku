@@ -422,6 +422,30 @@ func GetLeaderboard(c *fiber.Ctx) error {
 	})
 }
 
+// --- Score History ---
+
+func GetScoreHistory(c *fiber.Ctx) error {
+	targetID := c.Params("id")
+
+	type HistoryPoint struct {
+		Score     float64 `json:"score"`
+		ScannedAt string  `json:"scanned_at"`
+		ScanJobID uint    `json:"scan_job_id"`
+		ResultID  uint    `json:"result_id"`
+	}
+
+	var history []HistoryPoint
+	config.DB.Raw(`
+		SELECT overall_score AS score, ended_at AS scanned_at,
+		       scan_job_id, id AS result_id
+		FROM scan_results
+		WHERE scan_target_id = ? AND status = 'completed'
+		ORDER BY created_at ASC
+	`, targetID).Scan(&history)
+
+	return c.JSON(history)
+}
+
 func scoreToGrade(score float64) string {
 	switch {
 	case score >= 900:

@@ -21,6 +21,7 @@ const router = useRouter()
           <div class="flex items-center gap-4">
             <router-link to="/methodology-ar" class="text-sm text-gray-600 hover:text-indigo-600 transition-colors">معايير التقييم</router-link>
             <router-link to="/methodology" class="text-sm text-gray-600 hover:text-indigo-600 transition-colors">Methodology</router-link>
+            <router-link to="/pricing" class="text-sm text-gray-600 hover:text-indigo-600 transition-colors">الأسعار</router-link>
             <router-link to="/login" class="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
               تسجيل الدخول
             </router-link>

@@ -20,33 +20,127 @@ type Scanner interface {
 	Scan(url string) []models.CheckResult
 }
 
+// Plan tier scanner access
+// Free: 5 categories (basic security)
+// Basic: 10 categories (standard security)
+// Pro: 14 categories (advanced security)
+// Enterprise: 17 categories (full scan)
+var PlanScanners = map[string][]string{
+	"free": {
+		"ssl",
+		"headers",
+		"cookies",
+		"performance",
+		"mixed_content",
+	},
+	"basic": {
+		"ssl",
+		"headers",
+		"cookies",
+		"server_info",
+		"directory",
+		"performance",
+		"ddos",
+		"cors",
+		"http_methods",
+		"dns",
+	},
+	"pro": {
+		"ssl",
+		"headers",
+		"cookies",
+		"server_info",
+		"directory",
+		"performance",
+		"ddos",
+		"cors",
+		"http_methods",
+		"dns",
+		"mixed_content",
+		"info_disclosure",
+		"content",
+		"hosting",
+	},
+	"enterprise": {
+		"ssl",
+		"headers",
+		"cookies",
+		"server_info",
+		"directory",
+		"performance",
+		"ddos",
+		"cors",
+		"http_methods",
+		"dns",
+		"mixed_content",
+		"info_disclosure",
+		"content",
+		"hosting",
+		"advanced_security",
+		"malware",
+		"threat_intel",
+	},
+}
+
 // Engine manages and runs all scanners
 type Engine struct {
 	scanners []Scanner
+	plan     string
 }
 
-// NewEngine creates a new scan engine with all registered scanners
+// allScanners returns all 17 registered scanners
+func allScanners() []Scanner {
+	return []Scanner{
+		NewSSLScanner(),
+		NewHeaderScanner(),
+		NewCookieScanner(),
+		NewServerInfoScanner(),
+		NewDirectoryScanner(),
+		NewPerformanceScanner(),
+		NewDDoSScanner(),
+		NewCORSScanner(),
+		NewHTTPMethodsScanner(),
+		NewDNSScanner(),
+		NewMixedContentScanner(),
+		NewInfoDisclosureScanner(),
+		NewContentScanner(),
+		NewHostingScanner(),
+		NewAdvancedSecurityScanner(),
+		NewMalwareScanner(),
+		NewThreatIntelScanner(),
+	}
+}
+
+// NewEngine creates a scan engine with all scanners (enterprise by default)
 func NewEngine() *Engine {
 	return &Engine{
-		scanners: []Scanner{
-			NewSSLScanner(),
-			NewHeaderScanner(),
-			NewCookieScanner(),
-			NewServerInfoScanner(),
-			NewDirectoryScanner(),
-			NewPerformanceScanner(),
-			NewDDoSScanner(),
-			NewCORSScanner(),
-			NewHTTPMethodsScanner(),
-			NewDNSScanner(),
-			NewMixedContentScanner(),
-			NewInfoDisclosureScanner(),
-			NewContentScanner(),
-			NewHostingScanner(),
-			NewAdvancedSecurityScanner(),
-			NewMalwareScanner(),
-			NewThreatIntelScanner(),
-		},
+		scanners: allScanners(),
+		plan:     "enterprise",
+	}
+}
+
+// NewEngineForPlan creates a scan engine filtered by plan
+func NewEngineForPlan(plan string) *Engine {
+	allowed, ok := PlanScanners[plan]
+	if !ok {
+		allowed = PlanScanners["enterprise"]
+	}
+
+	allowedMap := map[string]bool{}
+	for _, cat := range allowed {
+		allowedMap[cat] = true
+	}
+
+	var filtered []Scanner
+	for _, s := range allScanners() {
+		if allowedMap[s.Category()] {
+			filtered = append(filtered, s)
+		}
+	}
+
+	return &Engine{
+		scanners: filtered,
+		plan:     plan,
 	}
 }
 
@@ -119,4 +213,17 @@ func (e *Engine) scanTarget(result *models.ScanResult) {
 	result.Status = "completed"
 	result.EndedAt = &ended
 	config.DB.Save(result)
+}
+
+// GetPlanCategories returns the allowed categories for a plan
+func GetPlanCategories(plan string) []string {
+	if cats, ok := PlanScanners[plan]; ok {
+		return cats
+	}
+	return PlanScanners["enterprise"]
+}
+
+// GetPlanCategoryCount returns how many categories a plan can scan
+func GetPlanCategoryCount(plan string) int {
+	return len(GetPlanCategories(plan))
 }
