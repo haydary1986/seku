@@ -93,6 +93,7 @@ onMounted(async () => {
       'Hosting Quality',
       'Content Optimization',
       'Advanced Security',
+      'Malware & Threats',
     ]
 
     // Attempt to derive meaningful per-category estimates from available data

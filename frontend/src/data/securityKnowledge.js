@@ -95,6 +95,12 @@ export const categoryInfo = {
     importance: 'medium',
     attackScenario: 'Without cross-origin isolation, a malicious iframe or popup can exploit Spectre-class vulnerabilities to read sensitive data from the victim\'s browsing context. Without OCSP Stapling, certificate revocation checks add latency and may fail silently.',
   },
+  malware: {
+    title: 'Malware & Threats',
+    description: 'Scans the website for malware indicators including malicious JavaScript, hidden iframes, cryptocurrency miners, suspicious redirects, and known malware signatures.',
+    importance: 'critical',
+    attackScenario: 'Hackers inject malicious JavaScript or hidden iframes into compromised websites to steal visitor credentials, install ransomware, mine cryptocurrency using visitor CPU, or redirect users to phishing sites. These attacks are often invisible to site administrators.',
+  },
 }
 
 export const checkExplanations = {

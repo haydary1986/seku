@@ -50,7 +50,7 @@ const router = useRouter()
 
           <p class="mt-6 text-lg sm:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
             أول منصة عربية متخصصة لفحص أمان المواقع الإلكترونية للمؤسسات التعليمية والحكومية.
-            نفحص موقعك عبر <strong class="text-gray-900">15 معياراً شاملاً</strong> و <strong class="text-gray-900">أكثر من 50 فحصاً تفصيلياً</strong>
+            نفحص موقعك عبر <strong class="text-gray-900">16 معياراً شاملاً</strong> و <strong class="text-gray-900">أكثر من 60 فحصاً تفصيلياً</strong>
             ونقدم تقريراً شاملاً مع توصيات الإصلاح.
           </p>
 
@@ -71,7 +71,7 @@ const router = useRouter()
             </div>
             <div class="flex items-center gap-2">
               <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-              <span>15 معيار تقييم</span>
+              <span>16 معيار تقييم</span>
             </div>
             <div class="flex items-center gap-2">
               <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -87,7 +87,7 @@ const router = useRouter()
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
           <h2 class="text-3xl sm:text-4xl font-bold text-gray-900">ماذا نفحص؟</h2>
-          <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">15 فئة تقييم شاملة تغطي الأمان والأداء وجودة الاستضافة</p>
+          <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">16 فئة تقييم شاملة تغطي الأمان والأداء وجودة الاستضافة وفحص الفايروسات</p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -206,6 +206,7 @@ export default {
         { title: 'جودة الاستضافة', desc: 'HTTP/2, HTTP/3 QUIC, ضغط Brotli, دعم IPv6, سرعة DNS', weight: 12, icon: 'M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01', bg: 'bg-emerald-100', icon_color: 'text-emerald-600' },
         { title: 'تحسين المحتوى', desc: 'ترويسات التخزين المؤقت، حجم الصفحة، نسبة الضغط', weight: 8, icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z', bg: 'bg-sky-100', icon_color: 'text-sky-600' },
         { title: 'الأمان المتقدم', desc: 'عزل المصادر المتقاطعة COEP/COOP/CORP, تدبيس OCSP', weight: 5, icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', bg: 'bg-violet-100', icon_color: 'text-violet-600' },
+        { title: 'الفايروسات والتهديدات', desc: 'فحص JavaScript خبيث، iframes مخفية، تعدين العملات، توقيعات Malware', weight: 10, icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', bg: 'bg-rose-100', icon_color: 'text-rose-600' },
       ],
       grades: [
         { grade: 'A+', range: '900-1000', label: 'ممتاز', color: 'text-emerald-400' },
@@ -217,7 +218,7 @@ export default {
       ],
       steps: [
         { title: 'أضف المواقع', desc: 'أدخل عناوين المواقع التي تريد فحصها - فردياً أو بالجملة' },
-        { title: 'ابدأ الفحص', desc: 'النظام يفحص جميع المواقع بالتوازي عبر 15 معياراً شاملاً' },
+        { title: 'ابدأ الفحص', desc: 'النظام يفحص جميع المواقع بالتوازي عبر 16 معياراً شاملاً' },
         { title: 'استعرض النتائج', desc: 'تقرير تفصيلي لكل موقع مع درجة من 1000 وشرح كل ثغرة' },
         { title: 'تحليل AI', desc: 'الذكاء الاصطناعي يحلل النتائج ويقترح خطوات الإصلاح للوصول لـ 1000' },
       ],

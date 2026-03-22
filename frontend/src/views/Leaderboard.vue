@@ -34,6 +34,7 @@ const categoryOptions = [
   { id: 'content', label: 'Content Optimization' },
   { id: 'hosting', label: 'Hosting Quality' },
   { id: 'advanced_security', label: 'Advanced Security' },
+  { id: 'malware', label: 'Malware & Threats' },
 ]
 
 const categoryLabelMap = Object.fromEntries(categoryOptions.map(c => [c.id, c.label]))
