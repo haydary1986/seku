@@ -14,14 +14,20 @@ const verificationError = ref('')
 const newTarget = ref({ url: '', name: '', institution: '' })
 const bulkText = ref('')
 
+// Check if current user is admin (admins skip domain verification)
+const user = JSON.parse(localStorage.getItem('user') || '{}')
+const isAdmin = user.role === 'admin'
+
 async function loadTargets() {
   loading.value = true
   try {
     const { data } = await getTargets()
     targets.value = data
-    // Load verification status for each target
-    for (const target of data) {
-      await loadVerificationStatus(target.ID)
+    // Only load verification status for non-admin users
+    if (!isAdmin) {
+      for (const target of data) {
+        await loadVerificationStatus(target.ID)
+      }
     }
   } catch (e) {
     console.error('Failed to load targets:', e)
@@ -221,10 +227,10 @@ uobasrah.edu.iq, University of Basrah, University"
     </div>
 
     <!-- Verification Messages -->
-    <div v-if="verificationMessage" class="bg-green-50 border border-green-200 text-green-700 rounded-lg p-4 mb-6">
+    <div v-if="!isAdmin && verificationMessage" class="bg-green-50 border border-green-200 text-green-700 rounded-lg p-4 mb-6">
       {{ verificationMessage }}
     </div>
-    <div v-if="verificationError" class="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-6">
+    <div v-if="!isAdmin && verificationError" class="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-6">
       {{ verificationError }}
     </div>
 
@@ -242,7 +248,7 @@ uobasrah.edu.iq, University of Basrah, University"
             <th class="text-right py-3 px-4 text-gray-600 font-medium">URL</th>
             <th class="text-right py-3 px-4 text-gray-600 font-medium">Name</th>
             <th class="text-right py-3 px-4 text-gray-600 font-medium">Institution</th>
-            <th class="text-center py-3 px-4 text-gray-600 font-medium">Verification</th>
+            <th v-if="!isAdmin" class="text-center py-3 px-4 text-gray-600 font-medium">Verification</th>
             <th class="text-center py-3 px-4 text-gray-600 font-medium">Actions</th>
           </tr>
         </thead>
@@ -256,7 +262,7 @@ uobasrah.edu.iq, University of Basrah, University"
             </td>
             <td class="py-3 px-4 text-gray-900">{{ target.name || '-' }}</td>
             <td class="py-3 px-4 text-gray-600">{{ target.institution || '-' }}</td>
-            <td class="py-3 px-4 text-center">
+            <td v-if="!isAdmin" class="py-3 px-4 text-center">
               <!-- Verified -->
               <span v-if="isVerified(target.ID)" class="inline-flex items-center gap-1 text-green-600 font-medium text-xs">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -295,8 +301,8 @@ uobasrah.edu.iq, University of Basrah, University"
             </td>
           </tr>
 
-          <!-- Verification instructions row (expandable) -->
-          <tr v-for="target in targets" :key="'verify-' + target.ID" v-show="verifyingTarget === target.ID && isInitiated(target.ID) && !isVerified(target.ID)">
+          <!-- Verification instructions row (expandable) - hidden for admin -->
+          <tr v-if="!isAdmin" v-for="target in targets" :key="'verify-' + target.ID" v-show="verifyingTarget === target.ID && isInitiated(target.ID) && !isVerified(target.ID)">
             <td colspan="6" class="px-4 py-4 bg-blue-50 border-t border-blue-100">
               <div class="max-w-2xl">
                 <h4 class="font-semibold text-gray-900 mb-3">Domain Verification for {{ getDomain(target.ID) }}</h4>

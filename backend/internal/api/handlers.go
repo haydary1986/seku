@@ -502,9 +502,13 @@ func GetLeaderboard(c *fiber.Ctx) error {
 		result = append(result, entry)
 	}
 
-	// Summary stats
+	// Summary stats - scoped to org for non-admins
 	var totalSites int64
-	config.DB.Model(&models.ScanTarget{}).Count(&totalSites)
+	if isAdmin {
+		config.DB.Model(&models.ScanTarget{}).Count(&totalSites)
+	} else {
+		config.DB.Model(&models.ScanTarget{}).Where("organization_id = ?", orgID).Count(&totalSites)
+	}
 
 	var avgScore float64
 	if len(ranked) > 0 {

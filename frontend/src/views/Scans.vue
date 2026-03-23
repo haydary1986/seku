@@ -31,8 +31,11 @@ async function loadData() {
   }
 }
 
+const scanError = ref('')
+
 async function runScan() {
   scanning.value = true
+  scanError.value = ''
   try {
     const payload = {
       name: scanForm.value.name,
@@ -42,10 +45,16 @@ async function runScan() {
     showStartForm.value = false
     scanForm.value = { name: '', target_ids: [], selectAll: true }
     await loadData()
-    // Poll for completion
     pollJob(data.ID)
   } catch (e) {
-    console.error('Failed to start scan:', e)
+    if (e.response?.status === 403 && e.response?.data?.unverified_domains) {
+      const domains = e.response.data.unverified_domains.join(', ')
+      scanError.value = `يجب التحقق من ملكية النطاقات التالية قبل الفحص: ${domains}. اذهب إلى صفحة المواقع لإتمام التحقق.`
+    } else if (e.response?.data?.error) {
+      scanError.value = e.response.data.error
+    } else {
+      scanError.value = 'Failed to start scan. Please try again.'
+    }
   } finally {
     scanning.value = false
   }
@@ -102,6 +111,7 @@ onMounted(loadData)
         <p class="text-gray-500 mt-1">Manage and run security scans</p>
       </div>
       <button
+        v-if="targets.length > 0"
         @click="showStartForm = !showStartForm"
         class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
       >
@@ -111,6 +121,37 @@ onMounted(loadData)
         </svg>
         Start New Scan
       </button>
+    </div>
+
+    <!-- Error Message -->
+    <div v-if="scanError" class="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-6 flex items-start gap-3">
+      <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.999L13.732 4.001c-.77-1.333-2.694-1.333-3.464 0L3.34 16.001c-.77 1.332.192 2.999 1.732 2.999z"/>
+      </svg>
+      <div>
+        <p>{{ scanError }}</p>
+        <router-link v-if="scanError.includes('التحقق')" to="/targets" class="text-indigo-600 hover:underline text-sm mt-1 inline-block">
+          الذهاب إلى صفحة المواقع
+        </router-link>
+      </div>
+      <button @click="scanError = ''" class="mr-auto text-red-400 hover:text-red-600">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- No Targets Warning -->
+    <div v-if="!loading && targets.length === 0" class="bg-yellow-50 border border-yellow-200 rounded-xl p-8 mb-6 text-center">
+      <svg class="w-12 h-12 mx-auto text-yellow-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.999L13.732 4.001c-.77-1.333-2.694-1.333-3.464 0L3.34 16.001c-.77 1.332.192 2.999 1.732 2.999z"/>
+      </svg>
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">No websites added yet</h3>
+      <p class="text-gray-600 mb-4">You need to add websites and verify domain ownership before you can start scanning.</p>
+      <router-link to="/targets" class="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Add Your Websites
+      </router-link>
     </div>
 
     <!-- Start Scan Form -->
