@@ -277,6 +277,11 @@ func (e *Engine) scanTarget(result *models.ScanResult) {
 	config.DB.Save(result)
 }
 
+// GetScanners returns the list of scanners in this engine
+func (e *Engine) GetScanners() []Scanner {
+	return e.scanners
+}
+
 // GetPlanCategories returns the allowed categories for a plan
 func GetPlanCategories(plan string) []string {
 	if cats, ok := PlanScanners[plan]; ok {

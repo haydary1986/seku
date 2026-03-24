@@ -1,0 +1,33 @@
+name: Security Scan Example
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL to scan'
+        required: true
+        default: 'example.com'
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run VScan Security Scanner
+        uses: haydary1986/vscan-mohesr@main
+        id: vscan
+        with:
+          url: ${{ github.event.inputs.url }}
+          output: sarif
+          output-file: results.sarif
+          plan: enterprise
+
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+        if: always()
+
+      - name: Check Score Threshold
+        run: |
+          echo "Security Score: ${{ steps.vscan.outputs.score }}"
+          echo "Grade: ${{ steps.vscan.outputs.grade }}"

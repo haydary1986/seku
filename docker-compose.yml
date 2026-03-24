@@ -25,6 +25,13 @@ services:
     networks:
       - vscan-network
 
+  cli:
+    build:
+      context: .
+      dockerfile: Dockerfile.cli
+    profiles: ["cli"]
+    entrypoint: ["vscan"]
+
 volumes:
   vscan-data:
 

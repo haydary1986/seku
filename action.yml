@@ -1,0 +1,52 @@
+name: 'VScan Security Scanner'
+description: 'Scan websites for security vulnerabilities with 22 categories and 1000-point scoring'
+author: 'VScan-MOHESR'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  url:
+    description: 'URL to scan'
+    required: false
+  urls:
+    description: 'Comma-separated URLs to scan'
+    required: false
+  file:
+    description: 'File containing URLs to scan (one per line)'
+    required: false
+  output:
+    description: 'Output format: table, json, sarif'
+    default: 'table'
+  output-file:
+    description: 'Save results to file'
+    required: false
+  severity:
+    description: 'Minimum severity to report: all, critical, high, medium'
+    default: 'all'
+  plan:
+    description: 'Scan plan: free, basic, pro, enterprise'
+    default: 'enterprise'
+  fail-on-score:
+    description: 'Fail the action if score is below this threshold (0-1000)'
+    required: false
+
+outputs:
+  score:
+    description: 'Overall security score (0-1000)'
+  grade:
+    description: 'Security grade (A+ to F)'
+  sarif:
+    description: 'Path to SARIF output file (if sarif output selected)'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile.cli'
+  args:
+    - ${{ inputs.url && format('-url={0}', inputs.url) || '' }}
+    - ${{ inputs.urls && format('-urls={0}', inputs.urls) || '' }}
+    - ${{ inputs.file && format('-file={0}', inputs.file) || '' }}
+    - -output=${{ inputs.output }}
+    - ${{ inputs.output-file && format('-o={0}', inputs.output-file) || '' }}
+    - -severity=${{ inputs.severity }}
+    - -plan=${{ inputs.plan }}
