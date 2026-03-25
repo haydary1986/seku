@@ -4,8 +4,8 @@
 
 **The Open-Source Web Security Scanner with 1000-Point Scoring**
 
-Scan websites across 22 security categories with granular 0–1000 scoring,
-OWASP Top 10 compliance mapping, and AI-powered remediation guides.
+Scan websites across **25 security categories** with granular 0–1000 scoring,
+OWASP Top 10 + CVSS v3.1 mapping, and AI-powered remediation guides.
 
 [![Go Version](https://img.shields.io/badge/Go-1.25-00ADD8?style=flat-square&logo=go)](https://go.dev)
 [![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D?style=flat-square&logo=vuedotjs)](https://vuejs.org)
@@ -343,23 +343,36 @@ Every finding maps to OWASP Top 10 (2021) and CWE identifiers:
 3. Set port to **80**
 4. Add persistent storage volume: `/app/data`
 
+## 📖 Documentation
+
+| Document | Language | Description |
+|----------|----------|-------------|
+| **[Scanner Reference](docs/SCANNERS.md)** | English | Complete technical reference for all 25 scanners, 80+ checks, scoring thresholds, OWASP/CWE/CVSS mappings |
+| **[مرجع الفاحصات](docs/SCANNERS-AR.md)** | العربية | المرجع التقني الكامل لجميع الفاحصات الـ 25 مع شرح تفصيلي لكل فحص |
+| **[Methodology](/methodology)** | English | Public scoring methodology page |
+| **[منهجية التقييم](/methodology-ar)** | العربية | صفحة معايير التقييم العامة |
+| **[Contributing](CONTRIBUTING.md)** | English | How to contribute to the project |
+| **[API Docs](/api/docs)** | English | REST API documentation (JSON) |
+
 ## 🌍 Internationalization
 
 - 🇬🇧 English — full support
 - 🇮🇶 Arabic — full RTL support with dedicated methodology page
-- Scoring methodology available in both languages at `/methodology` and `/methodology-ar`
+- Scanner documentation available in both languages
 
 ## 📋 Scoring Methodology
 
 The scoring system uses a **weighted average** approach:
 
-1. Each website is scanned across **22 categories**
+1. Each website is scanned across **25 categories** (80+ individual checks)
 2. Each category contains **multiple checks** with individual weights
 3. Every check produces a score from **0 to 1000**
 4. Category score = weighted average of its checks
 5. Overall score = weighted average of all category scores
+6. Each finding mapped to **OWASP Top 10**, **CWE**, and **CVSS v3.1**
 
 The full methodology is publicly available and transparent — no black boxes.
+See **[docs/SCANNERS.md](docs/SCANNERS.md)** for complete scoring details.
 
 ## 🤝 Contributing
 
