@@ -156,6 +156,8 @@ func GenerateScanReport(result *models.ScanResult, checks []models.CheckResult) 
 	if siteName == "" {
 		siteName = result.ScanTarget.URL
 	}
+	// Shape Arabic text for PDF rendering (joining + RTL)
+	siteNameShaped := ShapeArabic(siteName)
 
 	// ============================================
 	// PAGE 1: COVER
@@ -186,7 +188,7 @@ func GenerateScanReport(result *models.ScanResult, checks []models.CheckResult) 
 	// Website name (Arabic support)
 	setArabicFont("B", 18)
 	pdf.SetXY(15, 68)
-	pdf.Cell(0, 10, siteName)
+	pdf.Cell(0, 10, siteNameShaped)
 
 	// URL
 	setFont("", 11)
