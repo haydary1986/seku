@@ -239,18 +239,36 @@ func (s *XSSScanner) checkReflectedXSS(client *http.Client, targetURL, body stri
 		}
 	}
 
-	// Score based on worst reflection found.
-	worstScore := 1000.0
+	// Filter out safe reflections (WordPress search, encoded output, etc.)
+	var dangerousReflections []reflResult
 	for _, r := range reflections {
+		// "none" means canary not found — safe
+		// "encoded" means properly HTML-encoded — safe (this is correct behavior)
+		if r.Context == "script" || r.Context == "attribute" || r.Context == "body" {
+			dangerousReflections = append(dangerousReflections, r)
+		}
+	}
+
+	// Score based on worst dangerous reflection found.
+	worstScore := 1000.0
+	if len(dangerousReflections) == 0 {
+		// All reflections are either encoded or not reflected — safe
+		worstScore = 1000
+		if len(reflections) > 0 {
+			// Some encoded reflections exist — minor concern but safe
+			worstScore = 900
+		}
+	}
+	for _, r := range dangerousReflections {
 		var sc float64
 		switch r.Context {
-		case "script", "attribute":
-			sc = 100
+		case "script":
+			sc = 100 // Critical: reflected inside script tag
+		case "attribute":
+			sc = 200 // High: reflected inside HTML attribute
 		case "body":
-			sc = 400
-		case "encoded":
-			sc = 800
-		case "none":
+			sc = 500 // Medium: reflected in body but not in dangerous context
+		default:
 			sc = 1000
 		}
 		if sc < worstScore {

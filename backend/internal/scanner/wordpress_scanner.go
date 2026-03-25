@@ -269,13 +269,38 @@ func (s *WordPressScanner) checkLoginPageExposure(client *http.Client, baseURL s
 			strings.Contains(bodyStr, "user_login")
 
 		if hasStandardForm {
-			result.Score = 300
-			result.Status = statusFromScore(300)
-			result.Severity = severityFromScore(300)
+			// Check if protected by security plugin (Wordfence, Sucuri, etc.)
+			hasProtection := strings.Contains(bodyStr, "wordfence") ||
+				strings.Contains(bodyStr, "wfls-") ||
+				strings.Contains(bodyStr, "sucuri") ||
+				strings.Contains(bodyStr, "recaptcha") ||
+				strings.Contains(bodyStr, "g-recaptcha") ||
+				strings.Contains(bodyStr, "hcaptcha") ||
+				strings.Contains(bodyStr, "turnstile") ||
+				strings.Contains(bodyStr, "limit-login") ||
+				strings.Contains(bodyStr, "two-factor")
+
+			if hasProtection {
+				// Login page visible but protected by security plugin — acceptable
+				result.Score = 850
+				result.Status = statusFromScore(850)
+				result.Severity = "info"
+				result.Details = toJSON(map[string]string{
+					"path":        "/wp-login.php",
+					"status_code": fmt.Sprintf("%d", resp.StatusCode),
+					"message":     "Login page is publicly accessible but protected by a security plugin (brute-force protection active)",
+				})
+				return result
+			}
+
+			// Login visible without any detected protection
+			result.Score = 600
+			result.Status = statusFromScore(600)
+			result.Severity = severityFromScore(600)
 			result.Details = toJSON(map[string]string{
 				"path":        "/wp-login.php",
 				"status_code": fmt.Sprintf("%d", resp.StatusCode),
-				"message":     "Standard WordPress login page is publicly accessible",
+				"message":     "Login page is publicly accessible. Consider adding brute-force protection (Wordfence, Limit Login Attempts, or reCAPTCHA)",
 			})
 			return result
 		}

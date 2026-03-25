@@ -112,24 +112,40 @@ func (s *DirectoryScanner) Scan(url string) []models.CheckResult {
 					"message": fmt.Sprintf("Directory listing enabled at %s", sp.path),
 				})
 			} else {
-				// Sensitive path accessible but no directory listing
-				// Score varies by how critical the path is
-				var score float64
-				switch sp.severity {
-				case "critical":
-					score = 50
-				case "high":
-					score = 125
-				default:
-					score = 175
+				// Check if /admin/ is actually a WordPress redirect to wp-admin (normal behavior)
+				isWPAdminRedirect := sp.path == "/admin/" && (strings.Contains(bodyStr, "wp-login") ||
+					strings.Contains(bodyStr, "wp-admin") ||
+					strings.Contains(bodyStr, "wordpress") ||
+					strings.Contains(bodyStr, "wordfence"))
+
+				if isWPAdminRedirect {
+					// WordPress /admin/ → wp-admin redirect is expected behavior, not a vulnerability
+					check.Status = "pass"
+					check.Score = 850
+					check.Severity = "info"
+					check.Details = toJSON(map[string]string{
+						"path":    sp.path,
+						"message": "WordPress admin panel detected — this is standard CMS behavior, not a vulnerability. Protected by authentication.",
+					})
+				} else {
+					// Truly sensitive path accessible without protection
+					var score float64
+					switch sp.severity {
+					case "critical":
+						score = 50
+					case "high":
+						score = 125
+					default:
+						score = 175
+					}
+					check.Status = "fail"
+					check.Score = score
+					check.Severity = sp.severity
+					check.Details = toJSON(map[string]string{
+						"path":    sp.path,
+						"message": fmt.Sprintf("Sensitive path accessible: %s", sp.path),
+					})
 				}
-				check.Status = "fail"
-				check.Score = score
-				check.Severity = sp.severity
-				check.Details = toJSON(map[string]string{
-					"path":    sp.path,
-					"message": fmt.Sprintf("Sensitive path accessible: %s", sp.path),
-				})
 			}
 		} else if resp.StatusCode == 403 {
 			// 403 can mean WAF/CDN protection (Cloudflare, etc.) or server config
