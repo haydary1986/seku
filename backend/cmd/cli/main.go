@@ -57,28 +57,21 @@ func main() {
 	silentFlag := flag.Bool("silent", false, "Silent mode - only output results")
 	noColorFlag := flag.Bool("no-color", false, "Disable colored output")
 	versionFlag := flag.Bool("version", false, "Show version")
+	helpFlag := flag.Bool("help", false, "Show detailed help with examples")
+	listScannersFlag := flag.Bool("list-scanners", false, "List all available scanners")
 
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, `
-`+colorBold+colorCyan+`╔═══════════════════════════════════════════════════╗
-║          VScan-MOHESR CLI v%s                 ║
-║    Web Security Scanner — 22 Categories           ║
-║    https://github.com/haydary1986/vscan-mohesr    ║
-╚═══════════════════════════════════════════════════╝`+colorReset+`
-
-`+colorBold+`Usage:`+colorReset+`
-  vscan -url https://example.com
-  vscan -urls "site1.com,site2.com"
-  vscan -file urls.txt -output json -o results.json
-  vscan -url example.com -severity high -plan pro
-  vscan example.com
-
-`+colorBold+`Flags:`+colorReset+`
-`, version)
-		flag.PrintDefaults()
-		fmt.Fprintln(os.Stderr)
-	}
+	flag.Usage = func() { printHelp(false) }
 	flag.Parse()
+
+	if *helpFlag {
+		printHelp(true)
+		os.Exit(0)
+	}
+
+	if *listScannersFlag {
+		printScannerList()
+		os.Exit(0)
+	}
 
 	// Support positional argument: vscan example.com
 	if *urlFlag == "" && flag.NArg() > 0 {
@@ -738,4 +731,201 @@ func generateSARIF(outputs []ScanOutput) SARIFReport {
 			},
 		},
 	}
+}
+
+// printHelp prints usage information. If detailed is true, includes examples and scanner info.
+func printHelp(detailed bool) {
+	fmt.Fprintf(os.Stderr, `
+%s%s╔═══════════════════════════════════════════════════════════╗
+║              VScan-MOHESR CLI v%s                       ║
+║         Web Security Scanner — 25 Categories              ║
+║         https://github.com/haydary1986/vscan-mohesr       ║
+╚═══════════════════════════════════════════════════════════╝%s
+
+%sUSAGE:%s
+  vscan [flags] [url]
+  vscan example.com
+  vscan -url https://example.com
+  vscan -urls "site1.com,site2.com"
+  vscan -file urls.txt -output json -o results.json
+
+%sFLAGS:%s
+  -url string         URL to scan
+  -urls string        Comma-separated URLs to scan
+  -file string        File with URLs to scan (one per line)
+  -output string      Output format: table, json, sarif (default: table)
+  -o string           Output file path (default: stdout)
+  -severity string    Minimum severity: all, critical, high, medium, low (default: all)
+  -plan string        Scan plan: free, basic, pro, enterprise (default: enterprise)
+  -silent             Silent mode — only output results, no banner
+  -no-color           Disable colored output
+  -list-scanners      List all available security scanners
+  -version            Show version number
+  -help               Show this detailed help
+`, colorBold, colorCyan, version, colorReset,
+		colorBold+colorYellow, colorReset,
+		colorBold+colorYellow, colorReset)
+
+	if !detailed {
+		fmt.Fprintln(os.Stderr)
+		return
+	}
+
+	fmt.Fprintf(os.Stderr, `
+%sEXAMPLES:%s
+
+  %s# Quick scan with table output%s
+  vscan example.com
+
+  %s# Scan multiple sites%s
+  vscan -urls "university.edu,college.edu,school.edu"
+
+  %s# Scan from a file with one URL per line%s
+  vscan -file urls.txt
+
+  %s# JSON output saved to file%s
+  vscan example.com -output json -o results.json
+
+  %s# SARIF output for GitHub Security%s
+  vscan example.com -output sarif -o results.sarif
+
+  %s# Show only critical and high severity findings%s
+  vscan example.com -severity high
+
+  %s# Light scan (8 categories, faster)%s
+  vscan example.com -plan free
+
+  %s# Full deep scan (25 categories)%s
+  vscan example.com -plan enterprise
+
+  %s# Silent mode for CI/CD pipelines%s
+  vscan example.com -output json -silent
+
+  %s# Pipe-friendly: no colors%s
+  vscan example.com -no-color > report.txt
+
+%sSCAN PLANS:%s
+
+  %-12s  %s5 categories%s   — SSL, Headers, Cookies, Performance, Mixed Content
+  %-12s  %s13 categories%s  — + Server Info, Directory, DDoS, CORS, DNS, Secrets, SEO
+  %-12s  %s22 categories%s  — + Info Disclosure, Hosting, Content, WordPress, XSS, JS Libs
+  %-12s  %s25 categories%s  — + Advanced Security, Malware, Threat Intel (all scanners)
+
+%sGRADING SCALE:%s
+
+  %s%s A+ %s  900–1000   Excellent security posture
+  %s%s A  %s  800–899    Strong security
+  %s%s B  %s  700–799    Good with minor issues
+  %s%s C  %s  600–699    Average — needs improvement
+  %s%s D  %s  500–599    Below average — significant gaps
+  %s%s F  %s  0–499      Failing — critical issues found
+
+%sOUTPUT FORMATS:%s
+
+  table   Human-readable colored table (default)
+  json    JSON array of scan results
+  sarif   SARIF v2.1.0 for GitHub Advanced Security / VS Code
+
+%sDOCUMENTATION:%s
+  Full docs:   https://github.com/haydary1986/vscan-mohesr/blob/main/docs/SCANNERS.md
+  Arabic docs: https://github.com/haydary1986/vscan-mohesr/blob/main/docs/SCANNERS-AR.md
+  Web app:     https://sec.erticaz.com
+
+`,
+		colorBold+colorYellow, colorReset,
+		colorDim, colorReset,
+		colorDim, colorReset,
+		colorDim, colorReset,
+		colorDim, colorReset,
+		colorDim, colorReset,
+		colorDim, colorReset,
+		colorDim, colorReset,
+		colorDim, colorReset,
+		colorDim, colorReset,
+		colorDim, colorReset,
+		colorBold+colorYellow, colorReset,
+		colorGreen+"free"+colorReset, colorDim, colorReset,
+		colorCyan+"basic"+colorReset, colorDim, colorReset,
+		colorBlue+"pro"+colorReset, colorDim, colorReset,
+		colorYellow+"enterprise"+colorReset, colorDim, colorReset,
+		colorBold+colorYellow, colorReset,
+		bgGreen+colorBold, " ", colorReset,
+		bgGreen, " ", colorReset,
+		bgCyan, " ", colorReset,
+		bgYellow, " ", colorReset,
+		bgRed, " ", colorReset,
+		bgRed+colorBold, " ", colorReset,
+		colorBold+colorYellow, colorReset,
+		colorBold+colorYellow, colorReset,
+	)
+}
+
+// printScannerList lists all available scanners with their details.
+func printScannerList() {
+	fmt.Printf("\n%s%s VScan-MOHESR — 25 Security Scanners%s\n\n", colorBold, colorCyan, colorReset)
+
+	type scannerInfo struct {
+		category string
+		name     string
+		weight   float64
+		checks   int
+		plans    string
+	}
+
+	scanners := []scannerInfo{
+		{"ssl", "SSL/TLS", 20.0, 4, "free basic pro enterprise"},
+		{"headers", "Security Headers", 20.0, 7, "free basic pro enterprise"},
+		{"cookies", "Cookie Security", 10.0, 1, "free basic pro enterprise"},
+		{"server_info", "Server Information", 15.0, 3, "basic pro enterprise"},
+		{"directory", "Directory & Files", 10.0, 9, "basic pro enterprise"},
+		{"performance", "Performance", 15.0, 3, "free basic pro enterprise"},
+		{"ddos", "DDoS Protection", 10.0, 3, "basic pro enterprise"},
+		{"cors", "CORS Configuration", 10.0, 2, "basic pro enterprise"},
+		{"http_methods", "HTTP Methods", 8.0, 2, "basic pro enterprise"},
+		{"dns", "DNS Security", 8.0, 3, "basic pro enterprise"},
+		{"mixed_content", "Mixed Content", 7.0, 3, "free basic pro enterprise"},
+		{"info_disclosure", "Information Disclosure", 7.0, 3, "pro enterprise"},
+		{"hosting", "Hosting Quality", 12.0, 6, "pro enterprise"},
+		{"content", "Content Optimization", 8.0, 3, "pro enterprise"},
+		{"advanced_security", "Advanced Security", 5.0, 4, "enterprise"},
+		{"malware", "Malware & Threats", 10.0, 6, "enterprise"},
+		{"threat_intel", "Threat Intelligence", 8.0, 4, "enterprise"},
+		{"seo", "SEO & Technical Health", 7.0, 6, "basic pro enterprise"},
+		{"third_party", "Third-Party Scripts", 6.0, 4, "pro enterprise"},
+		{"js_libraries", "JS Library Vulnerabilities", 6.0, 3, "pro enterprise"},
+		{"wordpress", "WordPress Security", 8.0, 6, "pro enterprise"},
+		{"xss", "XSS Vulnerabilities", 9.0, 5, "pro enterprise"},
+		{"secrets", "Secrets Detection", 8.0, 4, "basic pro enterprise"},
+		{"subdomains", "Subdomain Discovery", 5.0, 3, "pro enterprise"},
+		{"tech_stack", "Technology Detection", 4.0, 3, "pro enterprise"},
+	}
+
+	fmt.Printf("  %s%-3s %-16s %-28s %6s %6s  %-30s%s\n",
+		colorBold, "#", "CATEGORY", "NAME", "WEIGHT", "CHECKS", "AVAILABLE IN", colorReset)
+	fmt.Printf("  %s%s%s\n", colorDim, strings.Repeat("─", 95), colorReset)
+
+	totalChecks := 0
+	for i, s := range scanners {
+		totalChecks += s.checks
+
+		planBadges := ""
+		if strings.Contains(s.plans, "free") {
+			planBadges += colorGreen + "free " + colorReset
+		}
+		if strings.Contains(s.plans, "basic") {
+			planBadges += colorCyan + "basic " + colorReset
+		}
+		if strings.Contains(s.plans, "pro") {
+			planBadges += colorBlue + "pro " + colorReset
+		}
+		if strings.Contains(s.plans, "enterprise") {
+			planBadges += colorYellow + "enterprise" + colorReset
+		}
+
+		fmt.Printf("  %-3d %-16s %-28s %6.1f %6d  %s\n",
+			i+1, s.category, s.name, s.weight, s.checks, planBadges)
+	}
+
+	fmt.Printf("  %s%s%s\n", colorDim, strings.Repeat("─", 95), colorReset)
+	fmt.Printf("  %s%d scanners, %d total checks%s\n\n", colorBold, len(scanners), totalChecks, colorReset)
 }
