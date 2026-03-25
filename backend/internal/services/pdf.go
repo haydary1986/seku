@@ -75,38 +75,55 @@ func GenerateScanReport(result *models.ScanResult, checks []models.CheckResult) 
 	// Try to load UTF-8 fonts for Arabic support
 	fontDir := findFontDir()
 	hasUTF8 := false
+	hasArabic := false
 	notoPath := filepath.Join(fontDir, "NotoSans.ttf")
 	arabicPath := filepath.Join(fontDir, "NotoSansArabic.ttf")
 
 	if _, err := os.Stat(notoPath); err == nil {
 		pdf.AddUTF8Font("NotoSans", "", notoPath)
 		pdf.AddUTF8Font("NotoSans", "B", notoPath)
-		hasUTF8 = true
+		if pdf.Err() {
+			pdf.ClearError()
+		} else {
+			hasUTF8 = true
+		}
 	}
 	if _, err := os.Stat(arabicPath); err == nil {
 		pdf.AddUTF8Font("NotoArabic", "", arabicPath)
 		pdf.AddUTF8Font("NotoArabic", "B", arabicPath)
-	}
-
-	// Helper to set font (with fallback)
-	setFont := func(style string, size float64) {
-		if hasUTF8 {
-			pdf.SetFont("NotoSans", style, size)
+		if pdf.Err() {
+			pdf.ClearError()
 		} else {
-			family := "Helvetica"
-			pdf.SetFont(family, style, size)
+			hasArabic = true
 		}
 	}
 
-	setArabicFont := func(style string, size float64) {
-		if _, err := os.Stat(arabicPath); err == nil {
-			pdf.SetFont("NotoArabic", style, size)
-		} else if hasUTF8 {
+	// Helper to set font (with fallback to built-in Helvetica)
+	setFont := func(style string, size float64) {
+		if hasUTF8 {
 			pdf.SetFont("NotoSans", style, size)
+			if pdf.Err() {
+				pdf.ClearError()
+				pdf.SetFont("Helvetica", style, size)
+			}
 		} else {
 			pdf.SetFont("Helvetica", style, size)
 		}
 	}
+
+	setArabicFont := func(style string, size float64) {
+		if hasArabic {
+			pdf.SetFont("NotoArabic", style, size)
+			if pdf.Err() {
+				pdf.ClearError()
+				pdf.SetFont("Helvetica", style, size)
+			}
+		} else {
+			setFont(style, size)
+		}
+	}
+
+	_ = setArabicFont // ensure used
 
 	// Colors
 	white := [3]int{255, 255, 255}
