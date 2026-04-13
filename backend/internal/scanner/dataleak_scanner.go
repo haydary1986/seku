@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"vscan-mohesr/internal/models"
+	"seku/internal/models"
 )
 
 type DataLeakScanner struct{}

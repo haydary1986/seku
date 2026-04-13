@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"vscan-mohesr/internal/models"
+	"seku/internal/models"
 )
 
 type CookieScanner struct{}

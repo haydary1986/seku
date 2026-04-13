@@ -9,8 +9,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
-	"vscan-mohesr/internal/config"
-	"vscan-mohesr/internal/models"
+	"seku/internal/config"
+	"seku/internal/models"
 )
 
 var jwtSecret []byte
@@ -130,13 +130,13 @@ func Register(c *fiber.Ctx) error {
 		slug = slug + "-" + time.Now().Format("20060102150405")
 	}
 
-	// Create Organization with free plan
+	// Create Organization with free plan (1 target, 5 scans/month)
 	org := models.Organization{
 		Name:       req.OrgName,
 		Slug:       slug,
 		Plan:       "free",
-		MaxTargets: 5,
-		MaxScans:   10,
+		MaxTargets: 1,
+		MaxScans:   5,
 		IsActive:   true,
 	}
 	if err := config.DB.Create(&org).Error; err != nil {

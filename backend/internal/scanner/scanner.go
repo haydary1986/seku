@@ -8,10 +8,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"vscan-mohesr/internal/config"
-	"vscan-mohesr/internal/models"
-	"vscan-mohesr/internal/services"
-	"vscan-mohesr/internal/ws"
+	"seku/internal/config"
+	"seku/internal/models"
+	"seku/internal/services"
+	"seku/internal/ws"
 )
 
 // ActiveScans tracks running scan jobs so they can be cancelled.
@@ -70,7 +70,7 @@ var PlanScanners = map[string][]string{
 		"performance",
 		"mixed_content",
 	},
-	"basic": { // 13 categories - standard security
+	"starter": { // 13 categories - standard security
 		"ssl",
 		"headers",
 		"cookies",
@@ -84,6 +84,30 @@ var PlanScanners = map[string][]string{
 		"mixed_content",
 		"seo",
 		"secrets",
+	},
+	"basic": { // 22 categories - extended security
+		"ssl",
+		"headers",
+		"cookies",
+		"server_info",
+		"directory",
+		"performance",
+		"ddos",
+		"cors",
+		"http_methods",
+		"dns",
+		"mixed_content",
+		"info_disclosure",
+		"content",
+		"hosting",
+		"seo",
+		"third_party",
+		"js_libraries",
+		"wordpress",
+		"xss",
+		"secrets",
+		"subdomains",
+		"tech_stack",
 	},
 	"pro": { // 28 categories - advanced security
 		"ssl",
@@ -114,6 +138,40 @@ var PlanScanners = map[string][]string{
 		"ssrf",
 		"email_security",
 		"waf",
+	},
+	"business": { // 32 categories - full scan
+		"ssl",
+		"headers",
+		"cookies",
+		"server_info",
+		"directory",
+		"performance",
+		"ddos",
+		"cors",
+		"http_methods",
+		"dns",
+		"mixed_content",
+		"info_disclosure",
+		"content",
+		"hosting",
+		"advanced_security",
+		"malware",
+		"threat_intel",
+		"seo",
+		"third_party",
+		"js_libraries",
+		"wordpress",
+		"xss",
+		"secrets",
+		"subdomains",
+		"tech_stack",
+		"sqli",
+		"ports",
+		"open_redirect",
+		"ssrf",
+		"email_security",
+		"waf",
+		"zone_transfer",
 	},
 	"enterprise": { // 32 categories - full scan
 		"ssl",

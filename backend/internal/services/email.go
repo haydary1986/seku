@@ -7,8 +7,8 @@ import (
 	"net/smtp"
 	"strings"
 
-	"vscan-mohesr/internal/config"
-	"vscan-mohesr/internal/models"
+	"seku/internal/config"
+	"seku/internal/models"
 )
 
 // SendScanCompletedEmail dispatches email notifications for a completed scan job.

@@ -6,9 +6,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"vscan-mohesr/internal/config"
-	"vscan-mohesr/internal/models"
-	"vscan-mohesr/internal/scheduler"
+	"seku/internal/config"
+	"seku/internal/models"
+	"seku/internal/scheduler"
 )
 
 // GetSchedules lists all scheduled scans.

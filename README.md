@@ -2,6 +2,8 @@
 
 # 🛡️ Seku
 
+**Powered by Irtikaz Technical Solutions — شركة ارتكاز للحلول التقنية**
+
 **The Open-Source Web Security Scanner with 1000-Point Scoring**
 
 Scan websites across **25 security categories** with granular 0–1000 scoring,
@@ -10,8 +12,8 @@ OWASP Top 10 + CVSS v3.1 mapping, and automated remediation guides.
 [![Go Version](https://img.shields.io/badge/Go-1.25-00ADD8?style=flat-square&logo=go)](https://go.dev)
 [![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D?style=flat-square&logo=vuedotjs)](https://vuejs.org)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/haydary1986/vscan-mohesr?style=flat-square)](https://github.com/haydary1986/vscan-mohesr/stargazers)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker)](https://github.com/haydary1986/vscan-mohesr/pkgs/container/vscan-mohesr)
+[![GitHub Stars](https://img.shields.io/github/stars/haydary1986/seku?style=flat-square)](https://github.com/haydary1986/seku/stargazers)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker)](https://github.com/haydary1986/seku/pkgs/container/seku)
 
 [Quick Start](#-quick-start) · [Features](#-features) · [Documentation](#-documentation) · [Contributing](#-contributing)
 
@@ -23,14 +25,14 @@ OWASP Top 10 + CVSS v3.1 mapping, and automated remediation guides.
 
 ```bash
 # One-liner: scan any website
-docker run --rm ghcr.io/haydary1986/vscan-mohesr example.com
+docker run --rm ghcr.io/haydary1986/seku example.com
 
 # Or install the CLI
-curl -sSL https://raw.githubusercontent.com/haydary1986/vscan-mohesr/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/haydary1986/seku/main/install.sh | bash
 vscan example.com
 
 # Or use as GitHub Action
-- uses: haydary1986/vscan-mohesr@v1
+- uses: haydary1986/seku@v1
   with:
     url: https://example.com
 ```
@@ -140,22 +142,22 @@ vscan example.com
 
 ```bash
 # macOS / Linux
-curl -sSL https://raw.githubusercontent.com/haydary1986/vscan-mohesr/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/haydary1986/seku/main/install.sh | bash
 
 # Docker
-docker pull ghcr.io/haydary1986/vscan-mohesr
+docker pull ghcr.io/haydary1986/seku
 
 # From source
-git clone https://github.com/haydary1986/vscan-mohesr.git
-cd vscan-mohesr/backend
+git clone https://github.com/haydary1986/seku.git
+cd seku/backend
 go build -o vscan ./cmd/cli/main.go
 ```
 
 ### Web Dashboard
 
 ```bash
-git clone https://github.com/haydary1986/vscan-mohesr.git
-cd vscan-mohesr
+git clone https://github.com/haydary1986/seku.git
+cd seku
 docker compose up -d
 # Open http://localhost (admin / admin123)
 ```
@@ -199,7 +201,7 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: haydary1986/vscan-mohesr@v1
+      - uses: haydary1986/seku@v1
         with:
           url: https://your-site.com
           output: sarif
@@ -214,7 +216,7 @@ jobs:
 ## 🏗️ Architecture
 
 ```
-vscan-mohesr/
+seku/
 ├── backend/                    # Go API + CLI
 │   ├── cmd/
 │   │   ├── main.go            # Web server entry point
@@ -380,8 +382,8 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 
 ```bash
 # Development setup
-git clone https://github.com/haydary1986/vscan-mohesr.git
-cd vscan-mohesr
+git clone https://github.com/haydary1986/seku.git
+cd seku
 
 # Backend
 cd backend && go run ./cmd/main.go
@@ -400,12 +402,12 @@ Open `http://localhost:5173` — default credentials: `admin` / `admin123`
 
 If Seku helps secure your websites, please star the repo — it helps others discover it!
 
-[![Star History Chart](https://api.star-history.com/svg?repos=haydary1986/vscan-mohesr&type=Date)](https://star-history.com/#haydary1986/vscan-mohesr&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=haydary1986/seku&type=Date)](https://star-history.com/#haydary1986/seku&Date)
 
 ---
 
 <div align="center">
 <strong>Designed & engineered by <a href="https://github.com/haydary1986">@haydary1986</a></strong>
 <br><br>
-<a href="https://github.com/haydary1986/vscan-mohesr/issues">Report Bug</a> · <a href="https://github.com/haydary1986/vscan-mohesr/issues">Request Feature</a> · <a href="https://github.com/haydary1986/vscan-mohesr/discussions">Discussions</a>
+<a href="https://github.com/haydary1986/seku/issues">Report Bug</a> · <a href="https://github.com/haydary1986/seku/issues">Request Feature</a> · <a href="https://github.com/haydary1986/seku/discussions">Discussions</a>
 </div>

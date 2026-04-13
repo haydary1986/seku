@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"vscan-mohesr/internal/config"
-	"vscan-mohesr/internal/models"
+	"seku/internal/config"
+	"seku/internal/models"
 )
 
 // SendScanCompletedWebhooks dispatches webhook notifications for a completed scan job.

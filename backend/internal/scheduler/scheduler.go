@@ -8,9 +8,9 @@ import (
 
 	"github.com/robfig/cron/v3"
 
-	"vscan-mohesr/internal/config"
-	"vscan-mohesr/internal/models"
-	"vscan-mohesr/internal/scanner"
+	"seku/internal/config"
+	"seku/internal/models"
+	"seku/internal/scanner"
 )
 
 // Start initializes the cron scheduler that checks for due scheduled scans every minute.

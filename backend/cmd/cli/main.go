@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"vscan-mohesr/internal/models"
-	"vscan-mohesr/internal/scanner"
+	"seku/internal/models"
+	"seku/internal/scanner"
 )
 
 const version = "1.0.0"
@@ -739,7 +739,7 @@ func printHelp(detailed bool) {
 %s%s╔═══════════════════════════════════════════════════════════╗
 ║              Seku CLI v%s                                ║
 ║         Web Security Scanner — 32 Categories              ║
-║         https://github.com/haydary1986/vscan-mohesr       ║
+║         https://github.com/haydary1986/seku       ║
 ╚═══════════════════════════════════════════════════════════╝%s
 
 %sUSAGE:%s
@@ -827,8 +827,8 @@ func printHelp(detailed bool) {
   sarif   SARIF v2.1.0 for GitHub Advanced Security / VS Code
 
 %sDOCUMENTATION:%s
-  Full docs:   https://github.com/haydary1986/vscan-mohesr/blob/main/docs/SCANNERS.md
-  Arabic docs: https://github.com/haydary1986/vscan-mohesr/blob/main/docs/SCANNERS-AR.md
+  Full docs:   https://github.com/haydary1986/seku/blob/main/docs/SCANNERS.md
+  Arabic docs: https://github.com/haydary1986/seku/blob/main/docs/SCANNERS-AR.md
   Web app:     https://sec.erticaz.com
 
 `,

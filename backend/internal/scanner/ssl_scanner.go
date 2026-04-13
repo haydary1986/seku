@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"vscan-mohesr/internal/models"
+	"seku/internal/models"
 )
 
 // strongCipherSuites lists TLS 1.2 cipher suites considered strong.

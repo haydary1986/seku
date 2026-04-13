@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"vscan-mohesr/internal/models"
+	"seku/internal/models"
 )
 
 // XSSScanner detects Cross-Site Scripting vulnerabilities using safe,

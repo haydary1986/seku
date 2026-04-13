@@ -75,12 +75,12 @@ function getPriorityLabel(p) {
       <!-- Official Header (printable) -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-6 print:shadow-none print:border-0">
         <div class="text-center mb-6 print:mb-8">
-          <p class="text-lg font-bold text-gray-800">جمهورية العراق</p>
-          <p class="text-lg font-bold text-gray-800">وزارة التعليم العالي والبحث العلمي</p>
-          <p class="text-base text-gray-600 mt-2">دائرة الأمن السيبراني</p>
+          <p class="text-lg font-bold text-gray-800">شركة ارتكاز للحلول التقنية</p>
+          <p class="text-base text-gray-600 mt-1">Irtikaz Technical Solutions</p>
+          <p class="text-base text-gray-600 mt-2">قسم الأمن السيبراني</p>
           <div class="w-24 h-0.5 bg-gray-300 mx-auto mt-4"></div>
-          <p class="text-xl font-bold text-gray-900 mt-4">مقترحات أوامر إدارية لتحسين الأمن السيبراني للجامعات</p>
-          <p class="text-sm text-gray-500 mt-2">تم توليدها آلياً بناءً على فحص {{ data.total_sites }} موقع جامعي</p>
+          <p class="text-xl font-bold text-gray-900 mt-4">مقترحات أوامر إدارية لتحسين الأمن السيبراني</p>
+          <p class="text-sm text-gray-500 mt-2">تم توليدها آلياً بناءً على فحص {{ data.total_sites }} موقع</p>
         </div>
 
         <!-- Summary Stats -->

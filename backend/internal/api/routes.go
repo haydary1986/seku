@@ -194,6 +194,6 @@ func SetupRoutes(app *fiber.App) {
 	// Purge all scan data (admin)
 	admin.Post("/purge-scans", PurgeAllScans)
 
-	// Ministry Directives (admin)
+	// Administrative Directives (admin)
 	admin.Get("/directives", GenerateDirectives)
 }

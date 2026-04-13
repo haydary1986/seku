@@ -8,8 +8,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 
-	"vscan-mohesr/internal/config"
-	"vscan-mohesr/internal/models"
+	"seku/internal/config"
+	"seku/internal/models"
 )
 
 // GenerateAPIKey creates a new API key for the user

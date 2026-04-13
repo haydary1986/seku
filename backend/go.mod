@@ -1,4 +1,4 @@
-module vscan-mohesr
+module seku
 
 go 1.25.0
 

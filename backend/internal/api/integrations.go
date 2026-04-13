@@ -9,9 +9,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"vscan-mohesr/internal/config"
-	"vscan-mohesr/internal/models"
-	"vscan-mohesr/internal/scanner"
+	"seku/internal/config"
+	"seku/internal/models"
+	"seku/internal/scanner"
 )
 
 // GetScanPolicies returns the available scan policy presets

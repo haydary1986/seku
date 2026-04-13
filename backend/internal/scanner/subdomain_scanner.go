@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"vscan-mohesr/internal/models"
-	"vscan-mohesr/internal/utils"
+	"seku/internal/models"
+	"seku/internal/utils"
 )
 
 type SubdomainScanner struct{}

@@ -3,8 +3,8 @@ package api
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"vscan-mohesr/internal/config"
-	"vscan-mohesr/internal/models"
+	"seku/internal/config"
+	"seku/internal/models"
 )
 
 // Plan limits mapping

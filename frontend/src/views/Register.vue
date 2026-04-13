@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { register } from '../api'
+import PasswordInput from '../components/PasswordInput.vue'
 
 const router = useRouter()
 const form = ref({
@@ -85,13 +86,12 @@ async function handleRegister() {
             </div>
             <div>
               <label class="block text-sm text-indigo-200 mb-1">كلمة المرور *</label>
-              <input
+              <PasswordInput
                 v-model="form.password"
-                type="password"
                 placeholder="6 أحرف على الأقل"
-                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                required
-                minlength="6"
+                :required="true"
+                input-class="w-full px-4 py-3 pl-12 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                icon-class="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300 hover:text-white transition-colors p-1"
               />
             </div>
           </div>

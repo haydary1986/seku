@@ -9,7 +9,7 @@ import (
 	"net/http/httptrace"
 	"time"
 
-	"vscan-mohesr/internal/models"
+	"seku/internal/models"
 )
 
 type PerformanceScanner struct{}

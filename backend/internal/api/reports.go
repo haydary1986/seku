@@ -9,10 +9,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"vscan-mohesr/internal/config"
-	"vscan-mohesr/internal/models"
-	"vscan-mohesr/internal/scanner"
-	"vscan-mohesr/internal/services"
+	"seku/internal/config"
+	"seku/internal/models"
+	"seku/internal/scanner"
+	"seku/internal/services"
 )
 
 func GeneratePDFReport(c *fiber.Ctx) error {

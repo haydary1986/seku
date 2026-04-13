@@ -14,8 +14,8 @@ import (
 
 	"golang.org/x/net/proxy"
 
-	"vscan-mohesr/internal/config"
-	"vscan-mohesr/internal/models"
+	"seku/internal/config"
+	"seku/internal/models"
 )
 
 // ProxyEntry represents a single proxy with health tracking.

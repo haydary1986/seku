@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"vscan-mohesr/internal/models"
+	"seku/internal/models"
 )
 
 // UpgradeSuggestion represents a recommendation to upgrade a vulnerable library.

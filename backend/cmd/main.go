@@ -6,12 +6,12 @@ import (
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 
-	"vscan-mohesr/internal/api"
-	"vscan-mohesr/internal/config"
-	"vscan-mohesr/internal/scanner"
-	"vscan-mohesr/internal/scheduler"
-	"vscan-mohesr/internal/services"
-	"vscan-mohesr/internal/ws"
+	"seku/internal/api"
+	"seku/internal/config"
+	"seku/internal/scanner"
+	"seku/internal/scheduler"
+	"seku/internal/services"
+	"seku/internal/ws"
 )
 
 func main() {

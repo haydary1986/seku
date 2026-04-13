@@ -3,7 +3,7 @@ package config
 import (
 	"log"
 
-	"vscan-mohesr/internal/models"
+	"seku/internal/models"
 )
 
 type seedTarget struct {

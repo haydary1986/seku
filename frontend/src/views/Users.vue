@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { getUsers, createUser, updateUser, deleteUser } from '../api'
+import PasswordInput from '../components/PasswordInput.vue'
 
 const users = ref([])
 const loading = ref(true)
@@ -96,8 +97,8 @@ onMounted(loadUsers)
         </div>
         <div>
           <label class="block text-sm text-gray-600 mb-1">{{ editingUser ? 'New Password (leave empty to keep)' : 'Password *' }}</label>
-          <input v-model="form.password" type="password" :required="!editingUser"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+          <PasswordInput v-model="form.password" :required="!editingUser"
+            input-class="w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
           <label class="block text-sm text-gray-600 mb-1">Full Name</label>

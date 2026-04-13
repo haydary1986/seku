@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"vscan-mohesr/internal/models"
+	"seku/internal/models"
 )
 
 type ThreatIntelScanner struct{}

@@ -8,8 +8,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"vscan-mohesr/internal/models"
-	"vscan-mohesr/internal/scanner"
+	"seku/internal/models"
+	"seku/internal/scanner"
 )
 
 // dataLeakStore holds results in memory (separate from main scan DB)

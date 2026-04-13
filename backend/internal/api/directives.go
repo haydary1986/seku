@@ -7,7 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"vscan-mohesr/internal/config"
+	"seku/internal/config"
 )
 
 type Directive struct {

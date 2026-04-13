@@ -24,8 +24,8 @@ type Organization struct {
 	Slug       string `json:"slug" gorm:"uniqueIndex;not null"`
 	LogoURL    string `json:"logo_url"`
 	Plan       string `json:"plan" gorm:"default:free"` // free, basic, pro, enterprise
-	MaxTargets int    `json:"max_targets" gorm:"default:5"`
-	MaxScans   int    `json:"max_scans" gorm:"default:10"`
+	MaxTargets int    `json:"max_targets" gorm:"default:1"`
+	MaxScans   int    `json:"max_scans" gorm:"default:5"`
 	IsActive   bool   `json:"is_active" gorm:"default:true"`
 }
 

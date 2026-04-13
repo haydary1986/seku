@@ -10,14 +10,14 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 ### Reporting Bugs
 
-1. Check [existing issues](https://github.com/haydary1986/vscan-mohesr/issues) to avoid duplicates
+1. Check [existing issues](https://github.com/haydary1986/seku/issues) to avoid duplicates
 2. Use the bug report template when creating a new issue
 3. Include steps to reproduce, expected behavior, and actual behavior
 4. Add screenshots or logs if applicable
 
 ### Suggesting Features
 
-1. Open a [feature request issue](https://github.com/haydary1986/vscan-mohesr/issues/new)
+1. Open a [feature request issue](https://github.com/haydary1986/seku/issues/new)
 2. Describe the use case and expected behavior
 3. Explain why this feature would be useful to other users
 
@@ -50,8 +50,8 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/vscan-mohesr.git
-cd vscan-mohesr
+git clone https://github.com/YOUR_USERNAME/seku.git
+cd seku
 
 # Backend
 cd backend
@@ -104,7 +104,7 @@ Default credentials: `admin` / `admin123`
 
 ## Questions?
 
-Open a [discussion](https://github.com/haydary1986/vscan-mohesr/discussions) or reach out via issues.
+Open a [discussion](https://github.com/haydary1986/seku/discussions) or reach out via issues.
 
 ---
 

@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getScanResult, analyzeResult, getAIAnalysis, downloadReport, exportSARIF, exportCSV, getUpgradeSuggestions, getScoreHistory, getComplianceReport, getRemediationGuide, createGitHubIssue, createJiraIssue, getFixPriority, getTimelineComparison } from '../api'
 import { categoryInfo, getCheckExplanation } from '../data/securityKnowledge'
+import PasswordInput from '../components/PasswordInput.vue'
 import { Radar, Line } from 'vue-chartjs'
 import { Chart as ChartJS, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, CategoryScale, LinearScale } from 'chart.js'
 
@@ -1155,8 +1156,8 @@ onMounted(async () => {
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Personal Access Token</label>
-              <input v-model="issueForm.token" type="password" required placeholder="ghp_..."
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
+              <PasswordInput v-model="issueForm.token" :required="true" placeholder="ghp_..."
+                input-class="w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
               <p class="text-xs text-gray-400 mt-1">Needs "repo" scope</p>
             </div>
             <button type="submit" :disabled="issueLoading"
@@ -1185,8 +1186,8 @@ onMounted(async () => {
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">API Token</label>
-              <input v-model="issueForm.token" type="password" required placeholder="Jira API token"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
+              <PasswordInput v-model="issueForm.token" :required="true" placeholder="Jira API token"
+                input-class="w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
             </div>
             <button type="submit" :disabled="issueLoading"
               class="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2 text-sm font-medium">

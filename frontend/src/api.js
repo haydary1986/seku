@@ -149,7 +149,7 @@ export const getScanPolicies = () => api.get('/scan-policies')
 export const runDataLeakScan = (targetIds) => api.post('/data-leak/scan', { target_ids: targetIds || [] })
 export const getDataLeakResults = (domain) => api.get('/data-leak/results' + (domain ? '?domain=' + encodeURIComponent(domain) : ''))
 
-// Ministry Directives (admin)
+// Administrative Directives (admin)
 export const getDirectives = () => api.get('/directives')
 
 // Proxy Pool (admin)

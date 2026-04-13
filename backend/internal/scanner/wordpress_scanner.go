@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"vscan-mohesr/internal/models"
+	"seku/internal/models"
 )
 
 // WordPressScanner detects WordPress installations and checks for common vulnerabilities.

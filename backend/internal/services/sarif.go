@@ -3,7 +3,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
-	"vscan-mohesr/internal/models"
+	"seku/internal/models"
 )
 
 // SARIF v2.1.0 schema types

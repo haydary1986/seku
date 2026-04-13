@@ -13,7 +13,7 @@ import (
 
 	"github.com/go-pdf/fpdf"
 
-	"vscan-mohesr/internal/models"
+	"seku/internal/models"
 )
 
 func scoreToGrade(score float64) string {

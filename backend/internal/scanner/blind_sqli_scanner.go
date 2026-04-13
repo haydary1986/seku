@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"time"
 
-	"vscan-mohesr/internal/models"
+	"seku/internal/models"
 )
 
 // BlindSQLiScanner detects time-based and boolean-based blind SQL injection.

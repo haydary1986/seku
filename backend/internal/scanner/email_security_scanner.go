@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"vscan-mohesr/internal/models"
+	"seku/internal/models"
 )
 
 // EmailSecurityScanner checks DKIM, BIMI, and aggregates an email security score.

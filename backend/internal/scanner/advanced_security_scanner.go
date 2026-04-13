@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"vscan-mohesr/internal/models"
+	"seku/internal/models"
 )
 
 // Sub-check weights for the Advanced Security Scanner.

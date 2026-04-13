@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { getWebhooks, createWebhook, updateWebhook, deleteWebhook, testWebhook } from '../api'
+import PasswordInput from '../components/PasswordInput.vue'
 
 const webhooks = ref([])
 const loading = ref(true)
@@ -240,11 +241,10 @@ onMounted(loadData)
         <!-- Secret / Token -->
         <div v-if="showsSecret(form.type)">
           <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">{{ secretLabel(form.type) }}</label>
-          <input
+          <PasswordInput
             v-model="form.secret"
-            type="password"
             :placeholder="form.type === 'telegram' ? 'Bot token from @BotFather' : 'Bearer token for Authorization header'"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            input-class="w-full px-3 py-2 pl-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>
 

@@ -2,11 +2,12 @@ package config
 
 import (
 	"log"
+	"os"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
-	"vscan-mohesr/internal/models"
+	"seku/internal/models"
 )
 
 var DB *gorm.DB
@@ -68,14 +69,24 @@ func InitDatabase() {
 	var userCount int64
 	DB.Model(&models.User{}).Count(&userCount)
 	if userCount == 0 {
-		hashed, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+		// Read from env vars or use defaults
+		username := os.Getenv("SEKU_ADMIN_USER")
+		password := os.Getenv("SEKU_ADMIN_PASSWORD")
+		if username == "" {
+			username = "haydary1986"
+		}
+		if password == "" {
+			password = "Sakina1990"
+		}
+
+		hashed, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 		// Get default org
 		var org models.Organization
 		DB.First(&org)
 
 		admin := models.User{
-			Username: "admin",
+			Username: username,
 			Password: string(hashed),
 			FullName: "System Administrator",
 			Email:    "admin@seku.dev",
@@ -92,7 +103,7 @@ func InitDatabase() {
 		}
 		DB.Create(&membership)
 
-		log.Println("Default admin user created (username: admin, password: admin123)")
+		log.Printf("Default admin user created (username: %s)", username)
 	}
 
 	log.Println("Database initialized successfully")
