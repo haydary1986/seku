@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"strings"
@@ -25,9 +24,7 @@ func (s *ServerInfoScanner) Scan(url string) []models.CheckResult {
 
 	client := &http.Client{
 		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	resp, err := client.Get(ensureHTTPS(url))
@@ -166,9 +163,7 @@ func (s *ServerInfoScanner) detectCMS(resp *http.Response, url string) models.Ch
 
 	client := &http.Client{
 		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	baseURL := ensureHTTPS(url)

@@ -142,6 +142,36 @@ var CheckConfidence = map[string]int{
 	"Web Framework Detection":      85,
 	"Server Technology Detection":  85,
 	"JavaScript Library Inventory": 85,
+
+	// SQL Injection Scanner
+	"SQL Injection Test":        70, // error-based detection, may have false positives
+	"Database Error Disclosure": 85,
+	"Blind SQL Injection Test":  60, // time-based, network-dependent
+
+	// Port Scanner
+	"Open Port Detection": 95, // deterministic TCP connection
+
+	// Open Redirect
+	"Open Redirect Test": 75,
+
+	// SSRF
+	"SSRF Detection": 65, // heuristic-based
+
+	// Email Security
+	"DKIM Record":         100, // DNS lookup, deterministic
+	"BIMI Record":         100,
+	"Email Security Score": 95,
+
+	// WAF Fingerprinting
+	"WAF Detection": 80,
+
+	// DNS Zone Transfer
+	"DNS Zone Transfer": 100, // deterministic
+
+	// Data Leak Scanner
+	"Domain Breach History": 90,  // based on HIBP public data
+	"Email Breach Detection": 85, // depends on API availability
+	"Paste Site Exposure":    80,  // depends on API availability
 }
 
 func GetConfidence(checkName string) int {

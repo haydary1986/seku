@@ -129,9 +129,7 @@ func (s *PerformanceScanner) checkResponseTime(url string) models.CheckResult {
 
 	client := &http.Client{
 		Timeout: 30 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	targetURL := ensureHTTPS(url)
@@ -217,9 +215,7 @@ func (s *PerformanceScanner) checkTTFB(url string) models.CheckResult {
 
 	client := &http.Client{
 		Timeout: 30 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	start := time.Now()

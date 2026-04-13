@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -76,9 +75,7 @@ var (
 func (s *XSSScanner) Scan(rawURL string) []models.CheckResult {
 	client := &http.Client{
 		Timeout: xssRequestTimeout,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	targetURL := ensureHTTPS(rawURL)

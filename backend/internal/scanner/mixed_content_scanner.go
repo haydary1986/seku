@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"crypto/tls"
 	"io"
 	"net/http"
 	"regexp"
@@ -26,9 +25,7 @@ func (s *MixedContentScanner) Scan(url string) []models.CheckResult {
 
 	client := &http.Client{
 		Timeout: 15 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	targetURL := ensureHTTPS(url)

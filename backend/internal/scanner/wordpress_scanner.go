@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -38,9 +37,7 @@ const (
 func (s *WordPressScanner) newHTTPClient() *http.Client {
 	return &http.Client{
 		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 5 {
 				return fmt.Errorf("too many redirects")
@@ -171,13 +168,55 @@ func (s *WordPressScanner) checkWordPressVersion(client *http.Client, baseURL st
 	if detectedVersion != "" {
 		msg = fmt.Sprintf("WordPress version %s detected", detectedVersion)
 	} else {
-		msg = "WordPress detected but version could not be determined"
+		msg = "WordPress detected but version could not be determined (good: version is hidden)"
 	}
 
-	result.Details = toJSON(map[string]string{
-		"version": detectedVersion,
-		"message": msg,
-	})
+	// Detect HOW WordPress was found
+	var detectionMethods []string
+	if resp, err := client.Get(baseURL); err == nil {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 256*1024))
+		resp.Body.Close()
+		b := string(body)
+		if strings.Contains(b, "wp-content/") {
+			detectionMethods = append(detectionMethods, "wp-content/ paths in HTML")
+		}
+		if strings.Contains(b, "wp-includes/") {
+			detectionMethods = append(detectionMethods, "wp-includes/ paths in HTML")
+		}
+		if strings.Contains(b, "wp-json") {
+			detectionMethods = append(detectionMethods, "wp-json API references")
+		}
+		if strings.Contains(b, "wp-embed") {
+			detectionMethods = append(detectionMethods, "wp-embed.min.js script")
+		}
+	}
+	if r, err := client.Get(baseURL + "/wp-json/"); err == nil {
+		r.Body.Close()
+		if r.StatusCode == 200 {
+			detectionMethods = append(detectionMethods, "/wp-json/ REST API accessible (200)")
+		}
+	}
+	if r, err := client.Get(baseURL + "/wp-login.php"); err == nil {
+		r.Body.Close()
+		if r.StatusCode == 200 {
+			detectionMethods = append(detectionMethods, "/wp-login.php login page accessible (200)")
+		}
+	}
+
+	details := map[string]interface{}{
+		"version":           detectedVersion,
+		"message":           msg,
+		"detection_methods": detectionMethods,
+		"hardening_tips": []string{
+			"Install WP Hide plugin or add rewrite rules to mask wp-content paths",
+			"Disable /wp-json/ REST API: add_filter('rest_authentication_errors', ...)",
+			"Move or protect /wp-login.php: use WPS Hide Login plugin",
+			"Remove wp-emoji and wp-embed scripts: add_action('init', 'disable_emojis')",
+			"Use Cloudflare WAF rules to block WordPress fingerprinting",
+		},
+	}
+
+	result.Details = toJSON(details)
 
 	return result, true, detectedVersion
 }
@@ -227,9 +266,7 @@ func (s *WordPressScanner) checkLoginPageExposure(client *http.Client, baseURL s
 	// Use a non-redirecting client to see the actual response
 	noRedirectClient := &http.Client{
 		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
@@ -237,12 +274,13 @@ func (s *WordPressScanner) checkLoginPageExposure(client *http.Client, baseURL s
 
 	resp, err := noRedirectClient.Get(baseURL + "/wp-login.php")
 	if err != nil {
-		result.Score = 1000
-		result.Status = statusFromScore(1000)
+		result.Score = 0
+		result.Weight = 0
+		result.Status = "error"
 		result.Severity = "info"
 		result.Details = toJSON(map[string]string{
 			"path":    "/wp-login.php",
-			"message": "Login page not accessible (connection error)",
+			"message": "Could not reach login page (timeout or network error)",
 		})
 		return result
 	}
@@ -347,12 +385,13 @@ func (s *WordPressScanner) checkXMLRPCExposure(client *http.Client, baseURL stri
 		strings.NewReader(xmlPayload),
 	)
 	if err != nil {
-		result.Score = 1000
-		result.Status = statusFromScore(1000)
+		result.Score = 0
+		result.Weight = 0
+		result.Status = "error"
 		result.Severity = "info"
 		result.Details = toJSON(map[string]string{
 			"path":    "/xmlrpc.php",
-			"message": "XML-RPC endpoint not accessible",
+			"message": "Could not reach XML-RPC endpoint (timeout or network error)",
 		})
 		return result
 	}
@@ -426,12 +465,13 @@ func (s *WordPressScanner) checkRESTAPIUserEnum(client *http.Client, baseURL str
 
 	resp, err := client.Get(baseURL + "/wp-json/wp/v2/users")
 	if err != nil {
-		result.Score = 1000
-		result.Status = statusFromScore(1000)
+		result.Score = 0
+		result.Weight = 0
+		result.Status = "error"
 		result.Severity = "info"
 		result.Details = toJSON(map[string]string{
 			"path":    "/wp-json/wp/v2/users",
-			"message": "REST API users endpoint not accessible",
+			"message": "Could not reach REST API endpoint (timeout or network error)",
 		})
 		return result
 	}

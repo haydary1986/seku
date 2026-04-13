@@ -250,7 +250,7 @@ func printBanner(useColor bool) {
 `
 	fmt.Print(colorize(useColor, colorCyan, banner))
 	fmt.Println(colorize(useColor, colorDim, "  Seku — Web Security Scanner v"+version))
-	fmt.Println(colorize(useColor, colorDim, "  22 Security Categories | OWASP Top 10 Mapped"))
+	fmt.Println(colorize(useColor, colorDim, "  32 Security Categories | OWASP Top 10 Mapped"))
 	fmt.Println()
 }
 
@@ -738,7 +738,7 @@ func printHelp(detailed bool) {
 	fmt.Fprintf(os.Stderr, `
 %s%s╔═══════════════════════════════════════════════════════════╗
 ║              Seku CLI v%s                                ║
-║         Web Security Scanner — 25 Categories              ║
+║         Web Security Scanner — 32 Categories              ║
 ║         https://github.com/haydary1986/vscan-mohesr       ║
 ╚═══════════════════════════════════════════════════════════╝%s
 
@@ -795,7 +795,7 @@ func printHelp(detailed bool) {
   %s# Light scan (8 categories, faster)%s
   vscan example.com -plan free
 
-  %s# Full deep scan (25 categories)%s
+  %s# Full deep scan (32 categories)%s
   vscan example.com -plan enterprise
 
   %s# Silent mode for CI/CD pipelines%s
@@ -809,7 +809,7 @@ func printHelp(detailed bool) {
   %-12s  %s5 categories%s   — SSL, Headers, Cookies, Performance, Mixed Content
   %-12s  %s13 categories%s  — + Server Info, Directory, DDoS, CORS, DNS, Secrets, SEO
   %-12s  %s22 categories%s  — + Info Disclosure, Hosting, Content, WordPress, XSS, JS Libs
-  %-12s  %s25 categories%s  — + Advanced Security, Malware, Threat Intel (all scanners)
+  %-12s  %s32 categories%s  — + Advanced Security, Malware, Threat Intel, SQLi, Ports, and more
 
 %sGRADING SCALE:%s
 
@@ -862,7 +862,7 @@ func printHelp(detailed bool) {
 
 // printScannerList lists all available scanners with their details.
 func printScannerList() {
-	fmt.Printf("\n%s%s Seku — 25 Security Scanners%s\n\n", colorBold, colorCyan, colorReset)
+	fmt.Printf("\n%s%s Seku — 32 Security Scanners%s\n\n", colorBold, colorCyan, colorReset)
 
 	type scannerInfo struct {
 		category string
@@ -898,6 +898,13 @@ func printScannerList() {
 		{"secrets", "Secrets Detection", 8.0, 4, "basic pro enterprise"},
 		{"subdomains", "Subdomain Discovery", 5.0, 3, "pro enterprise"},
 		{"tech_stack", "Technology Detection", 4.0, 3, "pro enterprise"},
+		{"sqli", "SQL Injection", 15.0, 3, "pro enterprise"},
+		{"ports", "Port Scanner", 8.0, 1, "pro enterprise"},
+		{"open_redirect", "Open Redirect", 7.0, 1, "pro enterprise"},
+		{"ssrf", "SSRF Detection", 8.0, 1, "pro enterprise"},
+		{"email_security", "Email Security", 8.0, 3, "pro enterprise"},
+		{"waf", "WAF Detection", 5.0, 1, "pro enterprise"},
+		{"zone_transfer", "DNS Zone Transfer", 6.0, 1, "enterprise"},
 	}
 
 	fmt.Printf("  %s%-3s %-16s %-28s %6s %6s  %-30s%s\n",

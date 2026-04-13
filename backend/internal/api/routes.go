@@ -14,6 +14,12 @@ func SetupRoutes(app *fiber.App) {
 	app.Use(recover.New())
 	app.Use(logger.New())
 
+	// CSRF Protection: validate Origin/Referer on state-changing requests
+	app.Use(csrfProtection())
+
+	// Audit logging for state-changing operations
+	app.Use(auditMiddleware())
+
 	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
 	if allowedOrigins == "" {
 		allowedOrigins = "*"
@@ -57,9 +63,11 @@ func SetupRoutes(app *fiber.App) {
 	targets.Post("/bulk", CreateBulkTargets)
 	targets.Put("/:id", UpdateTarget)
 	targets.Delete("/:id", DeleteTarget)
+	targets.Post("/cleanup-dead", CleanupDeadTargets)
 
-	// Score History
+	// Score History & Timeline
 	protected.Get("/targets/:id/history", GetScoreHistory)
+	protected.Get("/targets/:id/timeline", GetTimelineComparison)
 
 	// Domain Verification
 	protected.Post("/targets/:id/verify", InitiateVerification)
@@ -76,6 +84,7 @@ func SetupRoutes(app *fiber.App) {
 	scans.Get("/", GetScanJobs)
 	scans.Get("/:id", GetScanJob)
 	scans.Post("/start", StartScan)
+	scans.Post("/:id/cancel", CancelScan)
 	scans.Delete("/:id", DeleteScanJob)
 
 	// Scan Results
@@ -86,6 +95,7 @@ func SetupRoutes(app *fiber.App) {
 	results.Get("/:id/compliance", GetComplianceReport)
 	results.Get("/:id/upgrades", GetUpgradeSuggestions)
 	results.Get("/:id/csv", ExportCSV)
+	results.Get("/:id/fix-priority", GetFixPriority)
 
 	// AI Analysis
 	protected.Post("/ai/analyze/:id", AnalyzeScanResult)
@@ -96,12 +106,23 @@ func SetupRoutes(app *fiber.App) {
 
 	// Dashboard & Leaderboard
 	protected.Get("/dashboard", GetDashboardStats)
+	protected.Get("/dashboard/enhanced", GetDashboardEnhanced)
 	protected.Get("/leaderboard", GetLeaderboard)
 	protected.Get("/leaderboard/csv", ExportLeaderboardCSV)
 	protected.Get("/compare", CompareScanResults)
 
+	// Domain Discovery (internet search)
+	protected.Get("/discover/domain", DiscoverDomains)
+
+	// Data Leak Scanner (standalone — not part of main scan)
+	protected.Post("/data-leak/scan", RunDataLeakScan)
+	protected.Get("/data-leak/results", GetDataLeakResults)
+
 	// Remediation Guides
 	protected.Get("/remediation", GetRemediationGuide)
+
+	// CVE Feed
+	protected.Get("/cve/search", SearchCVEs)
 
 	// Scan Policies
 	protected.Get("/scan-policies", GetScanPolicies)
@@ -156,6 +177,10 @@ func SetupRoutes(app *fiber.App) {
 	admin.Get("/settings", GetSettings)
 	admin.Put("/settings", UpdateSettings)
 
+	// Proxy Pool (admin)
+	admin.Get("/proxy/stats", GetProxyStats)
+	admin.Post("/proxy/refresh", RefreshProxies)
+
 	// Email Config (admin)
 	admin.Get("/email-config", GetEmailConfig)
 	admin.Put("/email-config", UpdateEmailConfig)
@@ -165,4 +190,10 @@ func SetupRoutes(app *fiber.App) {
 	admin.Get("/upgrade/all", GetAllUpgradeRequests)
 	admin.Put("/upgrade/:id/approve", ApproveUpgrade)
 	admin.Put("/upgrade/:id/reject", RejectUpgrade)
+
+	// Purge all scan data (admin)
+	admin.Post("/purge-scans", PurgeAllScans)
+
+	// Ministry Directives (admin)
+	admin.Get("/directives", GenerateDirectives)
 }

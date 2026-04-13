@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sync"
@@ -12,6 +13,38 @@ import (
 	"vscan-mohesr/internal/services"
 	"vscan-mohesr/internal/ws"
 )
+
+// ActiveScans tracks running scan jobs so they can be cancelled.
+var ActiveScans = &activeScanManager{scans: make(map[uint]context.CancelFunc)}
+
+type activeScanManager struct {
+	mu    sync.RWMutex
+	scans map[uint]context.CancelFunc
+}
+
+func (m *activeScanManager) Register(jobID uint, cancel context.CancelFunc) {
+	m.mu.Lock()
+	m.scans[jobID] = cancel
+	m.mu.Unlock()
+}
+
+func (m *activeScanManager) Cancel(jobID uint) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	cancel, ok := m.scans[jobID]
+	if ok {
+		cancel()
+		delete(m.scans, jobID)
+		return true
+	}
+	return false
+}
+
+func (m *activeScanManager) Remove(jobID uint) {
+	m.mu.Lock()
+	delete(m.scans, jobID)
+	m.mu.Unlock()
+}
 
 // MaxScore is the maximum score for any check (1000-point scale)
 const MaxScore = 1000.0
@@ -52,7 +85,7 @@ var PlanScanners = map[string][]string{
 		"seo",
 		"secrets",
 	},
-	"pro": { // 22 categories - advanced security
+	"pro": { // 28 categories - advanced security
 		"ssl",
 		"headers",
 		"cookies",
@@ -75,8 +108,14 @@ var PlanScanners = map[string][]string{
 		"secrets",
 		"subdomains",
 		"tech_stack",
+		"sqli",
+		"ports",
+		"open_redirect",
+		"ssrf",
+		"email_security",
+		"waf",
 	},
-	"enterprise": { // 25 categories - full scan
+	"enterprise": { // 32 categories - full scan
 		"ssl",
 		"headers",
 		"cookies",
@@ -102,6 +141,13 @@ var PlanScanners = map[string][]string{
 		"secrets",
 		"subdomains",
 		"tech_stack",
+		"sqli",
+		"ports",
+		"open_redirect",
+		"ssrf",
+		"email_security",
+		"waf",
+		"zone_transfer",
 	},
 }
 
@@ -135,9 +181,9 @@ var ScanPolicies = map[string]ScanPolicy{
 	},
 	"deep": {
 		Name:        "Deep Scan",
-		Description: "Full security assessment — all categories including XSS, malware, subdomains, ~120 seconds per site",
-		Categories:  []string{"ssl", "headers", "cookies", "server_info", "directory", "performance", "ddos", "cors", "http_methods", "dns", "mixed_content", "info_disclosure", "hosting", "content", "advanced_security", "malware", "threat_intel", "seo", "third_party", "js_libraries", "wordpress", "xss", "secrets", "subdomains", "tech_stack"},
-		Timeout:     120,
+		Description: "Full security assessment — 32 categories including SQLi, SSRF, WAF, port scanning, ~3 minutes per site",
+		Categories:  []string{"ssl", "headers", "cookies", "server_info", "directory", "performance", "ddos", "cors", "http_methods", "dns", "mixed_content", "info_disclosure", "hosting", "content", "advanced_security", "malware", "threat_intel", "seo", "third_party", "js_libraries", "wordpress", "xss", "secrets", "subdomains", "tech_stack", "sqli", "ports", "open_redirect", "ssrf", "email_security", "waf", "zone_transfer"},
+		Timeout:     180,
 	},
 }
 
@@ -169,6 +215,14 @@ func allScanners() []Scanner {
 		NewSecretsScanner(),
 		NewSubdomainScanner(),
 		NewTechDetectScanner(),
+		NewSQLiScanner(),
+		NewPortScanner(),
+		NewBlindSQLiScanner(),
+		NewRedirectScanner(),
+		NewSSRFScanner(),
+		NewEmailSecurityScanner(),
+		NewWAFScanner(),
+		NewZoneTransferScanner(),
 	}
 }
 
@@ -226,8 +280,12 @@ func NewEngineForPlan(plan string) *Engine {
 	}
 }
 
-// RunScan executes all scanners against a target
+// RunScan executes all scanners against a target. Supports cancellation via ActiveScans.
 func (e *Engine) RunScan(job *models.ScanJob) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ActiveScans.Register(job.ID, cancel)
+	defer ActiveScans.Remove(job.ID)
+
 	now := time.Now()
 	job.Status = "running"
 	job.StartedAt = &now
@@ -241,15 +299,33 @@ func (e *Engine) RunScan(job *models.ScanJob) {
 	var completedCount int64
 
 	for i := range results {
+		// Check for cancellation before starting next target
+		select {
+		case <-ctx.Done():
+			goto scanDone
+		default:
+		}
+
 		wg.Add(1)
 		sem <- struct{}{}
 		go func(result *models.ScanResult) {
 			defer wg.Done()
 			defer func() { <-sem }()
+
+			// Check cancellation before scanning
+			select {
+			case <-ctx.Done():
+				result.Status = "cancelled"
+				config.DB.Save(result)
+				return
+			default:
+			}
+
 			e.scanTarget(result)
 
 			current := atomic.AddInt64(&completedCount, 1)
 			ws.DefaultHub.Broadcast(ws.ScanProgress{
+				Type:       "job",
 				JobID:      job.ID,
 				Status:     "running",
 				Total:      len(results),
@@ -263,27 +339,39 @@ func (e *Engine) RunScan(job *models.ScanJob) {
 
 	wg.Wait()
 
+scanDone:
+	// Determine final status
+	finalStatus := "completed"
+	select {
+	case <-ctx.Done():
+		finalStatus = "cancelled"
+	default:
+	}
+
 	ws.DefaultHub.Broadcast(ws.ScanProgress{
+		Type:      "job",
 		JobID:     job.ID,
-		Status:    "completed",
+		Status:    finalStatus,
 		Total:     len(results),
-		Completed: len(results),
+		Completed: int(atomic.LoadInt64(&completedCount)),
 		Percent:   100,
-		Message:   "Scan completed",
+		Message:   fmt.Sprintf("Scan %s", finalStatus),
 	})
 
 	ended := time.Now()
-	job.Status = "completed"
+	job.Status = finalStatus
 	job.EndedAt = &ended
 	config.DB.Save(job)
 
-	// Send webhook notifications
-	var completedResults []models.ScanResult
-	config.DB.Where("scan_job_id = ?", job.ID).Preload("ScanTarget").Find(&completedResults)
-	services.SendScanCompletedWebhooks(job, completedResults)
+	if finalStatus == "completed" {
+		// Send webhook notifications
+		var completedResults []models.ScanResult
+		config.DB.Where("scan_job_id = ?", job.ID).Preload("ScanTarget").Find(&completedResults)
+		services.SendScanCompletedWebhooks(job, completedResults)
 
-	// Send email notifications
-	services.SendScanCompletedEmail(job, completedResults)
+		// Send email notifications
+		services.SendScanCompletedEmail(job, completedResults)
+	}
 }
 
 func (e *Engine) scanTarget(result *models.ScanResult) {
@@ -294,8 +382,23 @@ func (e *Engine) scanTarget(result *models.ScanResult) {
 
 	var allChecks []models.CheckResult
 	var totalScore, totalWeight float64
+	totalScanners := len(e.scanners)
 
-	for _, s := range e.scanners {
+	for idx, s := range e.scanners {
+		// Broadcast per-scanner sub-progress
+		ws.DefaultHub.Broadcast(ws.ScanProgress{
+			Type:          "target",
+			JobID:         result.ScanJobID,
+			TargetID:      result.ScanTargetID,
+			TargetURL:     result.ScanTarget.URL,
+			ScannerName:   s.Name(),
+			ScannerIndex:  idx + 1,
+			TotalScanners: totalScanners,
+			TargetPercent: float64(idx) / float64(totalScanners) * 100,
+			Status:        "scanning",
+			Message:       fmt.Sprintf("[%d/%d] %s", idx+1, totalScanners, s.Name()),
+		})
+
 		checks := s.Scan(result.ScanTarget.URL)
 		for i := range checks {
 			checks[i].ScanResultID = result.ID
@@ -348,6 +451,20 @@ func (e *Engine) scanTarget(result *models.ScanResult) {
 	result.Status = "completed"
 	result.EndedAt = &ended
 	config.DB.Save(result)
+
+	// Broadcast target completion
+	ws.DefaultHub.Broadcast(ws.ScanProgress{
+		Type:          "target",
+		JobID:         result.ScanJobID,
+		TargetID:      result.ScanTargetID,
+		TargetURL:     result.ScanTarget.URL,
+		ScannerName:   "Complete",
+		ScannerIndex:  totalScanners,
+		TotalScanners: totalScanners,
+		TargetPercent: 100,
+		Status:        "completed",
+		Message:       fmt.Sprintf("Scan complete — Score: %.0f", result.OverallScore),
+	})
 }
 
 // GetScanners returns the list of scanners in this engine

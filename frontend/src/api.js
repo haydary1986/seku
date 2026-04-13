@@ -34,17 +34,19 @@ export const getProfile = () => api.get('/auth/profile')
 export const getMyOrganization = () => api.get('/auth/organization')
 export const changePassword = (data) => api.put('/auth/password', data)
 
-// Targets
-export const getTargets = () => api.get('/targets')
+// Targets (with pagination & search)
+export const getTargets = (params) => api.get('/targets', { params })
 export const createTarget = (data) => api.post('/targets', data)
 export const createBulkTargets = (targets) => api.post('/targets/bulk', { targets })
 export const updateTarget = (id, data) => api.put(`/targets/${id}`, data)
 export const deleteTarget = (id) => api.delete(`/targets/${id}`)
+export const cleanupDeadTargets = (dryRun = true) => api.post(`/targets/cleanup-dead?dry_run=${dryRun}`)
 
-// Scans
-export const getScanJobs = () => api.get('/scans')
+// Scans (with pagination & filter)
+export const getScanJobs = (params) => api.get('/scans', { params })
 export const getScanJob = (id) => api.get(`/scans/${id}`)
 export const startScan = (data) => api.post('/scans/start', data)
+export const cancelScan = (id) => api.post(`/scans/${id}/cancel`)
 export const deleteScanJob = (id) => api.delete(`/scans/${id}`)
 
 // Results
@@ -54,9 +56,12 @@ export const exportSARIF = (id) => api.get(`/results/${id}/sarif`, { responseTyp
 export const getUpgradeSuggestions = (id) => api.get(`/results/${id}/upgrades`)
 export const exportCSV = (id) => api.get(`/results/${id}/csv`, { responseType: 'blob' })
 export const getScoreHistory = (id) => api.get(`/targets/${id}/history`)
+export const getTimelineComparison = (id) => api.get(`/targets/${id}/timeline`)
+export const getFixPriority = (id) => api.get(`/results/${id}/fix-priority`)
 
 // Dashboard & Leaderboard
 export const getDashboardStats = () => api.get('/dashboard')
+export const getDashboardEnhanced = () => api.get('/dashboard/enhanced')
 export const getLeaderboard = () => api.get('/leaderboard')
 export const exportLeaderboardCSV = () => api.get('/leaderboard/csv', { responseType: 'blob' })
 
@@ -140,8 +145,25 @@ export const updateMyAlerts = (data) => api.put('/alerts', data)
 // Scan Policies
 export const getScanPolicies = () => api.get('/scan-policies')
 
+// Data Leak Scanner (standalone)
+export const runDataLeakScan = (targetIds) => api.post('/data-leak/scan', { target_ids: targetIds || [] })
+export const getDataLeakResults = (domain) => api.get('/data-leak/results' + (domain ? '?domain=' + encodeURIComponent(domain) : ''))
+
+// Ministry Directives (admin)
+export const getDirectives = () => api.get('/directives')
+
+// Proxy Pool (admin)
+export const getProxyStats = () => api.get('/proxy/stats')
+export const refreshProxies = () => api.post('/proxy/refresh')
+
 // Integrations (GitHub / Jira)
 export const createGitHubIssue = (data) => api.post('/integrations/github/issue', data)
 export const createJiraIssue = (data) => api.post('/integrations/jira/issue', data)
+
+// CVE Search
+export const searchCVEs = (keyword) => api.get(`/cve/search?keyword=${encodeURIComponent(keyword)}`)
+
+// Domain Discovery (internet search via Certificate Transparency)
+export const discoverDomains = (domain) => api.get(`/discover/domain?domain=${encodeURIComponent(domain)}`)
 
 export default api

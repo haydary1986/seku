@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"crypto/tls"
 	"net/http"
 	"time"
 
@@ -36,9 +35,7 @@ func (s *CORSScanner) checkCORSWildcard(url string) models.CheckResult {
 
 	client := &http.Client{
 		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	targetURL := ensureHTTPS(url)
@@ -51,13 +48,14 @@ func (s *CORSScanner) checkCORSWildcard(url string) models.CheckResult {
 		return check
 	}
 
-	req.Header.Set("Origin", "https://evil-attacker.com")
+	req.Header.Set("Origin", "https://cors-check.example.com")
 	req.Header.Set("Access-Control-Request-Method", "GET")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		check.Status = "pass"
-		check.Score = 825
+		check.Status = "error"
+		check.Score = 0
+		check.Weight = 0
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{"message": "Could not perform CORS check", "error": err.Error()})
 		return check
@@ -76,7 +74,7 @@ func (s *CORSScanner) checkCORSWildcard(url string) models.CheckResult {
 		check.Score = 375
 		check.Severity = "medium"
 		details["message"] = "CORS allows all origins (*) - may expose data to any domain"
-	} else if acao == "https://evil-attacker.com" {
+	} else if acao == "https://cors-check.example.com" {
 		// Reflects arbitrary origins - critical vulnerability
 		check.Status = "fail"
 		check.Score = 0
@@ -109,9 +107,7 @@ func (s *CORSScanner) checkCORSCredentials(url string) models.CheckResult {
 
 	client := &http.Client{
 		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	targetURL := ensureHTTPS(url)
@@ -124,13 +120,14 @@ func (s *CORSScanner) checkCORSCredentials(url string) models.CheckResult {
 		return check
 	}
 
-	req.Header.Set("Origin", "https://evil-attacker.com")
+	req.Header.Set("Origin", "https://cors-check.example.com")
 	req.Header.Set("Access-Control-Request-Method", "GET")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		check.Status = "pass"
-		check.Score = 825
+		check.Status = "error"
+		check.Score = 0
+		check.Weight = 0
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{"message": "Could not perform CORS credentials check"})
 		return check
@@ -145,7 +142,7 @@ func (s *CORSScanner) checkCORSCredentials(url string) models.CheckResult {
 		"allow_credentials": acac,
 	}
 
-	if acac == "true" && (acao == "*" || acao == "https://evil-attacker.com") {
+	if acac == "true" && (acao == "*" || acao == "https://cors-check.example.com") {
 		// Credentials with wildcard/reflected origin - critical
 		check.Status = "fail"
 		check.Score = 0

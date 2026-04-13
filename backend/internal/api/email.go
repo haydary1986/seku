@@ -8,6 +8,7 @@ import (
 	"vscan-mohesr/internal/config"
 	"vscan-mohesr/internal/models"
 	"vscan-mohesr/internal/services"
+	"vscan-mohesr/internal/utils"
 )
 
 // GetEmailConfig returns the current SMTP configuration (admin only).
@@ -38,9 +39,15 @@ func UpdateEmailConfig(c *fiber.Ctx) error {
 	err := config.DB.First(&existing).Error
 
 	if err != nil {
-		// Create new config
+		// Create new config — encrypt password
+		if input.SMTPPass != "" {
+			if enc, encErr := utils.Encrypt(input.SMTPPass); encErr == nil {
+				input.SMTPPass = enc
+			}
+		}
 		input.IsConfigured = input.SMTPHost != "" && input.SMTPUser != "" && input.FromEmail != ""
 		config.DB.Create(&input)
+		input.SMTPPass = "********"
 		return c.JSON(input)
 	}
 
@@ -49,7 +56,12 @@ func UpdateEmailConfig(c *fiber.Ctx) error {
 	existing.SMTPPort = input.SMTPPort
 	existing.SMTPUser = input.SMTPUser
 	if input.SMTPPass != "" && input.SMTPPass != "********" {
-		existing.SMTPPass = input.SMTPPass
+		encrypted, err := utils.Encrypt(input.SMTPPass)
+		if err == nil {
+			existing.SMTPPass = encrypted
+		} else {
+			existing.SMTPPass = input.SMTPPass
+		}
 	}
 	existing.FromEmail = input.FromEmail
 	existing.FromName = input.FromName

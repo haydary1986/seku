@@ -1,11 +1,22 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getTargets, createTarget, createBulkTargets, deleteTarget, initiateVerification, getVerificationStatus, checkVerification, getTags, createTag, deleteTag, tagTarget, untagTarget, getTargetTags } from '../api'
+import { getTargets, createTarget, createBulkTargets, deleteTarget, cleanupDeadTargets, initiateVerification, getVerificationStatus, checkVerification, getTags, createTag, deleteTag, tagTarget, untagTarget, getTargetTags } from '../api'
 
 const targets = ref([])
 const loading = ref(true)
 const showAddForm = ref(false)
 const showBulkForm = ref(false)
+const searchQuery = ref('')
+const currentPage = ref(1)
+let searchTimer = null
+function debouncedSearch() {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => { currentPage.value = 1; loadTargets() }, 400)
+}
+const totalPages = ref(1)
+const totalTargets = ref(0)
+const cleanupLoading = ref(false)
+const cleanupResult = ref(null)
 const verificationStatuses = ref({})
 const verifyingTarget = ref(null)
 const verificationMessage = ref('')
@@ -40,11 +51,13 @@ const isAdmin = user.role === 'admin'
 async function loadTargets() {
   loading.value = true
   try {
-    const { data } = await getTargets()
-    targets.value = data
+    const { data } = await getTargets({ page: currentPage.value, limit: 50, search: searchQuery.value || undefined })
+    targets.value = data.data || data
+    totalPages.value = data.pages || 1
+    totalTargets.value = data.total || targets.value.length
     // Only load verification status for non-admin users
     if (!isAdmin) {
-      for (const target of data) {
+      for (const target of targets.value) {
         await loadVerificationStatus(target.ID)
       }
     }
@@ -237,6 +250,34 @@ async function removeTagFromTarget(targetId, tagId) {
   }
 }
 
+async function scanDeadTargets() {
+  cleanupLoading.value = true
+  cleanupResult.value = null
+  try {
+    const { data } = await cleanupDeadTargets(true) // dry run first
+    cleanupResult.value = data
+  } catch (e) {
+    alert(e.response?.data?.error || 'Cleanup check failed')
+  } finally {
+    cleanupLoading.value = false
+  }
+}
+
+async function confirmDeleteDead() {
+  if (!cleanupResult.value?.dead_count) return
+  if (!confirm(`Are you sure you want to delete ${cleanupResult.value.dead_count} dead targets and all their scan results?`)) return
+  cleanupLoading.value = true
+  try {
+    const { data } = await cleanupDeadTargets(false) // actual delete
+    cleanupResult.value = data
+    await loadTargets()
+  } catch (e) {
+    alert(e.response?.data?.error || 'Delete failed')
+  } finally {
+    cleanupLoading.value = false
+  }
+}
+
 onMounted(async () => {
   await loadTargets()
   await loadAllTags()
@@ -249,12 +290,20 @@ onMounted(async () => {
     <div class="flex items-center justify-between mb-8">
       <div>
         <h1 class="text-3xl font-bold text-gray-900">Targets</h1>
-        <p class="text-gray-500 mt-1">Manage websites to scan</p>
+        <p class="text-gray-500 mt-1">Manage websites to scan ({{ totalTargets }} total)</p>
       </div>
-      <div class="flex gap-3">
+      <div class="flex gap-2 flex-wrap">
+        <button @click="scanDeadTargets" :disabled="cleanupLoading"
+          class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors text-sm flex items-center gap-1.5">
+          <div v-if="cleanupLoading" class="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
+          <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          Cleanup Dead
+        </button>
         <button
           @click="showManageTags = !showManageTags; showAddForm = false; showBulkForm = false"
-          class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+          class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
         >
           Manage Tags
         </button>
@@ -270,6 +319,70 @@ onMounted(async () => {
         >
           Add Target
         </button>
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="mb-4">
+      <div class="relative">
+        <input v-model="searchQuery" @input="debouncedSearch" type="text" placeholder="Search targets by URL, name, or institution..."
+          class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+        <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Cleanup Dead Targets Result -->
+    <div v-if="cleanupResult" class="mb-4 bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          <h3 class="font-semibold text-gray-900">Cleanup Results</h3>
+        </div>
+        <button @click="cleanupResult = null" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <div class="bg-gray-50 rounded-lg p-3 text-center">
+          <p class="text-xl font-bold text-gray-700">{{ cleanupResult.total_checked }}</p>
+          <p class="text-xs text-gray-500">Checked</p>
+        </div>
+        <div class="bg-green-50 rounded-lg p-3 text-center">
+          <p class="text-xl font-bold text-green-600">{{ cleanupResult.alive_count }}</p>
+          <p class="text-xs text-green-600">Alive</p>
+        </div>
+        <div class="bg-red-50 rounded-lg p-3 text-center">
+          <p class="text-xl font-bold text-red-600">{{ cleanupResult.dead_count }}</p>
+          <p class="text-xs text-red-600">Dead</p>
+        </div>
+      </div>
+
+      <div v-if="cleanupResult.dead_count > 0 && cleanupResult.dry_run" class="space-y-2">
+        <div v-for="d in cleanupResult.dead_targets" :key="d.id" class="flex items-center gap-2 text-sm py-1 border-b border-gray-100 last:border-0">
+          <span class="w-2 h-2 rounded-full bg-red-400 flex-shrink-0"></span>
+          <span class="text-gray-700 truncate">{{ d.name || d.url }}</span>
+          <span class="text-xs text-gray-400 truncate" dir="ltr">{{ d.url }}</span>
+        </div>
+        <button @click="confirmDeleteDead"
+          class="w-full mt-3 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          Delete {{ cleanupResult.dead_count }} Dead Targets
+        </button>
+      </div>
+
+      <div v-else-if="cleanupResult.dead_count === 0" class="text-center py-2">
+        <p class="text-green-600 font-medium">All targets are alive!</p>
+      </div>
+
+      <div v-else-if="!cleanupResult.dry_run" class="text-center py-2">
+        <p class="text-green-600 font-medium">{{ cleanupResult.message }}</p>
       </div>
     </div>
 
@@ -567,6 +680,17 @@ uobasrah.edu.iq, University of Basrah, University"
         </svg>
         <p class="text-lg">No targets added yet</p>
         <p class="text-sm mt-1">Add websites to start scanning</p>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4">
+      <p class="text-sm text-gray-500">Page {{ currentPage }} of {{ totalPages }} ({{ totalTargets }} targets)</p>
+      <div class="flex gap-2">
+        <button @click="currentPage--; loadTargets()" :disabled="currentPage <= 1"
+          class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Previous</button>
+        <button @click="currentPage++; loadTargets()" :disabled="currentPage >= totalPages"
+          class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
       </div>
     </div>
   </div>

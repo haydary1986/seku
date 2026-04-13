@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"crypto/tls"
 	"io"
 	"net/http"
 	"regexp"
@@ -29,9 +28,7 @@ func (s *SEOScanner) Scan(url string) []models.CheckResult {
 	// Fetch the page HTML once and reuse it for multiple checks
 	client := &http.Client{
 		Timeout: 15 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	resp, err := client.Get(targetURL)
@@ -253,9 +250,7 @@ func (s *SEOScanner) checkSitemap(baseURL string) models.CheckResult {
 
 	noRedirectClient := &http.Client{
 		Timeout: 15 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},

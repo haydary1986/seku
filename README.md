@@ -5,7 +5,7 @@
 **The Open-Source Web Security Scanner with 1000-Point Scoring**
 
 Scan websites across **25 security categories** with granular 0–1000 scoring,
-OWASP Top 10 + CVSS v3.1 mapping, and AI-powered remediation guides.
+OWASP Top 10 + CVSS v3.1 mapping, and automated remediation guides.
 
 [![Go Version](https://img.shields.io/badge/Go-1.25-00ADD8?style=flat-square&logo=go)](https://go.dev)
 [![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D?style=flat-square&logo=vuedotjs)](https://vuejs.org)
@@ -102,12 +102,12 @@ vscan example.com
 </tr>
 </table>
 
-### 🤖 AI-Powered Analysis
+### 🔬 Smart Analysis & Remediation
 
-- **Multi-LLM Support**: DeepSeek, OpenAI, Claude, Gemini, Ollama
-- **AI Chat Assistant**: Ask questions about scan results in real time
-- **Auto-Remediation**: Step-by-step fix guides for 7 server types (Apache, Nginx, IIS, LiteSpeed, Caddy, Tomcat, Node.js)
-- **Smart Upgrades**: CVE-aware library upgrade suggestions
+- **Multi-LLM Integration**: Pluggable architecture supporting DeepSeek, OpenAI, Claude, Gemini, and Ollama
+- **Interactive Chat**: Ask questions about scan results and get contextual answers
+- **Auto-Remediation Engine**: Step-by-step fix guides for 7 server types (Apache, Nginx, IIS, LiteSpeed, Caddy, Tomcat, Node.js)
+- **CVE-Aware Upgrades**: Library vulnerability detection with upgrade recommendations
 
 ### 📊 Enterprise Features
 
@@ -118,7 +118,7 @@ vscan example.com
 | Scans/month | 10 | 50 | 200 | ∞ |
 | PDF Reports | ❌ | ✅ | ✅ | ✅ |
 | SARIF Export | ❌ | ❌ | ✅ | ✅ |
-| AI Analysis | ❌ | 10/mo | 50/mo | ∞ |
+| LLM Analysis | ❌ | 10/mo | 50/mo | ∞ |
 | Scheduled Scans | ❌ | Weekly | Daily | Custom |
 | API Access | ❌ | Read | Full | Full |
 | Webhooks | ❌ | ❌ | ✅ | ✅ |
@@ -247,7 +247,7 @@ vscan-mohesr/
 | Database | SQLite (dev) / PostgreSQL (production) |
 | Real-time | WebSocket with progress streaming |
 | Deployment | Docker, Docker Compose, Coolify |
-| AI | DeepSeek, OpenAI, Claude, Gemini, Ollama |
+| LLM Integration | DeepSeek, OpenAI, Claude, Gemini, Ollama |
 
 ## 🔌 API
 
@@ -296,8 +296,8 @@ curl https://your-instance.com/api/targets \
 | `POST` | `/api/scans/start` | Start batch security scan |
 | `GET` | `/api/scans/:id` | Scan job details with real-time progress |
 | `GET` | `/api/results/:id` | Detailed scan result with categorized checks |
-| `POST` | `/api/ai/analyze/:id` | Generate AI security analysis |
-| `GET` | `/api/ai/analysis/:id` | Retrieve AI analysis report |
+| `POST` | `/api/ai/analyze/:id` | Generate security analysis |
+| `GET` | `/api/ai/analysis/:id` | Retrieve analysis report |
 
 ### Admin Endpoints
 
@@ -305,7 +305,7 @@ curl https://your-instance.com/api/targets \
 |--------|------|-------------|
 | `GET/POST` | `/api/users` | User management |
 | `PUT/DELETE` | `/api/users/:id` | Update / delete user |
-| `GET/PUT` | `/api/settings` | System settings (AI provider config) |
+| `GET/PUT` | `/api/settings` | System settings (LLM provider config) |
 
 </details>
 
@@ -405,7 +405,7 @@ If Seku helps secure your websites, please star the repo — it helps others dis
 ---
 
 <div align="center">
-<strong>Built for the security community</strong>
+<strong>Designed & engineered by <a href="https://github.com/haydary1986">@haydary1986</a></strong>
 <br><br>
 <a href="https://github.com/haydary1986/vscan-mohesr/issues">Report Bug</a> · <a href="https://github.com/haydary1986/vscan-mohesr/issues">Request Feature</a> · <a href="https://github.com/haydary1986/vscan-mohesr/discussions">Discussions</a>
 </div>

@@ -1,14 +1,37 @@
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, onMounted, watch } from 'vue'
 import { chatWithAI } from '../api.js'
 import { useI18n } from '../i18n'
 
 const { lang } = useI18n()
 
-const messages = ref([])
+// Load saved messages from localStorage
+const STORAGE_KEY = 'seku_ai_chat_history'
+function loadMessages() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    return saved ? JSON.parse(saved) : []
+  } catch { return [] }
+}
+
+const messages = ref(loadMessages())
 const input = ref('')
 const loading = ref(false)
 const messagesContainer = ref(null)
+
+// Auto-save messages on every change
+watch(messages, (val) => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(val))
+}, { deep: true })
+
+function clearChat() {
+  messages.value = []
+  localStorage.removeItem(STORAGE_KEY)
+}
+
+onMounted(() => {
+  scrollToBottom()
+})
 
 const suggestions = [
   'What are the most critical issues in my latest scan?',
@@ -78,10 +101,20 @@ function renderMarkdown(text) {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
         </svg>
       </div>
-      <div>
+      <div class="flex-1">
         <h2 class="font-bold text-gray-900 dark:text-white">{{ lang === 'ar' ? 'مساعد الأمان الذكي' : 'AI Security Assistant' }}</h2>
-        <p class="text-xs text-gray-500 dark:text-gray-400">{{ lang === 'ar' ? 'اسأل عن نتائج الفحص أو أفضل ممارسات الأمان' : 'Ask about your scan results or security best practices' }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          {{ lang === 'ar' ? 'اسأل عن نتائج الفحص أو أفضل ممارسات الأمان' : 'Ask about your scan results or security best practices' }}
+          <span v-if="messages.length" class="text-gray-400"> — {{ messages.length }} {{ lang === 'ar' ? 'رسالة' : 'messages' }}</span>
+        </p>
       </div>
+      <button v-if="messages.length" @click="clearChat"
+        class="px-3 py-1.5 text-xs text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+        {{ lang === 'ar' ? 'مسح' : 'Clear' }}
+      </button>
     </div>
 
     <!-- Messages -->

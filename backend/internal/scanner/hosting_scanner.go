@@ -103,9 +103,7 @@ func (s *HostingScanner) checkHTTP3Support(url string) models.CheckResult {
 
 	client := &http.Client{
 		Timeout: 15 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	resp, err := client.Get(targetURL)
@@ -169,11 +167,8 @@ func (s *HostingScanner) checkBrotliCompression(url string) models.CheckResult {
 	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; Seku/1.0)")
 
 	client := &http.Client{
-		Timeout: 15 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
-			DisableCompression: true, // prevent automatic decompression so we can read the header
-		},
+		Timeout:   15 * time.Second,
+		Transport: ScanTransport,
 	}
 
 	resp, err := client.Do(req)
@@ -286,9 +281,7 @@ func (s *HostingScanner) checkKeepAlive(url string) models.CheckResult {
 
 	client := &http.Client{
 		Timeout: 15 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	resp, err := client.Get(targetURL)

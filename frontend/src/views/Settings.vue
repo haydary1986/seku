@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getSettings, updateSettings, getEmailConfig, updateEmailConfig, testEmailConfig } from '../api'
+import { getSettings, updateSettings, getEmailConfig, updateEmailConfig, testEmailConfig, getProxyStats, refreshProxies } from '../api'
 
 const settings = ref({
   ai_provider: 'deepseek',
@@ -25,6 +25,11 @@ const emailSaving = ref(false)
 const emailMessage = ref('')
 const emailTesting = ref(false)
 const testEmailAddress = ref('')
+
+// Proxy state
+const proxyStats = ref(null)
+const proxyRefreshing = ref(false)
+const proxyToggling = ref(false)
 
 const providers = [
   { value: 'deepseek', label: 'DeepSeek', defaultModel: 'deepseek-chat', defaultUrl: 'https://api.deepseek.com/v1' },
@@ -115,7 +120,58 @@ async function sendTestEmail() {
   }
 }
 
-onMounted(loadSettings)
+async function loadProxyStats() {
+  try {
+    const { data } = await getProxyStats()
+    proxyStats.value = data
+  } catch { /* proxy stats not available */ }
+}
+
+async function toggleProxy() {
+  proxyToggling.value = true
+  const newState = !(proxyStats.value?.enabled)
+  try {
+    await updateSettings({ proxy_enabled: newState ? 'true' : 'false' })
+    await loadProxyStats()
+    // If enabling, poll for stats every 3s until proxies appear
+    if (newState) {
+      proxyRefreshing.value = true
+      const poll = setInterval(async () => {
+        await loadProxyStats()
+        if (proxyStats.value?.healthy_count > 0 || proxyStats.value?.total_proxies > 0) {
+          proxyRefreshing.value = false
+          clearInterval(poll)
+        }
+      }, 3000)
+      // Stop polling after 2 minutes max
+      setTimeout(() => { clearInterval(poll); proxyRefreshing.value = false }, 120000)
+    }
+  } catch (e) {
+    console.error('Failed to toggle proxy:', e)
+  } finally {
+    proxyToggling.value = false
+  }
+}
+
+async function doRefreshProxies() {
+  proxyRefreshing.value = true
+  try {
+    await refreshProxies()
+    // Wait a bit for refresh to start, then poll
+    setTimeout(async () => {
+      await loadProxyStats()
+      proxyRefreshing.value = false
+    }, 5000)
+  } catch (e) {
+    proxyRefreshing.value = false
+    console.error('Proxy refresh failed:', e)
+  }
+}
+
+onMounted(() => {
+  loadSettings()
+  loadProxyStats()
+})
 </script>
 
 <template>
@@ -291,6 +347,69 @@ onMounted(loadSettings)
           </li>
         </ol>
       </div>
+    </div>
+
+    <!-- Proxy Rotation Configuration -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-6">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+          <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Proxy Rotation</h3>
+          <p class="text-sm text-gray-500">Route scan requests through rotating proxies to avoid IP blocking</p>
+        </div>
+      </div>
+
+      <!-- Toggle -->
+      <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg mb-4">
+        <div>
+          <p class="font-medium text-gray-900">Enable Proxy Rotation</p>
+          <p class="text-sm text-gray-500">Uses free open-source proxy lists, auto-refreshed every 30 minutes</p>
+        </div>
+        <button @click="toggleProxy" :disabled="proxyToggling"
+          :class="proxyStats?.enabled ? 'bg-green-500' : 'bg-gray-300'"
+          class="relative w-14 h-7 rounded-full transition-colors duration-200 focus:outline-none">
+          <span :class="proxyStats?.enabled ? 'translate-x-7' : 'translate-x-1'"
+            class="absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200"></span>
+        </button>
+      </div>
+
+      <!-- Stats -->
+      <div v-if="proxyStats" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div class="bg-indigo-50 rounded-lg p-3 text-center">
+          <p class="text-2xl font-bold text-indigo-700">{{ proxyStats.total_proxies }}</p>
+          <p class="text-xs text-indigo-500">Total Proxies</p>
+        </div>
+        <div class="bg-green-50 rounded-lg p-3 text-center">
+          <p class="text-2xl font-bold text-green-700">{{ proxyStats.healthy_count }}</p>
+          <p class="text-xs text-green-500">Healthy</p>
+        </div>
+        <div class="bg-red-50 rounded-lg p-3 text-center">
+          <p class="text-2xl font-bold text-red-700">{{ proxyStats.dead_count }}</p>
+          <p class="text-xs text-red-500">Dead</p>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-3 text-center">
+          <p class="text-sm font-medium text-gray-700">{{ proxyStats.mode }}</p>
+          <p class="text-xs text-gray-500">Mode</p>
+        </div>
+      </div>
+
+      <div v-if="proxyStats?.last_refresh" class="text-xs text-gray-400 mb-3">
+        Last refresh: {{ new Date(proxyStats.last_refresh).toLocaleString() }}
+      </div>
+
+      <!-- Actions -->
+      <button @click="doRefreshProxies" :disabled="proxyRefreshing"
+        class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 transition-colors text-sm flex items-center gap-2">
+        <div v-if="proxyRefreshing" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        {{ proxyRefreshing ? 'Refreshing...' : 'Refresh Proxy List' }}
+      </button>
     </div>
   </div>
 </template>

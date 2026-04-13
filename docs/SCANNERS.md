@@ -2067,4 +2067,4 @@ Informational        ███████████████████�
 
 ---
 
-*This document was generated from the Seku source code and represents the exact scoring logic implemented in the scanner engine.*
+*This document reflects the exact scoring logic implemented in the Seku scanner engine.*

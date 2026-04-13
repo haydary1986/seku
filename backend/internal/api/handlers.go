@@ -1,22 +1,59 @@
 package api
 
 import (
+	"fmt"
+	"math"
+	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 
 	"vscan-mohesr/internal/config"
 	"vscan-mohesr/internal/models"
 	"vscan-mohesr/internal/scanner"
+	"vscan-mohesr/internal/services"
 )
 
 // --- Scan Targets ---
 
 func GetTargets(c *fiber.Ctx) error {
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	limit, _ := strconv.Atoi(c.Query("limit", "50"))
+	search := c.Query("search", "")
+
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 50
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+	offset := (page - 1) * limit
+
+	db := ScopedDB(c)
+	if search != "" {
+		like := "%" + search + "%"
+		db = db.Where("url LIKE ? OR name LIKE ? OR institution LIKE ?", like, like, like)
+	}
+
+	var total int64
+	db.Model(&models.ScanTarget{}).Count(&total)
+
 	var targets []models.ScanTarget
-	ScopedDB(c).Order("created_at desc").Find(&targets)
-	return c.JSON(targets)
+	db.Order("created_at desc").Offset(offset).Limit(limit).Find(&targets)
+
+	return c.JSON(fiber.Map{
+		"data":  targets,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+		"pages": int(math.Ceil(float64(total) / float64(limit))),
+	})
 }
 
 func CreateTarget(c *fiber.Ctx) error {
@@ -83,26 +120,148 @@ func UpdateTarget(c *fiber.Ctx) error {
 	return c.JSON(target)
 }
 
+// --- Cleanup Dead Targets ---
+
+func CleanupDeadTargets(c *fiber.Ctx) error {
+	var targets []models.ScanTarget
+	ScopedDB(c).Find(&targets)
+
+	if len(targets) == 0 {
+		return c.JSON(fiber.Map{"message": "No targets to check", "removed": 0})
+	}
+
+	type deadTarget struct {
+		ID   uint   `json:"id"`
+		URL  string `json:"url"`
+		Name string `json:"name"`
+	}
+
+	// Check all targets in parallel with 3s timeout per site
+	client := &http.Client{
+		Timeout: 3 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	type checkResult struct {
+		target models.ScanTarget
+		alive  bool
+	}
+
+	results := make(chan checkResult, len(targets))
+	sem := make(chan struct{}, 20) // 20 concurrent checks
+
+	for _, t := range targets {
+		sem <- struct{}{}
+		go func(t models.ScanTarget) {
+			defer func() { <-sem }()
+
+			url := t.URL
+			if !strings.HasPrefix(url, "http") {
+				url = "https://" + url
+			}
+
+			alive := false
+			resp, err := client.Get(url)
+			if err == nil {
+				resp.Body.Close()
+				if resp.StatusCode < 500 {
+					alive = true
+				}
+			}
+			if !alive {
+				httpURL := strings.Replace(url, "https://", "http://", 1)
+				resp, err := client.Get(httpURL)
+				if err == nil {
+					resp.Body.Close()
+					if resp.StatusCode < 500 {
+						alive = true
+					}
+				}
+			}
+			results <- checkResult{target: t, alive: alive}
+		}(t)
+	}
+
+	// Collect results
+	var dead []deadTarget
+	for i := 0; i < len(targets); i++ {
+		r := <-results
+		if !r.alive {
+			dead = append(dead, deadTarget{ID: r.target.ID, URL: r.target.URL, Name: r.target.Name})
+		}
+	}
+
+	// Delete if not dry run
+	dryRun := c.Query("dry_run", "true")
+	if dryRun == "false" && len(dead) > 0 {
+		for _, d := range dead {
+			var scanResults []models.ScanResult
+			config.DB.Where("scan_target_id = ?", d.ID).Find(&scanResults)
+			for _, r := range scanResults {
+				config.DB.Where("scan_result_id = ?", r.ID).Delete(&models.CheckResult{})
+			}
+			config.DB.Where("scan_target_id = ?", d.ID).Delete(&models.ScanResult{})
+			config.DB.Delete(&models.ScanTarget{}, d.ID)
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"total_checked": len(targets),
+		"dead_count":    len(dead),
+		"alive_count":   len(targets) - len(dead),
+		"dry_run":       dryRun != "false",
+		"dead_targets":  dead,
+		"message": func() string {
+			if dryRun != "false" {
+				return fmt.Sprintf("Deleted %d dead targets", len(dead))
+			}
+			return "Dry run complete. Review and confirm deletion."
+		}(),
+	})
+}
+
 // --- Scan Jobs ---
 
 func GetScanJobs(c *fiber.Ctx) error {
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	limit, _ := strconv.Atoi(c.Query("limit", "20"))
+	status := c.Query("status", "")
+
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
+
+	db := ScopedDB(c)
+	if status != "" {
+		db = db.Where("status = ?", status)
+	}
+
+	var total int64
+	db.Model(&models.ScanJob{}).Count(&total)
+
 	var jobs []models.ScanJob
-	ScopedDB(c).Order("created_at desc").Find(&jobs)
+	db.Order("created_at desc").Offset(offset).Limit(limit).Find(&jobs)
 
 	// Add progress info to each job
-	result := make([]fiber.Map, 0)
+	items := make([]fiber.Map, 0)
 	for _, job := range jobs {
-		var total, completed, failed int64
-		config.DB.Model(&models.ScanResult{}).Where("scan_job_id = ?", job.ID).Count(&total)
+		var jobTotal, completed, failed int64
+		config.DB.Model(&models.ScanResult{}).Where("scan_job_id = ?", job.ID).Count(&jobTotal)
 		config.DB.Model(&models.ScanResult{}).Where("scan_job_id = ? AND status = ?", job.ID, "completed").Count(&completed)
 		config.DB.Model(&models.ScanResult{}).Where("scan_job_id = ? AND status = ?", job.ID, "failed").Count(&failed)
 
 		progress := 0.0
-		if total > 0 {
-			progress = float64(completed+failed) / float64(total) * 100
+		if jobTotal > 0 {
+			progress = float64(completed+failed) / float64(jobTotal) * 100
 		}
 
-		result = append(result, fiber.Map{
+		items = append(items, fiber.Map{
 			"ID":         job.ID,
 			"CreatedAt":  job.CreatedAt,
 			"name":       job.Name,
@@ -110,7 +269,7 @@ func GetScanJobs(c *fiber.Ctx) error {
 			"started_at": job.StartedAt,
 			"ended_at":   job.EndedAt,
 			"progress": fiber.Map{
-				"total":     total,
+				"total":     jobTotal,
 				"completed": completed,
 				"failed":    failed,
 				"percent":   progress,
@@ -118,7 +277,13 @@ func GetScanJobs(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(result)
+	return c.JSON(fiber.Map{
+		"data":  items,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+		"pages": int(math.Ceil(float64(total) / float64(limit))),
+	})
 }
 
 func GetScanJob(c *fiber.Ctx) error {
@@ -173,6 +338,15 @@ func GetScanJob(c *fiber.Ctx) error {
 	})
 }
 
+// PurgeAllScans deletes ALL scan jobs, results, checks, and AI analyses.
+func PurgeAllScans(c *fiber.Ctx) error {
+	config.DB.Exec("DELETE FROM check_results")
+	config.DB.Exec("DELETE FROM ai_analyses")
+	config.DB.Exec("DELETE FROM scan_results")
+	config.DB.Exec("DELETE FROM scan_jobs")
+	return c.JSON(fiber.Map{"message": "All scan data purged"})
+}
+
 type StartScanRequest struct {
 	Name      string `json:"name"`
 	TargetIDs []uint `json:"target_ids"`
@@ -185,7 +359,7 @@ func StartScan(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	userID := c.Locals("user_id").(uint)
+	userID, _ := c.Locals("user_id").(uint)
 
 	// Get user's organization via OrgMembership
 	var membership models.OrgMembership
@@ -201,10 +375,26 @@ func StartScan(c *fiber.Ctx) error {
 			config.DB.Model(&models.ScanTarget{}).Where("organization_id = ?", org.ID).Count(&targetCount)
 			if int(targetCount) >= org.MaxTargets {
 				return c.Status(403).JSON(fiber.Map{
-					"error": "Target limit reached for your plan. Please upgrade.",
-					"limit": org.MaxTargets,
+					"error":   "Target limit reached for your plan. Please upgrade.",
+					"limit":   org.MaxTargets,
 					"current": targetCount,
-					"plan":  org.Plan,
+					"plan":    org.Plan,
+				})
+			}
+
+			// Enforce monthly scan limit
+			now := time.Now()
+			startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+			var monthlyScans int64
+			config.DB.Model(&models.ScanJob{}).
+				Where("organization_id = ? AND created_at >= ?", org.ID, startOfMonth).
+				Count(&monthlyScans)
+			if org.MaxScans > 0 && int(monthlyScans) >= org.MaxScans {
+				return c.Status(403).JSON(fiber.Map{
+					"error":   "Monthly scan limit reached for your plan. Please upgrade.",
+					"limit":   org.MaxScans,
+					"used":    monthlyScans,
+					"plan":    org.Plan,
 				})
 			}
 		}
@@ -348,6 +538,32 @@ func GetDashboardStats(c *fiber.Ctx) error {
 		`, orgID).Preload("ScanTarget").Find(&latestResults)
 	}
 
+	// Get worst 5 scan results (bottom scores)
+	var worstResults []models.ScanResult
+	if isAdmin {
+		config.DB.Raw(`
+			SELECT sr.* FROM scan_results sr
+			INNER JOIN (
+				SELECT scan_target_id, MAX(id) AS max_id
+				FROM scan_results WHERE status = 'completed'
+				GROUP BY scan_target_id
+			) latest ON sr.id = latest.max_id
+			ORDER BY sr.overall_score ASC LIMIT 5
+		`).Preload("ScanTarget").Find(&worstResults)
+	} else {
+		config.DB.Raw(`
+			SELECT sr.* FROM scan_results sr
+			INNER JOIN scan_targets st ON st.id = sr.scan_target_id
+			INNER JOIN (
+				SELECT scan_target_id, MAX(id) AS max_id
+				FROM scan_results WHERE status = 'completed'
+				GROUP BY scan_target_id
+			) latest ON sr.id = latest.max_id
+			WHERE st.organization_id = ?
+			ORDER BY sr.overall_score ASC LIMIT 5
+		`, orgID).Preload("ScanTarget").Find(&worstResults)
+	}
+
 	// Average score
 	var avgScore float64
 	if isAdmin {
@@ -364,17 +580,20 @@ func GetDashboardStats(c *fiber.Ctx) error {
 		`, orgID).Scan(&avgScore)
 	}
 
-	// Score distribution - scoped
+	// Score distribution - scoped (each count uses a fresh session to avoid chaining)
 	var excellent, good, average, poor, critical int64
-	scoreQuery := config.DB.Model(&models.ScanResult{}).Where("status = ?", "completed")
-	if !isAdmin {
-		scoreQuery = scoreQuery.Where("scan_target_id IN (SELECT id FROM scan_targets WHERE organization_id = ?)", orgID)
+	scopeFilter := func() *gorm.DB {
+		q := config.DB.Model(&models.ScanResult{}).Where("status = ?", "completed")
+		if !isAdmin {
+			q = q.Where("scan_target_id IN (SELECT id FROM scan_targets WHERE organization_id = ?)", orgID)
+		}
+		return q
 	}
-	scoreQuery.Where("overall_score >= 800").Count(&excellent)
-	scoreQuery.Where("overall_score >= 600 AND overall_score < 800").Count(&good)
-	scoreQuery.Where("overall_score >= 400 AND overall_score < 600").Count(&average)
-	scoreQuery.Where("overall_score >= 200 AND overall_score < 400").Count(&poor)
-	scoreQuery.Where("overall_score < 200").Count(&critical)
+	scopeFilter().Where("overall_score >= 800").Count(&excellent)
+	scopeFilter().Where("overall_score >= 600 AND overall_score < 800").Count(&good)
+	scopeFilter().Where("overall_score >= 400 AND overall_score < 600").Count(&average)
+	scopeFilter().Where("overall_score >= 200 AND overall_score < 400").Count(&poor)
+	scopeFilter().Where("overall_score < 200").Count(&critical)
 
 	return c.JSON(fiber.Map{
 		"total_targets":   targetCount,
@@ -382,6 +601,7 @@ func GetDashboardStats(c *fiber.Ctx) error {
 		"completed_scans": completedJobs,
 		"average_score":   avgScore,
 		"latest_results":  latestResults,
+		"worst_results":   worstResults,
 		"score_distribution": []fiber.Map{
 			{"range": "Excellent (800-1000)", "count": excellent},
 			{"range": "Good (600-799)", "count": good},
@@ -850,6 +1070,430 @@ func GetRemediationGuide(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(guide)
+}
+
+// --- Cancel Scan ---
+
+func CancelScan(c *fiber.Ctx) error {
+	id := c.Params("id")
+	jobID, _ := strconv.ParseUint(id, 10, 64)
+
+	var job models.ScanJob
+	if err := config.DB.First(&job, jobID).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Scan job not found"})
+	}
+
+	if job.Status != "running" && job.Status != "pending" {
+		return c.Status(400).JSON(fiber.Map{"error": "Scan is not running"})
+	}
+
+	if scanner.ActiveScans.Cancel(uint(jobID)) {
+		return c.JSON(fiber.Map{"message": "Scan cancellation requested", "job_id": jobID})
+	}
+
+	// If not in active scans, just mark as cancelled in DB
+	now := time.Now()
+	job.Status = "cancelled"
+	job.EndedAt = &now
+	config.DB.Save(&job)
+	return c.JSON(fiber.Map{"message": "Scan marked as cancelled", "job_id": jobID})
+}
+
+// --- Enhanced Dashboard Stats ---
+
+func GetDashboardEnhanced(c *fiber.Ctx) error {
+	orgID := GetUserOrgID(c)
+	role, _ := c.Locals("role").(string)
+	isAdmin := role == "admin"
+
+	// Most common vulnerabilities (top 10 failed checks)
+	type VulnCount struct {
+		CheckName string `json:"check_name"`
+		Category  string `json:"category"`
+		Count     int64  `json:"count"`
+		Severity  string `json:"severity"`
+	}
+	var topVulns []VulnCount
+	vulnQuery := config.DB.Table("check_results").
+		Select("check_name, category, COUNT(*) as count, severity").
+		Where("status = 'fail'").
+		Group("check_name, category, severity").
+		Order("count DESC").
+		Limit(10)
+	if !isAdmin {
+		vulnQuery = vulnQuery.Where("scan_result_id IN (SELECT id FROM scan_results WHERE scan_target_id IN (SELECT id FROM scan_targets WHERE organization_id = ?))", orgID)
+	}
+	vulnQuery.Scan(&topVulns)
+
+	// Category average scores
+	type CategoryAvg struct {
+		Category string  `json:"category"`
+		AvgScore float64 `json:"avg_score"`
+	}
+	var catAvgs []CategoryAvg
+	catQuery := config.DB.Table("check_results").
+		Select("category, AVG(score) as avg_score").
+		Group("category").
+		Order("avg_score ASC")
+	if !isAdmin {
+		catQuery = catQuery.Where("scan_result_id IN (SELECT id FROM scan_results WHERE scan_target_id IN (SELECT id FROM scan_targets WHERE organization_id = ?))", orgID)
+	}
+	catQuery.Scan(&catAvgs)
+
+	// Score trend over time (last 12 months)
+	type MonthlyTrend struct {
+		Month    string  `json:"month"`
+		AvgScore float64 `json:"avg_score"`
+		Count    int64   `json:"count"`
+	}
+	var trend []MonthlyTrend
+	cutoff := time.Now().AddDate(-1, 0, 0).Format("2006-01-02")
+	if !isAdmin {
+		config.DB.Raw(`
+			SELECT strftime('%Y-%m', sr.ended_at) AS month, AVG(sr.overall_score) AS avg_score, COUNT(*) AS count
+			FROM scan_results sr
+			WHERE sr.status = 'completed' AND sr.ended_at >= ?
+			AND sr.scan_target_id IN (SELECT id FROM scan_targets WHERE organization_id = ?)
+			GROUP BY strftime('%Y-%m', sr.ended_at) ORDER BY month ASC
+		`, cutoff, orgID).Scan(&trend)
+	} else {
+		config.DB.Raw(`
+			SELECT strftime('%Y-%m', sr.ended_at) AS month, AVG(sr.overall_score) AS avg_score, COUNT(*) AS count
+			FROM scan_results sr
+			WHERE sr.status = 'completed' AND sr.ended_at >= ?
+			GROUP BY strftime('%Y-%m', sr.ended_at) ORDER BY month ASC
+		`, cutoff).Scan(&trend)
+	}
+
+	// Severity distribution
+	type SeverityCount struct {
+		Severity string `json:"severity"`
+		Count    int64  `json:"count"`
+	}
+	var sevDist []SeverityCount
+	sevQuery := config.DB.Table("check_results").
+		Select("severity, COUNT(*) as count").
+		Where("status = 'fail'").
+		Group("severity")
+	if !isAdmin {
+		sevQuery = sevQuery.Where("scan_result_id IN (SELECT id FROM scan_results WHERE scan_target_id IN (SELECT id FROM scan_targets WHERE organization_id = ?))", orgID)
+	}
+	sevQuery.Scan(&sevDist)
+
+	return c.JSON(fiber.Map{
+		"top_vulnerabilities":   topVulns,
+		"category_averages":     catAvgs,
+		"score_trend":           trend,
+		"severity_distribution": sevDist,
+	})
+}
+
+// --- Timeline Comparison: all scans for a target over time ---
+
+func GetTimelineComparison(c *fiber.Ctx) error {
+	targetID := c.Params("id")
+
+	type TimelineEntry struct {
+		ResultID   uint    `json:"result_id"`
+		Score      float64 `json:"score"`
+		Grade      string  `json:"grade"`
+		ScannedAt  string  `json:"scanned_at"`
+		Status     string  `json:"status"`
+		CheckCount int     `json:"check_count"`
+		FailCount  int     `json:"fail_count"`
+		WarnCount  int     `json:"warn_count"`
+		PassCount  int     `json:"pass_count"`
+	}
+
+	var results []models.ScanResult
+	config.DB.Where("scan_target_id = ? AND status = 'completed'", targetID).
+		Order("created_at ASC").
+		Find(&results)
+
+	var timeline []TimelineEntry
+	for _, r := range results {
+		var checks []models.CheckResult
+		config.DB.Where("scan_result_id = ?", r.ID).Find(&checks)
+
+		failCount, warnCount, passCount := 0, 0, 0
+		for _, ch := range checks {
+			switch ch.Status {
+			case "fail":
+				failCount++
+			case "warn", "warning":
+				warnCount++
+			case "pass":
+				passCount++
+			}
+		}
+
+		scannedAt := ""
+		if r.EndedAt != nil {
+			scannedAt = r.EndedAt.Format("2006-01-02 15:04")
+		}
+
+		timeline = append(timeline, TimelineEntry{
+			ResultID:   r.ID,
+			Score:      r.OverallScore,
+			Grade:      scoreToGrade(r.OverallScore),
+			ScannedAt:  scannedAt,
+			Status:     r.Status,
+			CheckCount: len(checks),
+			FailCount:  failCount,
+			WarnCount:  warnCount,
+			PassCount:  passCount,
+		})
+	}
+
+	// Category comparison between first and last scan
+	var catComparison []fiber.Map
+	if len(results) >= 2 {
+		first := results[0]
+		last := results[len(results)-1]
+
+		var firstChecks, lastChecks []models.CheckResult
+		config.DB.Where("scan_result_id = ?", first.ID).Find(&firstChecks)
+		config.DB.Where("scan_result_id = ?", last.ID).Find(&lastChecks)
+
+		calcCatScore := func(checks []models.CheckResult) map[string]float64 {
+			t := map[string]float64{}
+			w := map[string]float64{}
+			for _, ch := range checks {
+				t[ch.Category] += ch.Score * ch.Weight
+				w[ch.Category] += ch.Weight
+			}
+			result := map[string]float64{}
+			for cat, total := range t {
+				if w[cat] > 0 {
+					result[cat] = total / w[cat]
+				}
+			}
+			return result
+		}
+
+		firstScores := calcCatScore(firstChecks)
+		lastScores := calcCatScore(lastChecks)
+
+		allCats := map[string]bool{}
+		for c := range firstScores {
+			allCats[c] = true
+		}
+		for c := range lastScores {
+			allCats[c] = true
+		}
+
+		for cat := range allCats {
+			change := lastScores[cat] - firstScores[cat]
+			status := "unchanged"
+			if change > 10 {
+				status = "improved"
+			} else if change < -10 {
+				status = "declined"
+			}
+			catComparison = append(catComparison, fiber.Map{
+				"category":    cat,
+				"first_score": firstScores[cat],
+				"last_score":  lastScores[cat],
+				"change":      change,
+				"status":      status,
+			})
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"timeline":            timeline,
+		"total_scans":         len(timeline),
+		"category_comparison": catComparison,
+	})
+}
+
+// --- Fix Priority Recommendations ---
+
+func GetFixPriority(c *fiber.Ctx) error {
+	resultID := c.Params("id")
+
+	var checks []models.CheckResult
+	config.DB.Where("scan_result_id = ? AND (status = 'fail' OR status = 'warn')", resultID).
+		Order("score ASC, cvss_score DESC").
+		Find(&checks)
+
+	type FixRecommendation struct {
+		Priority      int     `json:"priority"`
+		CheckName     string  `json:"check_name"`
+		Category      string  `json:"category"`
+		CurrentScore  float64 `json:"current_score"`
+		Impact        float64 `json:"impact"`
+		Severity      string  `json:"severity"`
+		CVSSScore     float64 `json:"cvss_score"`
+		Effort        string  `json:"effort"` // easy, medium, hard
+		OWASP         string  `json:"owasp"`
+		CWE           string  `json:"cwe"`
+		Recommendation string `json:"recommendation"`
+	}
+
+	var recommendations []FixRecommendation
+
+	for i, ch := range checks {
+		impact := (maxScore - ch.Score) * ch.Weight
+		effort := estimateEffort(ch.CheckName, ch.Category)
+		rec := getFixRecommendation(ch.CheckName)
+
+		recommendations = append(recommendations, FixRecommendation{
+			Priority:       i + 1,
+			CheckName:      ch.CheckName,
+			Category:       ch.Category,
+			CurrentScore:   ch.Score,
+			Impact:         impact,
+			Severity:       ch.Severity,
+			CVSSScore:      ch.CVSSScore,
+			Effort:         effort,
+			OWASP:          ch.OWASP,
+			CWE:            ch.CWE,
+			Recommendation: rec,
+		})
+	}
+
+	// Calculate potential score improvement
+	totalImpact := 0.0
+	for _, r := range recommendations {
+		totalImpact += r.Impact
+	}
+
+	quickWins := 0
+	for _, r := range recommendations {
+		if r.Effort == "easy" {
+			quickWins++
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"recommendations":        recommendations,
+		"total_issues":           len(recommendations),
+		"total_potential_impact":  totalImpact,
+		"quick_wins":             quickWins,
+	})
+}
+
+const maxScore = 1000.0
+
+func estimateEffort(checkName, category string) string {
+	easyCategories := map[string]bool{
+		"headers": true, "cookies": true, "mixed_content": true, "seo": true,
+	}
+	hardCategories := map[string]bool{
+		"sqli": true, "xss": true, "advanced_security": true, "malware": true,
+	}
+
+	if easyCategories[category] {
+		return "easy"
+	}
+	if hardCategories[category] {
+		return "hard"
+	}
+
+	lowerName := strings.ToLower(checkName)
+	if strings.Contains(lowerName, "header") || strings.Contains(lowerName, "hsts") ||
+		strings.Contains(lowerName, "x-frame") || strings.Contains(lowerName, "x-content") {
+		return "easy"
+	}
+	return "medium"
+}
+
+func getFixRecommendation(checkName string) string {
+	recommendations := map[string]string{
+		"Strict-Transport-Security (HSTS)": "Add 'Strict-Transport-Security: max-age=31536000; includeSubDomains' header to your web server configuration",
+		"Content-Security-Policy":          "Define a Content-Security-Policy header to prevent XSS and data injection attacks",
+		"X-Frame-Options":                  "Add 'X-Frame-Options: DENY' or 'SAMEORIGIN' header to prevent clickjacking",
+		"X-Content-Type-Options":           "Add 'X-Content-Type-Options: nosniff' header to prevent MIME type sniffing",
+		"SQL Injection Test":               "Use parameterized queries/prepared statements. Never concatenate user input into SQL queries",
+		"Open Port Detection":              "Close unnecessary ports. Restrict database and admin ports to internal networks using firewall rules",
+		"Database Error Disclosure":        "Configure custom error pages. Disable verbose error output in production",
+	}
+
+	if rec, ok := recommendations[checkName]; ok {
+		return rec
+	}
+	return "Review and fix this security issue based on industry best practices"
+}
+
+// --- CVE Search ---
+
+func SearchCVEs(c *fiber.Ctx) error {
+	keyword := c.Query("keyword", "")
+	if keyword == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "keyword query parameter is required"})
+	}
+
+	entries, err := services.FetchCVEsForProduct(keyword)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch CVE data: " + err.Error()})
+	}
+
+	return c.JSON(fiber.Map{
+		"keyword":      keyword,
+		"total":        len(entries),
+		"last_updated": services.CVECache.LastUpdated(),
+		"cves":         entries,
+	})
+}
+
+// --- Domain Discovery: search the internet for websites by domain extension ---
+
+func DiscoverDomains(c *fiber.Ctx) error {
+	domain := c.Query("domain", "")
+	if domain == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "domain query parameter is required (e.g., .edu.iq)"})
+	}
+	if domain[0] != '.' {
+		domain = "." + domain
+	}
+
+	// Search crt.sh (Certificate Transparency) for real domains on the internet
+	crtDomains, err := services.DiscoverDomainsFromCT(domain)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Discovery failed: " + err.Error()})
+	}
+
+	// Check which ones are already in our targets
+	var existingURLs []string
+	config.DB.Model(&models.ScanTarget{}).Pluck("url", &existingURLs)
+
+	existingMap := map[string]bool{}
+	for _, u := range existingURLs {
+		// Normalize: strip protocol and trailing slash
+		clean := strings.TrimPrefix(strings.TrimPrefix(u, "https://"), "http://")
+		clean = strings.TrimRight(clean, "/")
+		existingMap[strings.ToLower(clean)] = true
+	}
+
+	type DiscoveredSite struct {
+		Domain     string `json:"domain"`
+		URL        string `json:"url"`
+		AlreadyAdded bool `json:"already_added"`
+	}
+
+	var results []DiscoveredSite
+	newCount := 0
+	for _, d := range crtDomains {
+		clean := strings.ToLower(strings.TrimRight(d, "/"))
+		added := existingMap[clean]
+		results = append(results, DiscoveredSite{
+			Domain:       d,
+			URL:          "https://" + d,
+			AlreadyAdded: added,
+		})
+		if !added {
+			newCount++
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"domain":        domain,
+		"total_found":   len(results),
+		"new_sites":     newCount,
+		"already_added": len(results) - newCount,
+		"results":       results,
+	})
 }
 
 func scoreToGrade(score float64) string {

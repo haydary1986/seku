@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,9 +26,7 @@ func (s *InfoDisclosureScanner) Scan(url string) []models.CheckResult {
 
 	client := &http.Client{
 		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	targetURL := ensureHTTPS(url)
@@ -38,7 +35,11 @@ func (s *InfoDisclosureScanner) Scan(url string) []models.CheckResult {
 		targetURL = ensureHTTP(url)
 		resp, err = client.Get(targetURL)
 		if err != nil {
-			return nil
+			return []models.CheckResult{
+				{Category: s.Category(), CheckName: "Error Page Information Disclosure", Status: "error", Score: 0, Weight: 0, Severity: "info", Details: toJSON(map[string]string{"message": "Cannot reach website"})},
+				{Category: s.Category(), CheckName: "Sensitive HTML Comments", Status: "error", Score: 0, Weight: 0, Severity: "info", Details: toJSON(map[string]string{"message": "Cannot reach website"})},
+				{Category: s.Category(), CheckName: "Technology Version Disclosure", Status: "error", Score: 0, Weight: 0, Severity: "info", Details: toJSON(map[string]string{"message": "Cannot reach website"})},
+			}
 		}
 	}
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 512*1024))
@@ -67,10 +68,11 @@ func (s *InfoDisclosureScanner) checkErrorPages(client *http.Client, baseURL str
 	errorURL := baseURL + "/this-page-does-not-exist-test-404"
 	resp, err := client.Get(errorURL)
 	if err != nil {
-		check.Status = "pass"
-		check.Score = 825
+		check.Status = "error"
+		check.Score = 0
+		check.Weight = 0
 		check.Severity = "info"
-		check.Details = toJSON(map[string]string{"message": "Cannot check error pages"})
+		check.Details = toJSON(map[string]string{"message": "Cannot check error pages (timeout or network error)"})
 		return check
 	}
 	defer resp.Body.Close()

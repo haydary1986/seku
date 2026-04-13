@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"time"
@@ -22,9 +21,7 @@ func (s *CookieScanner) Weight() float64  { return 10.0 }
 func (s *CookieScanner) Scan(url string) []models.CheckResult {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	resp, err := client.Get(ensureHTTPS(url))

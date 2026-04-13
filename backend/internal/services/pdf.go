@@ -49,6 +49,12 @@ var categoryNames = map[string]string{
 	"content": "Content Optimization", "hosting": "Hosting Quality", "advanced_security": "Advanced Security",
 	"malware": "Malware & Threats", "threat_intel": "Threat Intelligence",
 	"seo": "SEO & Technical Health", "third_party": "Third-Party Scripts", "js_libraries": "JavaScript Libraries",
+	"wordpress": "WordPress Security", "xss": "XSS Vulnerabilities", "secrets": "Secrets Detection",
+	"subdomains": "Subdomain Discovery", "tech_stack": "Technology Detection",
+	"sqli": "SQL Injection", "ports": "Port Scanner",
+	"open_redirect": "Open Redirect", "ssrf": "SSRF Detection",
+	"email_security": "Email Security", "waf": "WAF Detection", "zone_transfer": "DNS Zone Transfer",
+	"data_leak": "Data Leak Detection",
 }
 
 // findFontDir locates the fonts directory

@@ -125,6 +125,48 @@ export const categoryInfo = {
     importance: 'critical',
     attackScenario: 'Hackers inject malicious JavaScript or hidden iframes into compromised websites to steal visitor credentials, install ransomware, mine cryptocurrency using visitor CPU, or redirect users to phishing sites. These attacks are often invisible to site administrators.',
   },
+  sqli: {
+    title: 'SQL Injection',
+    description: 'SQL injection occurs when user input is inserted into SQL queries without proper sanitization, allowing attackers to manipulate database operations.',
+    importance: 'critical',
+    attackScenario: 'An attacker enters SQL code in a login form (e.g., \' OR 1=1 --) to bypass authentication, or uses UNION queries to extract sensitive data like passwords, credit card numbers, or personal information from the database.',
+  },
+  ports: {
+    title: 'Open Ports',
+    description: 'Open network ports expose services to the internet. Unnecessary open ports increase the attack surface and may expose vulnerable services.',
+    importance: 'high',
+    attackScenario: 'An attacker scans for open database ports (MySQL 3306, PostgreSQL 5432) and attempts to connect directly, brute-forcing credentials or exploiting known vulnerabilities in exposed services.',
+  },
+  open_redirect: {
+    title: 'Open Redirect',
+    description: 'Open redirect vulnerabilities allow attackers to redirect users from a trusted domain to a malicious website through URL parameter manipulation.',
+    importance: 'medium',
+    attackScenario: 'An attacker crafts a phishing link using the university\'s trusted domain (e.g., university.edu/redirect?url=evil.com) to trick users into visiting malicious sites, making the phishing attack appear legitimate.',
+  },
+  ssrf: {
+    title: 'Server-Side Request Forgery',
+    description: 'SSRF allows attackers to make the server send requests to internal resources, potentially accessing internal services, metadata APIs, or sensitive internal endpoints.',
+    importance: 'critical',
+    attackScenario: 'An attacker exploits a URL-fetching feature to access the cloud metadata API (169.254.169.254) and steal IAM credentials, or probes internal network services that are not exposed to the internet.',
+  },
+  email_security: {
+    title: 'Email Security',
+    description: 'Email security records (SPF, DKIM, DMARC, BIMI) protect against email spoofing and phishing attacks targeting the organization\'s domain.',
+    importance: 'high',
+    attackScenario: 'Without DKIM and DMARC, an attacker can send emails that appear to come from the university\'s domain, tricking students and staff into revealing credentials or downloading malware.',
+  },
+  waf: {
+    title: 'Web Application Firewall',
+    description: 'A WAF protects web applications by filtering and monitoring HTTP traffic, blocking common attacks like SQL injection, XSS, and DDoS.',
+    importance: 'medium',
+    attackScenario: 'Without a WAF, automated attack tools can freely probe the website for vulnerabilities, launch SQL injection attacks, and exploit known CVEs without any filtering layer.',
+  },
+  zone_transfer: {
+    title: 'DNS Zone Transfer',
+    description: 'DNS zone transfer (AXFR) allows replication of DNS records between nameservers. If unrestricted, it exposes the complete DNS zone including all subdomains and internal records.',
+    importance: 'high',
+    attackScenario: 'An attacker performs a zone transfer to discover all subdomains, including internal ones (admin.uni.edu, vpn.uni.edu, dev.uni.edu) and then targets these potentially less-secured systems.',
+  },
 }
 
 export const checkExplanations = {
@@ -250,6 +292,86 @@ export const checkExplanations = {
     risk: 'Slow TLS handshake affects all HTTPS connections and user experience.',
     exploit: 'Attackers can exploit slow TLS by initiating thousands of TLS handshakes simultaneously (TLS exhaustion attack).',
     fix: 'Enable TLS session resumption, use OCSP stapling, ensure modern cipher suites are prioritized.',
+  },
+
+  // SQL Injection Checks
+  'SQL Injection Test': {
+    what: 'Tests input fields and URL parameters for SQL injection vulnerabilities by sending common SQL payloads.',
+    risk: 'Attackers can read, modify, or delete database contents, bypass authentication, and potentially execute system commands.',
+    exploit: 'Attacker injects SQL code like \' OR 1=1 -- into login forms or URL parameters to bypass authentication, or uses UNION SELECT to extract data from other tables.',
+    fix: 'Use parameterized queries (prepared statements) for all database operations. Never concatenate user input into SQL strings. Apply input validation and use an ORM.',
+  },
+  'Database Error Disclosure': {
+    what: 'Checks if the application exposes database error messages containing table names, query structure, or database version.',
+    risk: 'Database error messages reveal internal structure, making it easier for attackers to craft targeted SQL injection attacks.',
+    exploit: 'Attacker sends malformed input to trigger database errors, then uses revealed table names and column information to construct precise data extraction queries.',
+    fix: 'Configure custom error pages that hide technical details. Log detailed errors server-side only. Set display_errors=off in production.',
+  },
+  'Blind SQL Injection Test': {
+    what: 'Tests for blind SQL injection where the application does not show error messages but behaves differently based on injected conditions.',
+    risk: 'Even without visible errors, attackers can extract entire databases one character at a time using boolean or time-based techniques.',
+    exploit: 'Attacker uses payloads like \' AND 1=1-- vs \' AND 1=2-- to observe different responses, or \' AND SLEEP(5)-- to measure response time differences, slowly extracting data.',
+    fix: 'Use parameterized queries for all database operations. Implement a WAF with SQL injection rules. Monitor for unusually slow or repetitive query patterns.',
+  },
+
+  // Open Port Detection
+  'Open Port Detection': {
+    what: 'Scans for commonly exploited open network ports including database ports (3306, 5432), admin interfaces (8080, 8443), and other sensitive services.',
+    risk: 'Unnecessary open ports expose internal services to the internet, increasing the attack surface for brute-force, exploitation, and data exfiltration.',
+    exploit: 'Attacker discovers open MySQL port (3306) and uses tools like Hydra to brute-force database credentials, or finds an exposed Redis instance (6379) with no authentication.',
+    fix: 'Close all unnecessary ports using firewall rules (iptables/ufw). Restrict database and admin ports to internal networks only. Use VPN for remote administration.',
+  },
+
+  // Open Redirect
+  'Open Redirect Test': {
+    what: 'Tests URL parameters for open redirect vulnerabilities where the application redirects users to attacker-controlled URLs.',
+    risk: 'Attackers abuse trusted domain reputation to redirect users to phishing or malware sites, bypassing email filters and user suspicion.',
+    exploit: 'Attacker crafts URL like trusted-site.edu/redirect?url=https://evil.com/fake-login and distributes it via phishing emails. Victims trust the university domain and click.',
+    fix: 'Validate redirect URLs against a whitelist of allowed domains. Never redirect to user-supplied URLs without validation. Use relative paths for internal redirects.',
+  },
+
+  // SSRF Detection
+  'SSRF Detection': {
+    what: 'Tests for Server-Side Request Forgery where the application can be tricked into making requests to internal resources or arbitrary external URLs.',
+    risk: 'Attackers can access internal services, cloud metadata APIs, and private network resources that are not directly accessible from the internet.',
+    exploit: 'Attacker submits http://169.254.169.254/latest/meta-data/ as a URL parameter to steal cloud instance credentials, or http://localhost:6379/ to interact with internal Redis.',
+    fix: 'Validate and whitelist allowed URLs and IP ranges. Block requests to private IP ranges (10.x, 172.16.x, 192.168.x, 169.254.x). Use a dedicated HTTP client with SSRF protections.',
+  },
+
+  // Email Security Checks
+  'DKIM Record': {
+    what: 'Checks for DomainKeys Identified Mail (DKIM) records that cryptographically sign outgoing emails to verify they haven\'t been tampered with.',
+    risk: 'Without DKIM, attackers can forge emails that appear to come from your domain, and recipients cannot verify email authenticity.',
+    exploit: 'Attacker sends spoofed emails from admin@yourdomain.edu to employees requesting password resets or wire transfers. Without DKIM, email servers cannot detect the forgery.',
+    fix: 'Configure DKIM by generating a key pair, publishing the public key as a DNS TXT record, and configuring your mail server to sign outgoing emails.',
+  },
+  'BIMI Record': {
+    what: 'Checks for Brand Indicators for Message Identification (BIMI), which displays your organization\'s logo in supported email clients.',
+    risk: 'Without BIMI, recipients cannot visually verify email authenticity, making phishing emails harder to distinguish from legitimate ones.',
+    exploit: 'Phishing emails impersonating the organization appear identical to legitimate emails in the inbox. BIMI-enabled legitimate emails display the official logo, helping users identify real messages.',
+    fix: 'Set up BIMI by publishing a BIMI DNS record pointing to your SVG logo. Requires DMARC enforcement (p=quarantine or p=reject) as a prerequisite.',
+  },
+  'Email Security Score': {
+    what: 'Evaluates the overall email security posture by checking SPF, DKIM, DMARC, and BIMI configuration completeness and strength.',
+    risk: 'Incomplete email security allows various spoofing and phishing attacks that damage organization reputation and compromise user accounts.',
+    exploit: 'Attacker exploits gaps in email authentication chain — e.g., SPF exists but DMARC is set to p=none, meaning spoofed emails are still delivered to recipients.',
+    fix: 'Implement all four email security layers: SPF (restrict senders), DKIM (sign emails), DMARC (enforce policy with p=reject), and BIMI (brand verification).',
+  },
+
+  // WAF Detection
+  'WAF Detection': {
+    what: 'Detects whether a Web Application Firewall (WAF) is protecting the website by analyzing response headers, cookies, and behavior patterns.',
+    risk: 'Without a WAF, all malicious traffic reaches the application directly, relying solely on application-level security which may have gaps.',
+    exploit: 'Attacker uses automated scanning tools (sqlmap, nikto, nuclei) to send thousands of attack payloads directly to the application. Without a WAF, these all reach the server.',
+    fix: 'Deploy a WAF such as Cloudflare WAF, AWS WAF, or ModSecurity. Configure rules to block OWASP Top 10 attack patterns and enable rate limiting.',
+  },
+
+  // DNS Zone Transfer
+  'DNS Zone Transfer': {
+    what: 'Tests if the DNS server allows unrestricted zone transfers (AXFR), which would expose all DNS records including internal subdomains.',
+    risk: 'Unrestricted zone transfers reveal the complete DNS infrastructure, including internal hostnames, mail servers, and hidden services.',
+    exploit: 'Attacker runs dig axfr yourdomain.edu to dump all DNS records, discovering internal subdomains like admin.yourdomain.edu, staging.yourdomain.edu, and vpn.yourdomain.edu.',
+    fix: 'Restrict zone transfers to authorized secondary nameservers only. Configure allow-transfer in BIND or equivalent setting in your DNS server to list specific IPs.',
   },
 }
 

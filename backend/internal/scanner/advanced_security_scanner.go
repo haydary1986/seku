@@ -36,9 +36,7 @@ func (s *AdvancedSecurityScanner) Scan(url string) []models.CheckResult {
 	// -----------------------------------------------------------------------
 	client := &http.Client{
 		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	resp, err := client.Get(ensureHTTPS(url))

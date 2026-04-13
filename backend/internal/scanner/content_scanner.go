@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io"
 	"math"
@@ -46,9 +45,7 @@ func (s *ContentScanner) checkCacheHeaders(url string) models.CheckResult {
 
 	client := &http.Client{
 		Timeout: 15 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	targetURL := ensureHTTPS(url)
@@ -173,9 +170,7 @@ func (s *ContentScanner) checkPageSize(url string) models.CheckResult {
 
 	client := &http.Client{
 		Timeout: 30 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	targetURL := ensureHTTPS(url)
@@ -255,10 +250,7 @@ func (s *ContentScanner) checkCompressionRatio(url string) models.CheckResult {
 
 	client := &http.Client{
 		Timeout: 15 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig:  &tls.Config{InsecureSkipVerify: true},
-			DisableCompression: true,
-		},
+		Transport: ScanTransport,
 	}
 
 	targetURL := ensureHTTPS(url)

@@ -60,9 +60,7 @@ func (s *SSLScanner) checkHTTPS(url string) models.CheckResult {
 
 	client := &http.Client{
 		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	httpsURL := ensureHTTPS(url)
@@ -304,9 +302,7 @@ func (s *SSLScanner) checkHTTPSRedirect(url string) models.CheckResult {
 		// Cannot reach HTTP version - check if HTTPS works directly
 		httpsClient := &http.Client{
 			Timeout: 10 * time.Second,
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			},
+			Transport: ScanTransport,
 		}
 		httpsURL := ensureHTTPS(url)
 		httpsResp, httpsErr := httpsClient.Get(httpsURL)
@@ -367,9 +363,7 @@ func (s *SSLScanner) checkHTTPSRedirect(url string) models.CheckResult {
 	// No redirect to HTTPS - check if HTTPS is available separately
 	httpsClient := &http.Client{
 		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 	httpsURL := ensureHTTPS(url)
 	httpsResp, httpsErr := httpsClient.Get(httpsURL)

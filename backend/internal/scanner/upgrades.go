@@ -121,13 +121,25 @@ func GetUpgradeSuggestions(checkResults []models.CheckResult) []UpgradeSuggestio
 			continue // already good
 		}
 
+		detectedVersion := extractVersionFromCheck(ch)
+
 		for key, suggestion := range KnownVulnerableLibraries {
 			if seen[suggestion.Library] {
 				continue
 			}
 			if containsLibraryHint(ch, key) {
-				s := suggestion // copy to avoid mutation
-				s.CurrentVersion = extractVersionFromCheck(ch)
+				// Skip if version is unknown — can't confirm vulnerability
+				if detectedVersion == "unknown" || detectedVersion == "" {
+					s := suggestion
+					s.CurrentVersion = "unknown"
+					s.Severity = "low"
+					s.Description = "Version could not be detected. Verify manually and update if needed."
+					suggestions = append(suggestions, s)
+					seen[suggestion.Library] = true
+					continue
+				}
+				s := suggestion
+				s.CurrentVersion = detectedVersion
 				suggestions = append(suggestions, s)
 				seen[suggestion.Library] = true
 			}

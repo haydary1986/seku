@@ -12,6 +12,7 @@ import (
 
 	"vscan-mohesr/internal/config"
 	"vscan-mohesr/internal/models"
+	"vscan-mohesr/internal/scanner"
 )
 
 // --- Settings CRUD ---
@@ -50,6 +51,11 @@ func UpdateSettings(c *fiber.Ctx) error {
 				continue
 			}
 			config.DB.Model(&setting).Update("value", value)
+		}
+
+		// Sync proxy setting to pool
+		if key == "proxy_enabled" {
+			scanner.Pool.SetEnabled(value == "true")
 		}
 	}
 
@@ -262,6 +268,17 @@ func callAIAPI(baseURL, apiKey, model, provider, prompt string) (string, error) 
 	}
 
 	return aiResp.Choices[0].Message.Content, nil
+}
+
+// --- Proxy Pool ---
+
+func GetProxyStats(c *fiber.Ctx) error {
+	return c.JSON(scanner.Pool.Stats())
+}
+
+func RefreshProxies(c *fiber.Ctx) error {
+	go scanner.Pool.Refresh()
+	return c.JSON(fiber.Map{"message": "Proxy refresh started"})
 }
 
 func callAIChatAPI(baseURL, apiKey, model, provider string, messages []map[string]string) (string, error) {

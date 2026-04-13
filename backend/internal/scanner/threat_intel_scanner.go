@@ -2,7 +2,6 @@ package scanner
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -47,17 +46,16 @@ func (s *ThreatIntelScanner) checkCryptojacking(url string) models.CheckResult {
 
 	client := &http.Client{
 		Timeout: 15 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	targetURL := ensureHTTPS(url)
 	resp, err := client.Get(targetURL)
 	if err != nil {
-		check.Score = 800
-		check.Status = "warn"
-		check.Severity = "low"
+		check.Score = 0
+		check.Weight = 0
+		check.Status = "error"
+		check.Severity = "info"
 		check.Details = toJSON(map[string]string{"message": "Cannot fetch page for cryptojacking check"})
 		return check
 	}
@@ -154,17 +152,16 @@ func (s *ThreatIntelScanner) checkC2Callbacks(url string) models.CheckResult {
 
 	client := &http.Client{
 		Timeout: 15 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	targetURL := ensureHTTPS(url)
 	resp, err := client.Get(targetURL)
 	if err != nil {
-		check.Score = 800
-		check.Status = "warn"
-		check.Severity = "low"
+		check.Score = 0
+		check.Weight = 0
+		check.Status = "error"
+		check.Severity = "info"
 		check.Details = toJSON(map[string]string{"message": "Cannot fetch page for C2 check"})
 		return check
 	}
@@ -262,9 +259,10 @@ func (s *ThreatIntelScanner) checkBlacklists(host string) models.CheckResult {
 	// Resolve the domain IP first
 	ips, err := net.LookupIP(host)
 	if err != nil || len(ips) == 0 {
-		check.Score = 700
-		check.Status = "warn"
-		check.Severity = "low"
+		check.Score = 0
+		check.Weight = 0
+		check.Status = "error"
+		check.Severity = "info"
 		check.Details = toJSON(map[string]string{"message": "Cannot resolve domain IP for blacklist check"})
 		return check
 	}

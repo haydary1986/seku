@@ -58,6 +58,34 @@ var CheckCVSSMap = map[string]CVSSMapping{
 
 	// Subdomains
 	"Dangling DNS / Subdomain Takeover": {8.6, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:N/I:H/A:N", "High"},
+
+	// SQL Injection
+	"SQL Injection Test":        {9.8, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", "Critical"},
+	"Database Error Disclosure": {5.3, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N", "Medium"},
+	"Blind SQL Injection Test":  {9.8, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", "Critical"},
+
+	// Port Scanner
+	"Open Port Detection": {7.5, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H", "High"},
+
+	// Open Redirect
+	"Open Redirect Test": {6.1, "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N", "Medium"},
+
+	// SSRF
+	"SSRF Detection": {9.1, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N", "Critical"},
+
+	// Email Security
+	"Email Security Score": {5.3, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N", "Medium"},
+
+	// WAF
+	"WAF Detection": {5.3, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N", "Medium"},
+
+	// DNS Zone Transfer
+	"DNS Zone Transfer": {7.5, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N", "High"},
+
+	// Data Leak
+	"Domain Breach History": {9.1, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N", "Critical"},
+	"Email Breach Detection": {7.5, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N", "High"},
+	"Paste Site Exposure":    {7.5, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N", "High"},
 }
 
 // GetCVSSMapping returns the CVSS mapping for a given check name, or nil if not mapped

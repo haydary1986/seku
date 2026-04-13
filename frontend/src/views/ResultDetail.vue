@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getScanResult, analyzeResult, getAIAnalysis, downloadReport, exportSARIF, exportCSV, getUpgradeSuggestions, getScoreHistory, getComplianceReport, getRemediationGuide, createGitHubIssue, createJiraIssue } from '../api'
+import { getScanResult, analyzeResult, getAIAnalysis, downloadReport, exportSARIF, exportCSV, getUpgradeSuggestions, getScoreHistory, getComplianceReport, getRemediationGuide, createGitHubIssue, createJiraIssue, getFixPriority, getTimelineComparison } from '../api'
 import { categoryInfo, getCheckExplanation } from '../data/securityKnowledge'
 import { Radar, Line } from 'vue-chartjs'
 import { Chart as ChartJS, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, CategoryScale, LinearScale } from 'chart.js'
@@ -41,6 +41,14 @@ const csvLoading = ref(false)
 const upgradeSuggestions = ref([])
 const upgradesLoading = ref(false)
 const copiedUpgrade = ref(null)
+
+// Fix Priority
+const fixPriority = ref(null)
+const fixPriorityLoading = ref(false)
+
+// Timeline
+const timeline = ref(null)
+const timelineLoading = ref(false)
 
 const historyChartData = computed(() => {
   if (scoreHistory.value.length < 2) return null
@@ -189,6 +197,14 @@ const categoryLabels = {
   secrets: 'Secrets Detection',
   subdomains: 'Subdomain Discovery',
   tech_stack: 'Technology Detection',
+  sqli: 'SQL Injection',
+  ports: 'Port Scanner',
+  open_redirect: 'Open Redirect',
+  ssrf: 'SSRF Detection',
+  email_security: 'Email Security',
+  waf: 'WAF Detection',
+  zone_transfer: 'DNS Zone Transfer',
+  data_leak: 'Data Leak Detection',
 }
 
 const categoryIcons = {
@@ -551,6 +567,24 @@ onMounted(async () => {
       upgradeSuggestions.value = upgRes.data || []
     } catch { /* no upgrade data available */ }
     upgradesLoading.value = false
+
+    // Load fix priority
+    fixPriorityLoading.value = true
+    try {
+      const fpRes = await getFixPriority(route.params.id)
+      fixPriority.value = fpRes.data
+    } catch { /* ignore */ }
+    fixPriorityLoading.value = false
+
+    // Load timeline comparison
+    if (result.value?.scan_target_id) {
+      timelineLoading.value = true
+      try {
+        const tlRes = await getTimelineComparison(result.value.scan_target_id)
+        timeline.value = tlRes.data
+      } catch { /* ignore */ }
+      timelineLoading.value = false
+    }
   } catch (e) {
     console.error('Failed to load result:', e)
   } finally {
@@ -793,6 +827,78 @@ onMounted(async () => {
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
       </div>
 
+      <!-- Fix Priority Recommendations -->
+      <div v-if="fixPriority && fixPriority.recommendations?.length" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="p-2 bg-red-100 rounded-lg">
+            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Fix Priority</h3>
+            <p class="text-sm text-gray-500">{{ fixPriority.total_issues }} issues | {{ fixPriority.quick_wins }} quick wins</p>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <div v-for="rec in fixPriority.recommendations.slice(0, 10)" :key="rec.priority"
+            class="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:bg-gray-50">
+            <span class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-white text-xs font-bold"
+              :class="rec.priority <= 3 ? 'bg-red-500' : rec.priority <= 6 ? 'bg-orange-500' : 'bg-yellow-500'">
+              {{ rec.priority }}
+            </span>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-900 truncate">{{ rec.check_name }}</p>
+              <p class="text-xs text-gray-500">{{ rec.recommendation }}</p>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span :class="rec.effort === 'easy' ? 'bg-green-100 text-green-700' : rec.effort === 'hard' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'"
+                class="px-2 py-0.5 rounded text-xs font-medium">{{ rec.effort }}</span>
+              <span class="text-xs text-gray-400">{{ rec.category }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline Comparison -->
+      <div v-if="timeline && timeline.timeline?.length > 1" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="p-2 bg-blue-100 rounded-lg">
+            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Score Timeline</h3>
+            <p class="text-sm text-gray-500">{{ timeline.total_scans }} scans over time</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          <div v-for="(entry, idx) in timeline.timeline" :key="idx"
+            class="text-center p-3 border rounded-lg" :class="idx === timeline.timeline.length - 1 ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200'">
+            <p class="text-2xl font-bold" :class="entry.score >= 800 ? 'text-green-600' : entry.score >= 500 ? 'text-yellow-600' : 'text-red-600'">{{ entry.grade }}</p>
+            <p class="text-sm font-medium text-gray-700">{{ Math.round(entry.score) }}</p>
+            <p class="text-xs text-gray-400 mt-1">{{ entry.scanned_at?.split(' ')[0] }}</p>
+            <div class="flex justify-center gap-1 mt-1">
+              <span class="text-xs text-red-500">{{ entry.fail_count }}F</span>
+              <span class="text-xs text-yellow-500">{{ entry.warn_count }}W</span>
+              <span class="text-xs text-green-500">{{ entry.pass_count }}P</span>
+            </div>
+          </div>
+        </div>
+        <!-- Category changes -->
+        <div v-if="timeline.category_comparison?.length" class="mt-4 border-t pt-4">
+          <h4 class="text-sm font-semibold text-gray-700 mb-2">Category Changes (First vs Last scan)</h4>
+          <div class="flex flex-wrap gap-2">
+            <span v-for="cat in timeline.category_comparison" :key="cat.category"
+              :class="cat.status === 'improved' ? 'bg-green-100 text-green-700' : cat.status === 'declined' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'"
+              class="px-2 py-1 rounded text-xs">
+              {{ cat.category }}: {{ cat.change > 0 ? '+' : '' }}{{ Math.round(cat.change) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Radar Chart -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -903,8 +1009,60 @@ onMounted(async () => {
                   </div>
                 </div>
 
-                <!-- Raw Details -->
-                <div v-if="check.details" class="mt-2 bg-gray-50 rounded-lg p-3 text-sm">
+                <!-- Subdomain Individual Scan Details -->
+                <div v-if="check.details && check.check_name.startsWith('Subdomain Scan:')" class="mt-2 bg-gray-50 rounded-lg p-3 text-sm">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="font-semibold text-gray-800">{{ parseDetails(check.details).subdomain }}</span>
+                    <span v-if="parseDetails(check.details).scheme" :class="parseDetails(check.details).scheme === 'https' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-0.5 rounded text-xs font-medium">
+                      {{ parseDetails(check.details).scheme?.toUpperCase() }}
+                    </span>
+                    <span v-if="parseDetails(check.details).status_code" class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">
+                      HTTP {{ parseDetails(check.details).status_code }}
+                    </span>
+                    <span v-if="parseDetails(check.details).server" class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-xs">
+                      {{ parseDetails(check.details).server }}
+                    </span>
+                    <span v-if="parseDetails(check.details).is_cloudflare" class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs font-medium">
+                      Cloudflare
+                    </span>
+                  </div>
+                  <!-- IPs -->
+                  <div v-if="parseDetails(check.details).ips" class="flex gap-1 mb-2 flex-wrap">
+                    <span class="text-xs text-gray-500">IPs:</span>
+                    <span v-for="ip in parseDetails(check.details).ips" :key="ip" class="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-mono">{{ ip }}</span>
+                  </div>
+                  <!-- TLS Info -->
+                  <div v-if="parseDetails(check.details).tls_issuer" class="flex gap-2 mb-2 text-xs">
+                    <span :class="parseDetails(check.details).tls_valid ? 'text-green-700' : 'text-red-700'" class="flex items-center gap-1">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="parseDetails(check.details).tls_valid ? 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' : 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'"/></svg>
+                      TLS: {{ parseDetails(check.details).tls_issuer }}
+                    </span>
+                    <span class="text-gray-500">Expires: {{ parseDetails(check.details).tls_expires }}</span>
+                  </div>
+                  <!-- Issues -->
+                  <div v-if="parseDetails(check.details).issues?.length" class="mb-2">
+                    <p class="text-xs font-semibold text-red-700 mb-1">Issues ({{ parseDetails(check.details).issues_count }}):</p>
+                    <ul class="space-y-0.5">
+                      <li v-for="(issue, idx) in parseDetails(check.details).issues" :key="idx" class="flex items-start gap-1.5 text-red-700">
+                        <svg class="w-3.5 h-3.5 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                        <span>{{ issue }}</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <!-- Good findings -->
+                  <div v-if="parseDetails(check.details).good?.length">
+                    <p class="text-xs font-semibold text-green-700 mb-1">Passed ({{ parseDetails(check.details).good_count }}):</p>
+                    <ul class="space-y-0.5">
+                      <li v-for="(item, idx) in parseDetails(check.details).good" :key="idx" class="flex items-start gap-1.5 text-green-700">
+                        <svg class="w-3.5 h-3.5 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        <span>{{ item }}</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Raw Details (non-subdomain checks) -->
+                <div v-else-if="check.details" class="mt-2 bg-gray-50 rounded-lg p-3 text-sm">
                   <p class="text-xs text-gray-400 mb-1">Technical Details:</p>
                   <div v-for="(value, key) in parseDetails(check.details)" :key="key" class="flex gap-2 py-0.5">
                     <span class="text-gray-500 min-w-[100px]">{{ key }}:</span>

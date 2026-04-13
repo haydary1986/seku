@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -68,9 +67,7 @@ func (s *TechDetectScanner) Scan(url string) []models.CheckResult {
 func (s *TechDetectScanner) fetchPage(url string) techFetchResult {
 	client := &http.Client{
 		Timeout: 15 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: ScanTransport,
 	}
 
 	resp, err := client.Get(ensureHTTPS(url))
@@ -417,8 +414,9 @@ func (s *TechDetectScanner) checkJSLibraries(fetched techFetchResult) models.Che
 	}
 
 	if fetched.body == "" {
-		check.Status = "pass"
-		check.Score = MaxScore
+		check.Status = "error"
+		check.Score = 0
+		check.Weight = 0
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{
 			"message": "Could not fetch page body; skipping JS library detection",

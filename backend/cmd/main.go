@@ -8,7 +8,9 @@ import (
 
 	"vscan-mohesr/internal/api"
 	"vscan-mohesr/internal/config"
+	"vscan-mohesr/internal/scanner"
 	"vscan-mohesr/internal/scheduler"
+	"vscan-mohesr/internal/services"
 	"vscan-mohesr/internal/ws"
 )
 
@@ -21,6 +23,13 @@ func main() {
 
 	// Start scheduler
 	scheduler.Start()
+
+	// Start CVE auto-updater (background, every 12 hours)
+	services.StartCVEUpdater()
+
+	// Start proxy pool updater (background, every 30 minutes)
+	scanner.Pool.LoadSettingsFromDB()
+	scanner.Pool.StartUpdater()
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{

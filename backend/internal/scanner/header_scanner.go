@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"crypto/tls"
 	"net/http"
 	"strconv"
 	"strings"
@@ -32,17 +31,12 @@ const (
 )
 
 func (s *HeaderScanner) Scan(url string) []models.CheckResult {
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := NewScanClient(10 * time.Second)
 
-	resp, err := client.Get(ensureHTTPS(url))
+	resp, err := ScanGet(client, ensureHTTPS(url))
 	if err != nil {
 		// Try HTTP if HTTPS fails
-		resp, err = client.Get(ensureHTTP(url))
+		resp, err = ScanGet(client, ensureHTTP(url))
 		if err != nil {
 			return []models.CheckResult{{
 				Category:  s.Category(),

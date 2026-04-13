@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تقرير الأمن السيبراني — جامعة التراث</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap');
+
+:root {
+  --navy: #0c1b33;
+  --navy-light: #1a2d4d;
+  --gold: #b8860b;
+  --gold-light: #d4a843;
+  --gold-bg: #fdf8ef;
+  --cream: #faf7f2;
+  --border: #d4c5a9;
+  --green: #1b6b3a;
+  --green-light: #e8f5e9;
+  --red: #8b1a1a;
+  --red-light: #fce8e8;
+  --text: #1a1a1a;
+  --text-muted: #5a5a5a;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Tajawal',sans-serif; background:#fff; color:var(--text); line-height:1.8; font-size:14px; }
+.page { max-width:210mm; margin:0 auto; padding:15mm 20mm; }
+
+/* Print */
+@media print {
+  @page { size:A4; margin:10mm 15mm; }
+  body { background:#fff; font-size:11pt; }
+  .page { padding:0; max-width:100%; }
+  .page-break { page-break-before:always; }
+  .no-print { display:none !important; }
+}
+
+/* Header */
+.report-header { text-align:center; padding-bottom:20px; margin-bottom:30px; border-bottom:3px double var(--gold); position:relative; }
+.report-header::before { content:''; position:absolute; top:0; right:0; left:0; height:4px; background:linear-gradient(90deg, var(--navy), var(--gold), var(--navy)); }
+.ministry { font-family:'Amiri',serif; font-size:16px; color:var(--navy); margin-top:16px; font-weight:700; }
+.ministry-sub { font-family:'Amiri',serif; font-size:14px; color:var(--text-muted); margin-bottom:6px; }
+.report-title { font-size:24px; font-weight:900; color:var(--navy); margin:20px 0 6px; letter-spacing:-0.5px; }
+.report-subtitle { font-size:15px; color:var(--gold); font-weight:700; }
+.report-meta { font-size:11px; color:var(--text-muted); margin-top:14px; border-top:1px solid var(--border); padding-top:10px; }
+.report-meta span { margin:0 12px; }
+
+/* Emblem placeholder */
+.emblem { width:70px; height:70px; margin:0 auto 10px; border:2px solid var(--gold); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:28px; color:var(--gold); background:var(--gold-bg); }
+
+/* Section */
+.section { margin-bottom:28px; }
+.section-title { font-size:17px; font-weight:800; color:var(--navy); padding:8px 14px; background:linear-gradient(90deg, var(--gold-bg), transparent); border-right:4px solid var(--gold); margin-bottom:14px; }
+
+/* Score Hero */
+.hero-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; }
+.hero-card { background:var(--cream); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center; position:relative; }
+.hero-card.winner { background:linear-gradient(135deg, #0c1b33, #1a3a5c); color:#fff; border-color:var(--gold); }
+.hero-card.winner .hero-label { color:var(--gold-light); }
+.hero-card.winner .hero-score { color:var(--gold-light); }
+.hero-rank { position:absolute; top:-10px; right:14px; background:var(--gold); color:#fff; font-size:11px; font-weight:800; padding:2px 12px; border-radius:10px; }
+.hero-name { font-size:16px; font-weight:800; margin:8px 0 2px; }
+.hero-url { font-size:11px; color:var(--text-muted); direction:ltr; }
+.hero-card.winner .hero-url { color:#94a3b8; }
+.hero-score { font-size:36px; font-weight:900; color:var(--navy); margin:10px 0 4px; }
+.hero-grade { font-size:13px; font-weight:700; }
+.hero-label { font-size:11px; color:var(--text-muted); }
+
+/* Tables */
+table { width:100%; border-collapse:collapse; margin-bottom:16px; font-size:12px; }
+th { background:var(--navy); color:#fff; padding:8px 12px; text-align:right; font-size:11px; font-weight:700; letter-spacing:0.3px; }
+td { padding:7px 12px; border-bottom:1px solid #e8e4dc; vertical-align:top; }
+tr:nth-child(even) { background:#faf9f7; }
+tr:hover { background:var(--gold-bg); }
+tr.row-highlight { background:linear-gradient(90deg, #e8f4fd, #f0f7ff) !important; font-weight:700; }
+tr.row-warning { background:var(--red-light) !important; }
+tr.row-gold { background:var(--gold-bg) !important; }
+
+/* Status */
+.st-pass { color:var(--green); font-weight:700; }
+.st-fail { color:var(--red); font-weight:700; }
+.st-warn { color:#b45309; font-weight:700; }
+
+/* Badges */
+.grade-badge { display:inline-block; padding:2px 10px; border-radius:4px; font-size:11px; font-weight:800; color:#fff; }
+.g-aplus { background:var(--green); }
+.g-a { background:#2563eb; }
+.g-b { background:#b45309; }
+.g-c { background:var(--red); }
+.g-f { background:#1a1a1a; }
+.severity { display:inline-block; padding:1px 8px; border-radius:3px; font-size:10px; font-weight:700; }
+.sev-critical { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+.sev-high { background:#fff7ed; color:#9a3412; border:1px solid #fdba74; }
+.sev-medium { background:#fefce8; color:#854d0e; border:1px solid #fde047; }
+
+/* Comparison */
+.comp-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+.comp-box { border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.comp-header { padding:10px 14px; font-size:13px; font-weight:800; }
+.comp-header.green { background:var(--green-light); color:var(--green); border-bottom:2px solid var(--green); }
+.comp-header.red { background:var(--red-light); color:var(--red); border-bottom:2px solid var(--red); }
+.comp-row { display:flex; justify-content:space-between; padding:5px 14px; font-size:12px; border-bottom:1px solid #f1ede5; }
+.comp-row:last-child { border:none; }
+
+/* Analysis box */
+.analysis-box { border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:16px; background:var(--cream); }
+.analysis-box h4 { font-size:14px; font-weight:800; color:var(--navy); margin-bottom:8px; }
+.analysis-box ul { padding-right:20px; }
+.analysis-box li { margin-bottom:5px; font-size:12.5px; }
+.analysis-box.green-box { background:var(--green-light); border-color:#a7d8b6; }
+.analysis-box.green-box h4 { color:var(--green); }
+.analysis-box.red-box { background:var(--red-light); border-color:#f0b0b0; }
+.analysis-box.red-box h4 { color:var(--red); }
+.analysis-box.gold-box { background:var(--gold-bg); border-color:var(--gold-light); }
+.analysis-box.gold-box h4 { color:var(--gold); }
+
+/* Footer */
+.report-footer { text-align:center; padding-top:20px; margin-top:30px; border-top:3px double var(--gold); font-size:11px; color:var(--text-muted); }
+.report-footer strong { color:var(--navy); }
+
+/* Watermark */
+.confidential { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-30deg); font-size:80px; font-weight:900; color:rgba(180,160,120,0.06); pointer-events:none; letter-spacing:10px; z-index:0; }
+</style>
+</head>
+<body>
+<div class="confidential">سري</div>
+
+<div class="page">
+<!-- HEADER -->
+<div class="report-header">
+<img src="AL-Turath Logo.png" alt="شعار جامعة التراث" style="width:90px; height:auto; margin:0 auto 12px; display:block;">
+<div class="ministry">جامعة التراث</div>
+<div class="ministry-sub">Al-Turath University</div>
+<div class="ministry-sub">قسم تكنولوجيا المعلومات</div>
+<div class="report-title">تقرير تقييم الوضع الأمني للمواقع الإلكترونية الجامعية</div>
+<div class="report-subtitle">جامعة التراث مقارنةً مع الجامعات العراقية الحكومية والأهلية</div>
+<div class="report-meta">
+<span>رقم التقرير: SEKU-2026-0327</span>
+<span>|</span>
+<span>تاريخ الفحص: 27 آذار 2026</span>
+<span>|</span>
+<span>عدد المواقع: 135 جامعة</span>
+<span>|</span>
+<span>إعداد: م.م حيدر عبدالامير — مسؤول الموقع الإلكتروني</span>
+</div>
+</div>
+
+<!-- EXECUTIVE SUMMARY -->
+<div class="section">
+<div class="section-title">الملخص التنفيذي</div>
+<div class="analysis-box gold-box">
+<h4>النتائج الرئيسية</h4>
+<ul>
+<li><strong>جامعة التراث</strong> تحتل <strong>المرتبة الأولى</strong> من بين 135 جامعة عراقية بدرجة <strong>887/1000</strong></li>
+<li>تتفوق على <strong>جامعة بغداد</strong> (حكومية) بفارق <strong>156 نقطة</strong> وعلى <strong>الجامعة التكنولوجية</strong> بفارق <strong>33 نقطة</strong></li>
+<li>تتفوق على <strong>جامعة تكنولوجيا المعلومات والاتصالات</strong> بفارق <strong>206 نقطة</strong> — وهي المتخصصة بالتكنولوجيا</li>
+<li>جامعة التراث <strong>الجامعة الأهلية الوحيدة</strong> التي تطبق جميع معايير الأمان الدولية (HSTS, CSP, DKIM, DMARC, SPF, WAF)</li>
+<li>جامعة بغداد لديها <strong>ملفات حساسة مكشوفة</strong> تُعرّض بيانات الطلبة للخطر</li>
+</ul>
+</div>
+</div>
+
+<!-- HERO SCORES -->
+<div class="section">
+<div class="section-title">درجات التقييم الرئيسية</div>
+<div class="hero-grid">
+<div class="hero-card winner">
+<div class="hero-rank">المرتبة #1</div>
+<div class="hero-name">جامعة التراث</div>
+<div class="hero-url">uoturath.edu.iq</div>
+<div class="hero-score">887</div>
+<div class="hero-grade"><span class="grade-badge g-aplus">A+</span></div>
+<div class="hero-label">أهلية — بغداد</div>
+</div>
+<div class="hero-card">
+<div class="hero-rank">المرتبة #25</div>
+<div class="hero-name">جامعة المستقبل</div>
+<div class="hero-url">uomus.edu.iq</div>
+<div class="hero-score" style="color:var(--gold);">826</div>
+<div class="hero-grade"><span class="grade-badge g-a">A</span></div>
+<div class="hero-label">أهلية</div>
+</div>
+</div>
+</div>
+
+<!-- COMPARISON: TURATH vs MUSTAQBAL -->
+<div class="section">
+<div class="section-title">مقارنة تفصيلية: جامعة التراث مقابل جامعة المستقبل</div>
+<div class="comp-grid">
+<div class="comp-box">
+<div class="comp-header green">جامعة التراث — 887/1000</div>
+<div class="comp-row"><span>HTTPS + HSTS</span><span class="st-pass">مُفعّل ✓</span></div>
+<div class="comp-row"><span>Content Security Policy</span><span class="st-pass">مُفعّل ✓</span></div>
+<div class="comp-row"><span>X-Frame-Options</span><span class="st-pass">مُفعّل ✓</span></div>
+<div class="comp-row"><span>X-Content-Type-Options</span><span class="st-pass">مُفعّل ✓</span></div>
+<div class="comp-row"><span>Permissions-Policy</span><span class="st-pass">مُفعّل ✓</span></div>
+<div class="comp-row"><span>SPF + DMARC + DKIM</span><span class="st-pass">مكتمل ✓</span></div>
+<div class="comp-row"><span>WAF (Cloudflare)</span><span class="st-pass">نشط ✓</span></div>
+<div class="comp-row"><span>SQL Injection</span><span class="st-pass">محمي ✓</span></div>
+<div class="comp-row"><span>ملفات حساسة (.env, .git)</span><span class="st-pass">محمي ✓</span></div>
+<div class="comp-row"><span>Open Redirect / SSRF</span><span class="st-pass">محمي ✓</span></div>
+</div>
+<div class="comp-box">
+<div class="comp-header red">جامعة المستقبل — 826/1000</div>
+<div class="comp-row"><span>HTTPS + HSTS</span><span class="st-fail">HSTS مفقود ✗</span></div>
+<div class="comp-row"><span>Content Security Policy</span><span class="st-fail">مفقود ✗</span></div>
+<div class="comp-row"><span>X-Frame-Options</span><span class="st-fail">مفقود ✗</span></div>
+<div class="comp-row"><span>X-Content-Type-Options</span><span class="st-fail">مفقود ✗</span></div>
+<div class="comp-row"><span>Permissions-Policy</span><span class="st-fail">مفقود ✗</span></div>
+<div class="comp-row"><span>SPF + DMARC + DKIM</span><span class="st-fail">DKIM مفقود ✗</span></div>
+<div class="comp-row"><span>WAF</span><span class="st-pass">نشط ✓</span></div>
+<div class="comp-row"><span>SQL Injection</span><span class="st-pass">محمي ✓</span></div>
+<div class="comp-row"><span>ملفات حساسة (.env, .git)</span><span class="st-fail">مكشوفة! ✗</span></div>
+<div class="comp-row"><span>API Keys</span><span class="st-fail">مفاتيح مكشوفة ✗</span></div>
+</div>
+</div>
+</div>
+
+<!-- PAGE BREAK -->
+<div class="page-break"></div>
+
+<!-- GOVERNMENT COMPARISON -->
+<div class="section">
+<div class="section-title">مقارنة مع الجامعات الحكومية الكبرى</div>
+<table>
+<thead>
+<tr><th style="width:5%">#</th><th style="width:28%">الجامعة</th><th style="width:10%">النوع</th><th style="width:10%">الدرجة</th><th style="width:8%">التقييم</th><th style="width:39%">أبرز المشاكل</th></tr>
+</thead>
+<tbody>
+<tr class="row-gold"><td>1</td><td><strong>جامعة التراث</strong></td><td>أهلية</td><td><strong>887</strong></td><td><span class="grade-badge g-aplus">A+</span></td><td>لا توجد مشاكل حرجة</td></tr>
+<tr><td>13</td><td>الجامعة التكنولوجية</td><td>حكومية</td><td>854</td><td><span class="grade-badge g-aplus">A+</span></td><td>HSTS, CSP مفقود — DKIM, DMARC فشل</td></tr>
+<tr><td>—</td><td>الجامعة التقنية الوسطى</td><td>حكومية</td><td>856</td><td><span class="grade-badge g-aplus">A+</span></td><td>بعض الترويسات الأمنية مفقودة</td></tr>
+<tr><td>—</td><td>الجامعة التقنية الشمالية</td><td>حكومية</td><td>844</td><td><span class="grade-badge g-a">A</span></td><td>ترويسات أمنية غير مكتملة</td></tr>
+<tr><td>25</td><td>جامعة المستقبل</td><td>أهلية</td><td>826</td><td><span class="grade-badge g-a">A</span></td><td>ملفات حساسة مكشوفة، 7 ترويسات مفقودة</td></tr>
+<tr><td>—</td><td>كلية بغداد للعلوم الطبية</td><td>أهلية</td><td>777</td><td><span class="grade-badge g-b">B</span></td><td>ترويسات أمنية متعددة مفقودة</td></tr>
+<tr class="row-warning"><td>—</td><td>جامعة بغداد</td><td>حكومية</td><td>731</td><td><span class="grade-badge g-b">B</span></td><td><strong>7 ترويسات حرجة مفقودة + .env/.git مكشوف</strong></td></tr>
+<tr class="row-warning"><td>—</td><td>جامعة تكنولوجيا المعلومات والاتصالات</td><td>حكومية</td><td>681</td><td><span class="grade-badge g-c">C</span></td><td><strong>بدون WAF/CDN — WP Debug مفعّل — أضعف جامعة</strong></td></tr>
+</tbody>
+</table>
+
+<div class="analysis-box gold-box">
+<h4>تحليل الفوارق</h4>
+<ul>
+<li>جامعة التراث تتفوق على <strong>جامعة بغداد</strong> بفارق <strong>156 نقطة</strong> — جامعة بغداد لديها ملفات حساسة مكشوفة تُعرّض بيانات آلاف الطلبة للسرقة</li>
+<li>جامعة التراث تتفوق على <strong>جامعة تكنولوجيا المعلومات والاتصالات</strong> بفارق <strong>206 نقطة</strong> — رغم أن الأخيرة متخصصة بالتكنولوجيا</li>
+<li>جامعة التراث تتفوق على <strong>الجامعة التكنولوجية</strong> (الأقوى حكومياً) بفارق <strong>33 نقطة</strong></li>
+<li>الفارق بين التراث وأقرب جامعة (القلم) هو <strong>12 نقطة فقط</strong> — تفوّق مستقر</li>
+</ul>
+</div>
+</div>
+
+<!-- TOP 20 RANKING -->
+<div class="section">
+<div class="section-title">ترتيب أفضل 20 جامعة عراقية</div>
+<table>
+<thead><tr><th style="width:5%">#</th><th>الجامعة</th><th style="width:22%">الموقع</th><th style="width:10%">الدرجة</th><th style="width:8%">التقييم</th></tr></thead>
+<tbody>
+<tr class="row-gold"><td><strong>1</strong></td><td><strong>جامعة التراث</strong></td><td dir="ltr">uoturath.edu.iq</td><td><strong>887</strong></td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>2</td><td>جامعة القلم</td><td dir="ltr">alqalam.edu.iq</td><td>875</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>3</td><td>كلية الحكمة الجامعة</td><td dir="ltr">hiuc.edu.iq</td><td>874</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>4</td><td>جامعة السليمانية</td><td dir="ltr">univsul.edu.iq</td><td>874</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>5</td><td>جامعة السبطين</td><td dir="ltr">sums.edu.iq</td><td>870</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>6</td><td>جامعة ابن سينا للعلوم الطبية</td><td dir="ltr">ibnsina.edu.iq</td><td>861</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>7</td><td>جامعة جابر بن حيان الطبية</td><td dir="ltr">jmu.edu.iq</td><td>861</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>8</td><td>جامعة البصرة للنفط والغاز</td><td dir="ltr">buog.edu.iq</td><td>858</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>9</td><td>جامعة الحدباء</td><td dir="ltr">hu.edu.iq</td><td>858</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>10</td><td>كلية الشرق الاوسط</td><td dir="ltr">Meuc.edu.iq</td><td>858</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>11</td><td>جامعة الفلوجة</td><td dir="ltr">uofallujah.edu.iq</td><td>856</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>12</td><td>الجامعة التقنية الوسطى</td><td dir="ltr">atu.edu.iq</td><td>856</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>13</td><td>الجامعة التكنولوجية</td><td dir="ltr">uotechnology.edu.iq</td><td>854</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>14</td><td>جامعة الكوت</td><td dir="ltr">alkutcollege.edu.iq</td><td>854</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>15</td><td>جامعة الزهراء للبنات</td><td dir="ltr">alzahraa.edu.iq</td><td>852</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>16</td><td>جامعة نينوى</td><td dir="ltr">uoninevah.edu.iq</td><td>851</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>17</td><td>جامعة الفراهيدي</td><td dir="ltr">uoalfarahidi.edu.iq</td><td>850</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>18</td><td>كلية الطف</td><td dir="ltr">altuff.edu.iq</td><td>850</td><td><span class="grade-badge g-aplus">A+</span></td></tr>
+<tr><td>19</td><td>جامعة المأمون</td><td dir="ltr">almamonuc.edu.iq</td><td>849</td><td><span class="grade-badge g-a">A</span></td></tr>
+<tr><td>20</td><td>الجامعة العراقية</td><td dir="ltr">aliraqia.edu.iq</td><td>847</td><td><span class="grade-badge g-a">A</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- PAGE BREAK -->
+<div class="page-break"></div>
+
+<!-- TURATH STRENGTHS -->
+<div class="section">
+<div class="section-title">نقاط القوة — جامعة التراث</div>
+<div class="analysis-box green-box">
+<h4>المعايير الأمنية المُطبّقة بنجاح</h4>
+<ul>
+<li>شهادة SSL/TLS صالحة مع تشفير TLS 1.3 وإعادة توجيه HTTPS</li>
+<li>جميع ترويسات الأمان الدولية مُفعّلة: HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Permissions-Policy, Referrer-Policy, X-XSS-Protection</li>
+<li>بريد إلكتروني مؤمّن بالكامل: SPF + DMARC + DKIM — يمنع انتحال هوية الجامعة</li>
+<li>جدار حماية Cloudflare WAF نشط مع حماية DDoS</li>
+<li>لا ملفات حساسة مكشوفة (.env, .git, نسخ احتياطية)</li>
+<li>لا ثغرات SQL Injection أو SSRF أو Open Redirect</li>
+<li>HTTP/2 و HTTP/3 (QUIC) مع ضغط Brotli — أداء عالٍ</li>
+<li>دعم IPv6 و Keep-Alive و DNS سريع</li>
+</ul>
+</div>
+</div>
+
+<!-- SCORING NOTE -->
+<div class="section">
+<div class="section-title">ملاحظة حول نظام التقييم</div>
+<div class="analysis-box gold-box">
+<h4>لماذا لا يمكن الحصول على درجة 1000/1000</h4>
+<ul>
+<li>نظام Seku يفحص <strong>32 فئة أمنية</strong> تشمل أكثر من <strong>120 فحصاً فردياً</strong> لكل موقع</li>
+<li>بعض الفحوصات تتطلب <strong>معايير متقدمة جداً</strong> لا تدعمها معظم البنى التحتية حالياً (مثل: BIMI, COEP, CORP, HTTP/3 الكامل)</li>
+<li>فحوصات مثل <strong>اكتشاف السب دومينات</strong> تُخفّض الدرجة كلما زاد عدد السب دومينات — وهذا طبيعي للجامعات الكبيرة التي تمتلك عشرات الأنظمة</li>
+<li>فحوصات <strong>Third-Party Scripts</strong> تعتمد على مكتبات خارجية (Google Analytics, reCAPTCHA) لا يمكن التحكم بها بالكامل</li>
+<li>عملياً، <strong>أي درجة فوق 850 تُعتبر ممتازة عالمياً</strong> — وأعلى المواقع العالمية نادراً ما تتجاوز 920</li>
+<li><strong>درجة 887</strong> التي حققتها جامعة التراث تُعد <strong>إنجازاً استثنائياً</strong> على مستوى المنطقة</li>
+</ul>
+</div>
+</div>
+
+<!-- RECOMMENDATIONS -->
+<div class="section">
+<div class="section-title">التوصيات</div>
+<table>
+<thead><tr><th style="width:5%">#</th><th style="width:10%">الأولوية</th><th>التوصية</th><th style="width:15%">الجهة</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><span class="severity sev-critical">حرج</span></td><td>إلزام جميع الجامعات بتفعيل HSTS وجميع ترويسات الأمان — 87% لا تطبقها</td><td>الوزارة</td></tr>
+<tr><td>2</td><td><span class="severity sev-critical">حرج</span></td><td>إلزام الجامعات بتطبيق DKIM + DMARC + SPF لتأمين البريد الإلكتروني</td><td>الوزارة</td></tr>
+<tr><td>3</td><td><span class="severity sev-critical">حرج</span></td><td>مراجعة جامعة بغداد فوراً — ملفات .env و .git مكشوفة للعامة</td><td>جامعة بغداد</td></tr>
+<tr><td>4</td><td><span class="severity sev-high">عالي</span></td><td>تفعيل WAF لجامعة تكنولوجيا المعلومات — حالياً بدون أي حماية</td><td>UOITC</td></tr>
+<tr><td>5</td><td><span class="severity sev-high">عالي</span></td><td>تعميم تجربة جامعة التراث كنموذج أفضل ممارسات أمنية</td><td>الوزارة</td></tr>
+<tr><td>6</td><td><span class="severity sev-medium">متوسط</span></td><td>جدولة فحص أمني دوري شهري لجميع المواقع الجامعية</td><td>الوزارة</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- FOOTER -->
+<div class="report-footer">
+<p>تم إنشاء هذا التقرير آلياً بواسطة نظام <strong>Seku</strong> للأمن السيبراني — الإصدار 1.0</p>
+<p>32 فحص أمني | OWASP Top 10 | CVSS v3.1 | 135 جامعة</p>
+</div>
+
+</div>
+</body>
+</html>

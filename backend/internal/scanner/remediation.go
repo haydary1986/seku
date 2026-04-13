@@ -4655,4 +4655,678 @@ Add to ` + "`" + `.htaccess` + "`" + ` (before WordPress rules):
 This is a server-level issue. If you are on shared hosting, contact your host to restrict ` + "`mod_status`" + ` access.`,
 		},
 	}
+
+	// -------------------------------------------------------------------------
+	// 54. SQL Injection Test
+	// -------------------------------------------------------------------------
+	RemediationDB["SQL Injection Test"] = RemediationGuide{
+		CheckName:    "SQL Injection Test",
+		Title:        "Prevent SQL Injection Attacks",
+		Description:  "SQL Injection allows attackers to execute arbitrary SQL commands on your database, potentially reading, modifying, or deleting all data.",
+		Priority:     "critical",
+		TimeEstimate: "2 hours",
+		Guides: map[string]string{
+			"cloudflare": `## Cloudflare - SQL Injection Protection
+
+1. Go to **Security** > **WAF**
+2. Enable **Managed Rules**
+3. Ensure the **Cloudflare OWASP Core Ruleset** is enabled
+4. Under **OWASP ModSecurity**, verify SQL Injection rules are active:
+   - Rule group: **SQL Injection**
+   - Action: **Block**
+5. Go to **Security** > **WAF** > **Custom Rules**
+6. Create a rule to block common SQLi patterns:
+   - Field: **URI Query String**
+   - Operator: **contains**
+   - Values: ` + "`UNION SELECT`" + `, ` + "`OR 1=1`" + `, ` + "`' OR '`" + `
+   - Action: **Block**
+
+> Cloudflare WAF provides an additional layer, but always fix the underlying code.`,
+
+			"apache": `## Apache - SQL Injection Protection
+
+**Enable ModSecurity WAF:**
+
+` + "```bash" + `
+sudo apt install libapache2-mod-security2
+sudo a2enmod security2
+` + "```" + `
+
+**Configure OWASP rules in** ` + "`/etc/modsecurity/modsecurity.conf`" + `:
+
+` + "```apache" + `
+SecRuleEngine On
+SecRule ARGS "@detectSQLi" "id:1,phase:2,deny,status:403,msg:'SQL Injection Detected'"
+` + "```" + `
+
+**In your application code:**
+
+` + "```" + `
+# WRONG - vulnerable to SQLi
+query = "SELECT * FROM users WHERE id = " + user_input
+
+# CORRECT - use parameterized queries
+query = "SELECT * FROM users WHERE id = ?"
+db.execute(query, [user_input])
+` + "```" + `
+
+Restart Apache: ` + "`sudo systemctl restart apache2`" + ``,
+
+			"nginx": `## Nginx - SQL Injection Protection
+
+**Install ModSecurity for Nginx:**
+
+` + "```bash" + `
+sudo apt install libnginx-mod-http-modsecurity
+` + "```" + `
+
+**Enable in** ` + "`nginx.conf`" + `:
+
+` + "```nginx" + `
+modsecurity on;
+modsecurity_rules_file /etc/nginx/modsec/main.conf;
+` + "```" + `
+
+**Add SQLi blocking rules:**
+
+` + "```nginx" + `
+# Block common SQL injection patterns in query strings
+if ($query_string ~* "(union.*select|insert.*into|delete.*from|drop.*table|update.*set)") {
+    return 403;
+}
+` + "```" + `
+
+**In your application code, always use parameterized queries and prepared statements.**
+
+Reload: ` + "`sudo nginx -t && sudo systemctl reload nginx`" + ``,
+
+			"wordpress": `## WordPress - SQL Injection Protection
+
+**Use WordPress prepared statements:**
+
+` + "```php" + `
+// WRONG - vulnerable
+$wpdb->query("SELECT * FROM $wpdb->posts WHERE ID = $id");
+
+// CORRECT - use $wpdb->prepare()
+$wpdb->get_results($wpdb->prepare(
+    "SELECT * FROM %i WHERE ID = %d",
+    $wpdb->posts,
+    $id
+));
+` + "```" + `
+
+**Additional protections:**
+
+1. Install a security plugin: **Wordfence** or **Sucuri Security**
+2. Keep WordPress, themes, and plugins updated
+3. Use ` + "`esc_sql()`" + ` for any custom SQL queries
+4. Validate and sanitize all user input with ` + "`sanitize_text_field()`" + `, ` + "`intval()`" + `
+5. Never use ` + "`$_GET`" + ` or ` + "`$_POST`" + ` directly in SQL queries`,
+
+			"cpanel": `## cPanel - SQL Injection Protection
+
+**Enable ModSecurity in WHM:**
+
+1. Go to **WHM** > **Security Center** > **ModSecurity Configuration**
+2. Set **ModSecurity** to **On**
+3. Go to **ModSecurity Vendors**
+4. Enable **OWASP ModSecurity Core Rule Set**
+5. Click **Update** to fetch latest rules
+
+**In cPanel:**
+
+1. Go to **Security** > **ModSecurity**
+2. Verify it is enabled for your domain
+3. Check logs at **Metrics** > **Errors** for blocked requests
+
+**In your application code:**
+- Always use parameterized queries / prepared statements
+- Never concatenate user input directly into SQL strings
+- Use ORM frameworks when possible`,
+		},
+	}
+
+	// -------------------------------------------------------------------------
+	// 55. Database Error Disclosure
+	// -------------------------------------------------------------------------
+	RemediationDB["Database Error Disclosure"] = RemediationGuide{
+		CheckName:    "Database Error Disclosure",
+		Title:        "Hide Database Error Messages from Users",
+		Description:  "Detailed database error messages expose table names, query structures, and database versions to attackers, making SQL injection and other attacks easier.",
+		Priority:     "high",
+		TimeEstimate: "30 minutes",
+		Guides: map[string]string{
+			"cloudflare": `## Cloudflare - Hide Database Errors
+
+Cloudflare can mask error pages:
+
+1. Go to **Rules** > **Configuration Rules**
+2. Create a rule targeting your error pages
+3. Under **Custom Pages**, configure:
+   - **500-class errors**: Use a custom error page
+4. Go to **Custom Pages** (Account level)
+5. Upload a generic error page for **500 Internal Server Error**
+6. This prevents raw database errors from reaching visitors
+
+> Always fix the underlying application code — Cloudflare is an additional safety net.`,
+
+			"apache": `## Apache - Hide Database Errors
+
+**Disable detailed errors in production:**
+
+` + "```apache" + `
+# In .htaccess or virtual host config
+php_flag display_errors Off
+php_value error_reporting 0
+ErrorDocument 500 /error-pages/500.html
+ErrorDocument 503 /error-pages/503.html
+` + "```" + `
+
+**In PHP configuration (` + "`php.ini`" + `):**
+
+` + "```ini" + `
+display_errors = Off
+log_errors = On
+error_log = /var/log/php/error.log
+error_reporting = E_ALL
+` + "```" + `
+
+**Custom error page:**
+
+` + "```apache" + `
+<IfModule mod_rewrite.c>
+    ErrorDocument 500 "An error occurred. Please try again later."
+</IfModule>
+` + "```" + `
+
+Restart: ` + "`sudo systemctl restart apache2`" + ``,
+
+			"nginx": `## Nginx - Hide Database Errors
+
+**Configure custom error pages:**
+
+` + "```nginx" + `
+server {
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
+        root /var/www/error-pages;
+        internal;
+    }
+}
+` + "```" + `
+
+**In your PHP configuration (` + "`php.ini`" + `):**
+
+` + "```ini" + `
+display_errors = Off
+log_errors = On
+error_log = /var/log/php/error.log
+` + "```" + `
+
+**For FastCGI/PHP-FPM, ensure:**
+
+` + "```nginx" + `
+fastcgi_intercept_errors on;
+` + "```" + `
+
+Reload: ` + "`sudo nginx -t && sudo systemctl reload nginx`" + ``,
+
+			"wordpress": `## WordPress - Hide Database Errors
+
+**In** ` + "`wp-config.php`" + `:
+
+` + "```php" + `
+// Disable debug mode in production
+define('WP_DEBUG', false);
+define('WP_DEBUG_DISPLAY', false);
+define('WP_DEBUG_LOG', true); // Logs to wp-content/debug.log
+
+// Disable database error display
+$wpdb->hide_errors();
+$wpdb->suppress_errors();
+` + "```" + `
+
+**Additional steps:**
+
+1. Remove or protect ` + "`wp-content/debug.log`" + ` from public access
+2. Add to ` + "`.htaccess`" + `:
+
+` + "```apache" + `
+<Files debug.log>
+    Require all denied
+</Files>
+` + "```" + `
+
+3. Install a security plugin to handle error pages gracefully`,
+
+			"cpanel": `## cPanel - Hide Database Errors
+
+**Configure PHP error display:**
+
+1. Go to **Software** > **MultiPHP INI Editor**
+2. Select your domain
+3. Set:
+   - **display_errors**: Off
+   - **log_errors**: On
+4. Click **Apply**
+
+**Set custom error pages:**
+
+1. Go to **Advanced** > **Error Pages**
+2. Select your domain
+3. Customize the **500 Internal Server Error** page
+4. Replace with a user-friendly message (no technical details)
+
+**In your application code:**
+- Use try/catch blocks around database operations
+- Log detailed errors to files, never display to users
+- Return generic error messages in responses`,
+		},
+	}
+
+	// -------------------------------------------------------------------------
+	// 56. Open Port Detection
+	// -------------------------------------------------------------------------
+	RemediationDB["Open Port Detection"] = RemediationGuide{
+		CheckName:    "Open Port Detection",
+		Title:        "Close Unnecessary Open Ports",
+		Description:  "Open ports expose services to the internet. Unnecessary open ports increase the attack surface and can be exploited to gain unauthorized access.",
+		Priority:     "high",
+		TimeEstimate: "1 hour",
+		Guides: map[string]string{
+			"cloudflare": `## Cloudflare - Port Protection
+
+Cloudflare only proxies HTTP/HTTPS traffic by default, blocking access to non-standard ports:
+
+1. Ensure your DNS records are **Proxied** (orange cloud)
+2. Go to **Network** settings
+3. Cloudflare proxies these ports by default:
+   - HTTP: 80, 8080, 8880, 2052, 2082, 2086, 2095
+   - HTTPS: 443, 2053, 2083, 2087, 2096, 8443
+4. All other ports are blocked when traffic is proxied
+5. For additional port access, use **Cloudflare Spectrum** (Enterprise)
+
+> If your origin IP is exposed, Cloudflare cannot protect non-proxied ports. Restrict access at the firewall level.`,
+
+			"apache": `## Apache / Linux Server - Close Open Ports
+
+**Identify open ports:**
+
+` + "```bash" + `
+sudo ss -tlnp
+sudo netstat -tlnp
+` + "```" + `
+
+**Close ports with UFW firewall:**
+
+` + "```bash" + `
+# Enable firewall
+sudo ufw enable
+
+# Allow only necessary ports
+sudo ufw allow 80/tcp    # HTTP
+sudo ufw allow 443/tcp   # HTTPS
+sudo ufw allow 22/tcp    # SSH (restrict to your IP if possible)
+
+# Deny everything else
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+
+# Block specific ports
+sudo ufw deny 3306/tcp   # MySQL - should not be public
+sudo ufw deny 5432/tcp   # PostgreSQL
+sudo ufw deny 27017/tcp  # MongoDB
+
+# Check status
+sudo ufw status verbose
+` + "```" + `
+
+**With iptables:**
+
+` + "```bash" + `
+# Block MySQL from external access
+sudo iptables -A INPUT -p tcp --dport 3306 -j DROP
+sudo iptables -A INPUT -p tcp --dport 3306 -s 127.0.0.1 -j ACCEPT
+` + "```" + `
+
+**Bind database to localhost in** ` + "`my.cnf`" + `:
+
+` + "```ini" + `
+[mysqld]
+bind-address = 127.0.0.1
+` + "```",
+
+			"nginx": `## Nginx / Linux Server - Close Open Ports
+
+**Audit open ports:**
+
+` + "```bash" + `
+sudo ss -tlnp
+sudo nmap -sT localhost
+` + "```" + `
+
+**Configure UFW firewall:**
+
+` + "```bash" + `
+sudo ufw enable
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 'Nginx Full'   # Allows 80 and 443
+sudo ufw allow 22/tcp          # SSH
+
+# Deny database ports from external access
+sudo ufw deny 3306/tcp
+sudo ufw deny 5432/tcp
+sudo ufw deny 6379/tcp   # Redis
+` + "```" + `
+
+**Bind services to localhost:**
+
+` + "```bash" + `
+# Redis: /etc/redis/redis.conf
+bind 127.0.0.1
+
+# PostgreSQL: /etc/postgresql/*/main/postgresql.conf
+listen_addresses = 'localhost'
+` + "```" + `
+
+Reload firewall: ` + "`sudo ufw reload`" + ``,
+
+			"cpanel": `## cPanel - Close Open Ports
+
+**Via WHM (root access required):**
+
+1. Go to **WHM** > **Plugins** > **ConfigServer Security & Firewall (CSF)**
+   - If not installed: ` + "`cd /usr/src && wget https://download.configserver.com/csf.tgz && tar -xzf csf.tgz && cd csf && sh install.sh`" + `
+2. In CSF, go to **Firewall Configuration**
+3. Edit **TCP_IN** to allow only needed ports:
+   ` + "`" + `TCP_IN = "20,21,22,25,53,80,110,143,443,465,587,993,995,2077,2078,2082,2083,2086,2087,2095,2096"` + "`" + `
+4. Edit **TCP_OUT** similarly
+5. Click **Change** then **Restart csf+lfd**
+
+**Block specific ports:**
+
+1. In CSF, add to **Deny IP Addresses** for port-specific blocking
+2. Or via command line:
+
+` + "```bash" + `
+csf -d IP_ADDRESS "Reason for block"
+` + "```" + `
+
+**Verify with:**
+
+` + "```bash" + `
+csf -p   # Show listening ports
+` + "```",
+		},
+	}
+
+	// -------------------------------------------------------------------------
+	// 57. Open Redirect Test
+	// -------------------------------------------------------------------------
+	RemediationDB["Open Redirect Test"] = RemediationGuide{
+		CheckName:    "Open Redirect Test",
+		Title:        "Fix Open Redirect Vulnerabilities",
+		Description:  "Open redirects allow attackers to craft URLs on your domain that redirect users to malicious sites, enabling phishing attacks and credential theft.",
+		Priority:     "medium",
+		TimeEstimate: "30 minutes",
+		Guides: map[string]string{
+			"apache": `## Apache - Fix Open Redirects
+
+**Block external redirects in** ` + "`.htaccess`" + `:
+
+` + "```apache" + `
+# Prevent open redirects via query parameters
+RewriteEngine On
+RewriteCond %{QUERY_STRING} (^|&)(url|redirect|next|return|goto)=https?:// [NC]
+RewriteRule .* - [F,L]
+` + "```" + `
+
+**In your application code:**
+
+` + "```" + `
+# WRONG - open redirect
+redirect_url = request.params["redirect"]
+redirect(redirect_url)
+
+# CORRECT - validate against whitelist
+ALLOWED_HOSTS = ["yourdomain.com", "www.yourdomain.com"]
+redirect_url = request.params["redirect"]
+if parsed_url(redirect_url).host in ALLOWED_HOSTS:
+    redirect(redirect_url)
+else:
+    redirect("/")  # fallback to homepage
+` + "```" + `
+
+**Best practices:**
+- Use relative URLs for internal redirects (e.g., ` + "`/dashboard`" + ` instead of ` + "`https://yourdomain.com/dashboard`" + `)
+- Never use user input directly in redirect targets
+- Maintain a whitelist of allowed redirect domains`,
+
+			"nginx": `## Nginx - Fix Open Redirects
+
+**Block redirect parameters pointing externally:**
+
+` + "```nginx" + `
+# Block requests with external redirect URLs in query string
+if ($query_string ~* "(redirect|url|next|return|goto)=https?://") {
+    return 403;
+}
+` + "```" + `
+
+**In your application code:**
+
+- Validate all redirect URLs against a whitelist of allowed domains
+- Use relative URLs (` + "`/path`" + `) instead of absolute URLs
+- Strip or reject any redirect parameter containing ` + "`://`" + ` pointing to external domains
+- Implement a safe redirect function:
+
+` + "```" + `
+func safeRedirect(targetURL, defaultURL string) string {
+    parsed := parseURL(targetURL)
+    if parsed.Host == "" || parsed.Host == "yourdomain.com" {
+        return targetURL
+    }
+    return defaultURL
+}
+` + "```" + `
+
+Reload: ` + "`sudo nginx -t && sudo systemctl reload nginx`" + ``,
+
+			"wordpress": `## WordPress - Fix Open Redirects
+
+**Use** ` + "`wp_safe_redirect()`" + ` **instead of** ` + "`wp_redirect()`" + `:
+
+` + "```php" + `
+// WRONG - allows open redirect
+wp_redirect($_GET['redirect_to']);
+
+// CORRECT - validates against allowed hosts
+wp_safe_redirect($_GET['redirect_to']);
+exit;
+` + "```" + `
+
+**Add allowed redirect hosts:**
+
+` + "```php" + `
+// In functions.php or a custom plugin
+add_filter('allowed_redirect_hosts', function($hosts) {
+    $hosts[] = 'yourdomain.com';
+    $hosts[] = 'www.yourdomain.com';
+    $hosts[] = 'subdomain.yourdomain.com';
+    return $hosts;
+});
+` + "```" + `
+
+**Additional steps:**
+
+1. Audit all uses of ` + "`wp_redirect()`" + ` in themes and plugins
+2. Replace with ` + "`wp_safe_redirect()`" + `
+3. Review plugins that handle login redirects (e.g., after login forms)
+4. Update WordPress and all plugins to latest versions`,
+		},
+	}
+
+	// -------------------------------------------------------------------------
+	// 58. DNS Zone Transfer
+	// -------------------------------------------------------------------------
+	RemediationDB["DNS Zone Transfer"] = RemediationGuide{
+		CheckName:    "DNS Zone Transfer",
+		Title:        "Restrict DNS Zone Transfers (AXFR)",
+		Description:  "Unrestricted DNS zone transfers allow anyone to download a complete copy of your DNS records, revealing all subdomains, internal hosts, and network topology.",
+		Priority:     "high",
+		TimeEstimate: "15 minutes",
+		Guides: map[string]string{
+			"cloudflare": `## Cloudflare - DNS Zone Transfer Protection
+
+Cloudflare does not allow zone transfers by default — your DNS is already protected.
+
+**Verify your setup:**
+
+1. Ensure your domain's nameservers point to Cloudflare:
+   - e.g., ` + "`ns1.cloudflare.com`" + ` and ` + "`ns2.cloudflare.com`" + `
+2. Go to **DNS** > **Records** to review all entries
+3. Cloudflare blocks AXFR queries at the edge — no action needed
+
+**If you previously used another DNS provider:**
+
+1. Confirm old nameservers are no longer authoritative
+2. Check that no legacy NS records point to servers that allow AXFR
+3. Verify with: ` + "`dig AXFR yourdomain.com @old-nameserver`" + `
+
+> Cloudflare's managed DNS inherently prevents zone transfer attacks.`,
+
+			"cpanel": `## cPanel - Restrict DNS Zone Transfers
+
+**Via WHM (root required):**
+
+1. Go to **WHM** > **DNS Functions** > **Edit DNS Zone**
+2. Select your domain
+3. Verify zone configuration
+
+**Restrict AXFR in BIND (named.conf):**
+
+` + "```bash" + `
+# Edit named.conf
+sudo nano /etc/named.conf
+` + "```" + `
+
+**Add allow-transfer ACL:**
+
+` + "```" + `
+options {
+    allow-transfer { none; };  // Deny all zone transfers by default
+};
+
+// For specific zones, allow only secondary nameservers:
+zone "yourdomain.com" {
+    type master;
+    file "/var/named/yourdomain.com.db";
+    allow-transfer { 192.168.1.2; 10.0.0.5; };  // Only your secondary NS
+};
+` + "```" + `
+
+**Restart DNS service:**
+
+` + "```bash" + `
+sudo systemctl restart named
+# or
+sudo rndc reload
+` + "```" + `
+
+**Verify zone transfer is blocked:**
+
+` + "```bash" + `
+dig AXFR yourdomain.com @your-nameserver
+# Should return "Transfer failed" or no results
+` + "```" + `
+
+**In WHM Tweak Settings:**
+1. Go to **Server Configuration** > **Tweak Settings**
+2. Under **Domains**, ensure **Allow zone transfers** is disabled or restricted to known IPs`,
+		},
+	}
+
+	// -------------------------------------------------------------------------
+	// 59. WAF Detection
+	// -------------------------------------------------------------------------
+	RemediationDB["WAF Detection"] = RemediationGuide{
+		CheckName:    "WAF Detection",
+		Title:        "Enable Web Application Firewall (WAF)",
+		Description:  "A WAF protects your website from common web attacks such as SQL injection, XSS, and DDoS by filtering and monitoring HTTP traffic.",
+		Priority:     "medium",
+		TimeEstimate: "30 minutes",
+		Guides: map[string]string{
+			"cloudflare": `## Cloudflare - Enable and Configure WAF
+
+**Enable Managed WAF Rules:**
+
+1. Log in to **Cloudflare Dashboard**
+2. Select your domain
+3. Go to **Security** > **WAF**
+4. Enable **Managed Rules**:
+   - **Cloudflare Managed Ruleset**: Covers common vulnerabilities
+   - **Cloudflare OWASP Core Ruleset**: Covers OWASP Top 10
+5. Set sensitivity to **High** for maximum protection
+6. Review and customize rule actions:
+   - **Block**: For critical attack patterns
+   - **Challenge**: For suspicious but not definitive patterns
+   - **Log**: For monitoring before enforcement
+
+**Create Custom WAF Rules:**
+
+1. Go to **Security** > **WAF** > **Custom Rules**
+2. Add rules for your application:
+   - Block requests from known-bad user agents
+   - Rate limit login endpoints
+   - Block requests with malicious payloads
+3. Set rule priority (lower number = higher priority)
+
+**Monitor WAF Activity:**
+
+1. Go to **Security** > **Events**
+2. Review blocked and challenged requests
+3. Adjust rules to reduce false positives`,
+
+			"cpanel": `## cPanel - Enable ModSecurity WAF
+
+**Enable ModSecurity via WHM:**
+
+1. Go to **WHM** > **Security Center** > **ModSecurity Configuration**
+2. Set **ModSecurity** to **On**
+3. Set **Audit Log Level** to **Only log noteworthy transactions**
+
+**Install OWASP Rule Set:**
+
+1. Go to **WHM** > **Security Center** > **ModSecurity Vendors**
+2. Click **Add Vendor**
+3. Add the OWASP ModSecurity Core Rule Set URL
+4. Enable the vendor and click **Save**
+
+**Or install manually:**
+
+` + "```bash" + `
+# Download OWASP CRS
+cd /etc/apache2/modsecurity.d/
+git clone https://github.com/coreruleset/coreruleset.git
+cp coreruleset/crs-setup.conf.example crs-setup.conf
+
+# Include in Apache config
+echo 'Include /etc/apache2/modsecurity.d/coreruleset/rules/*.conf' >> /etc/apache2/conf.d/modsec_vendor_configs/owasp.conf
+` + "```" + `
+
+**Per-domain configuration in cPanel:**
+
+1. Go to **Security** > **ModSecurity**
+2. Enable or disable per-domain as needed
+3. Review logs at **Metrics** > **Errors** for false positives
+
+**Restart Apache:**
+
+` + "```bash" + `
+sudo systemctl restart httpd
+` + "```",
+		},
+	}
 }

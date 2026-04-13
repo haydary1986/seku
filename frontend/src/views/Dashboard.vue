@@ -1,13 +1,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getDashboardStats } from '../api'
+import { getDashboardStats, getDashboardEnhanced } from '../api'
 import { Doughnut, Bar } from 'vue-chartjs'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js'
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement)
 
 const stats = ref(null)
+const enhanced = ref(null)
 const loading = ref(true)
+
 
 const scoreChartData = ref({ labels: [], datasets: [] })
 const scoreChartOptions = {
@@ -51,6 +53,7 @@ const topSites = computed(() => {
 })
 
 const bottomSites = computed(() => {
+  if (stats.value?.worst_results?.length) return stats.value.worst_results
   if (!stats.value?.latest_results) return []
   const completed = stats.value.latest_results
     .filter(r => r.status === 'completed' && r.overall_score != null)
@@ -62,6 +65,12 @@ onMounted(async () => {
   try {
     const { data } = await getDashboardStats()
     stats.value = data
+
+    // Load enhanced dashboard data
+    try {
+      const enhRes = await getDashboardEnhanced()
+      enhanced.value = enhRes.data
+    } catch { /* enhanced stats not available */ }
 
     if (data.score_distribution) {
       scoreChartData.value = {
@@ -435,6 +444,58 @@ function getGradeColor(grade) {
             </table>
           </div>
           <p v-else class="text-gray-400 text-center py-10">No scan results yet. Add targets and start a scan.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Enhanced Dashboard: Top Vulnerabilities & Severity Distribution -->
+    <div v-if="enhanced" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      <!-- Top Vulnerabilities -->
+      <div v-if="enhanced.top_vulnerabilities?.length" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Vulnerabilities</h3>
+        <div class="space-y-2">
+          <div v-for="v in enhanced.top_vulnerabilities" :key="v.check_name" class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+            <div class="flex items-center gap-2 min-w-0">
+              <span :class="v.severity === 'critical' ? 'bg-red-500' : v.severity === 'high' ? 'bg-orange-500' : v.severity === 'medium' ? 'bg-yellow-500' : 'bg-gray-400'"
+                class="w-2 h-2 rounded-full flex-shrink-0"></span>
+              <span class="text-sm text-gray-800 truncate">{{ v.check_name }}</span>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-xs text-gray-500">{{ v.category }}</span>
+              <span class="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium">{{ v.count }}x</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Severity Distribution -->
+      <div v-if="enhanced.severity_distribution?.length" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Failed Checks by Severity</h3>
+        <div class="space-y-3">
+          <div v-for="s in enhanced.severity_distribution" :key="s.severity" class="flex items-center gap-3">
+            <span class="text-sm font-medium w-16 capitalize" :class="s.severity === 'critical' ? 'text-red-600' : s.severity === 'high' ? 'text-orange-600' : s.severity === 'medium' ? 'text-yellow-600' : 'text-gray-600'">
+              {{ s.severity }}
+            </span>
+            <div class="flex-1 bg-gray-200 rounded-full h-4">
+              <div :style="{ width: Math.min(100, s.count) + '%' }" class="h-full rounded-full transition-all"
+                :class="s.severity === 'critical' ? 'bg-red-500' : s.severity === 'high' ? 'bg-orange-500' : s.severity === 'medium' ? 'bg-yellow-500' : 'bg-gray-400'"></div>
+            </div>
+            <span class="text-sm font-bold text-gray-700 w-10 text-right">{{ s.count }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weakest Categories -->
+      <div v-if="enhanced.category_averages?.length" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:col-span-2">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Weakest Categories (Need Attention)</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          <div v-for="cat in enhanced.category_averages.slice(0, 10)" :key="cat.category"
+            class="text-center p-3 border rounded-lg" :class="cat.avg_score < 500 ? 'border-red-200 bg-red-50' : cat.avg_score < 700 ? 'border-yellow-200 bg-yellow-50' : 'border-green-200 bg-green-50'">
+            <p class="text-lg font-bold" :class="cat.avg_score < 500 ? 'text-red-600' : cat.avg_score < 700 ? 'text-yellow-600' : 'text-green-600'">
+              {{ Math.round(cat.avg_score) }}
+            </p>
+            <p class="text-xs text-gray-600 mt-1 truncate">{{ cat.category }}</p>
+          </div>
         </div>
       </div>
     </div>

@@ -616,6 +616,94 @@ var CheckOWASPMap = map[string]OWASPMapping{
 		CWE: "", CWEName: "",
 		CVSSBase: "Informational",
 	},
+
+	// --- SQL Injection ---
+	"SQL Injection Test": {
+		OWASP: "A03:2021", OWASPName: "Injection",
+		CWE: "CWE-89", CWEName: "SQL Injection",
+		CVSSBase: "Critical",
+	},
+	"Database Error Disclosure": {
+		OWASP: "A05:2021", OWASPName: "Security Misconfiguration",
+		CWE: "CWE-209", CWEName: "Generation of Error Message Containing Sensitive Information",
+		CVSSBase: "High",
+	},
+
+	// --- Port Scanner ---
+	"Open Port Detection": {
+		OWASP: "A05:2021", OWASPName: "Security Misconfiguration",
+		CWE: "CWE-200", CWEName: "Exposure of Sensitive Information to an Unauthorized Actor",
+		CVSSBase: "High",
+	},
+
+	// --- Blind SQL Injection ---
+	"Blind SQL Injection Test": {
+		OWASP: "A03:2021", OWASPName: "Injection",
+		CWE: "CWE-89", CWEName: "SQL Injection",
+		CVSSBase: "Critical",
+	},
+
+	// --- Open Redirect ---
+	"Open Redirect Test": {
+		OWASP: "A01:2021", OWASPName: "Broken Access Control",
+		CWE: "CWE-601", CWEName: "URL Redirection to Untrusted Site",
+		CVSSBase: "Medium",
+	},
+
+	// --- SSRF ---
+	"SSRF Detection": {
+		OWASP: "A10:2021", OWASPName: "Server-Side Request Forgery",
+		CWE: "CWE-918", CWEName: "Server-Side Request Forgery (SSRF)",
+		CVSSBase: "High",
+	},
+
+	// --- Email Security ---
+	"DKIM Record": {
+		OWASP: "A05:2021", OWASPName: "Security Misconfiguration",
+		CWE: "CWE-290", CWEName: "Authentication Bypass by Spoofing",
+		CVSSBase: "Medium",
+	},
+	"BIMI Record": {
+		OWASP: "", OWASPName: "Informational",
+		CWE: "", CWEName: "",
+		CVSSBase: "Informational",
+	},
+	"Email Security Score": {
+		OWASP: "A05:2021", OWASPName: "Security Misconfiguration",
+		CWE: "CWE-290", CWEName: "Authentication Bypass by Spoofing",
+		CVSSBase: "Medium",
+	},
+
+	// --- WAF Fingerprinting ---
+	"WAF Detection": {
+		OWASP: "A05:2021", OWASPName: "Security Misconfiguration",
+		CWE: "CWE-693", CWEName: "Protection Mechanism Failure",
+		CVSSBase: "Medium",
+	},
+
+	// --- DNS Zone Transfer ---
+	"DNS Zone Transfer": {
+		OWASP: "A05:2021", OWASPName: "Security Misconfiguration",
+		CWE: "CWE-200", CWEName: "Exposure of Sensitive Information to an Unauthorized Actor",
+		CVSSBase: "High",
+	},
+
+	// --- Data Leak ---
+	"Domain Breach History": {
+		OWASP: "A07:2021", OWASPName: "Identification and Authentication Failures",
+		CWE: "CWE-359", CWEName: "Exposure of Private Personal Information to an Unauthorized Actor",
+		CVSSBase: "Critical",
+	},
+	"Email Breach Detection": {
+		OWASP: "A07:2021", OWASPName: "Identification and Authentication Failures",
+		CWE: "CWE-521", CWEName: "Weak Password Requirements",
+		CVSSBase: "High",
+	},
+	"Paste Site Exposure": {
+		OWASP: "A07:2021", OWASPName: "Identification and Authentication Failures",
+		CWE: "CWE-200", CWEName: "Exposure of Sensitive Information to an Unauthorized Actor",
+		CVSSBase: "High",
+	},
 }
 
 // GetOWASPMapping returns the OWASP/CWE mapping for a given check name, or nil if not found.

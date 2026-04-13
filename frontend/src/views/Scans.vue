@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { getScanJobs, getTargets, startScan, deleteScanJob } from '../api'
+import { getScanJobs, getTargets, startScan, cancelScan, deleteScanJob } from '../api'
 
 const router = useRouter()
 const jobs = ref([])
@@ -9,8 +9,16 @@ const targets = ref([])
 const loading = ref(true)
 const showStartForm = ref(false)
 const scanning = ref(false)
+const scanPage = ref(1)
+const scanTotalPages = ref(1)
+const statusFilter = ref('')
 
 const wsConnection = ref(null)
+const targetProgress = ref({})
+const totalTargetCount = ref(0)
+let wsRetryCount = 0
+let wsRetryTimer = null
+let pendingTimers = []
 
 const scanForm = ref({
   name: '',
@@ -22,9 +30,15 @@ const scanForm = ref({
 async function loadData() {
   loading.value = true
   try {
-    const [jobsRes, targetsRes] = await Promise.all([getScanJobs(), getTargets()])
-    jobs.value = jobsRes.data
-    targets.value = targetsRes.data
+    const [jobsRes, targetsRes] = await Promise.all([
+      getScanJobs({ page: scanPage.value, limit: 20, status: statusFilter.value || undefined }),
+      getTargets({ limit: 1000 })
+    ])
+    jobs.value = jobsRes.data.data || jobsRes.data
+    scanTotalPages.value = jobsRes.data.pages || 1
+    const tData = targetsRes.data
+    targets.value = Array.isArray(tData) ? tData : (tData.data || [])
+    totalTargetCount.value = targetsRes.data.total || targets.value.length
   } catch (e) {
     console.error('Failed to load data:', e)
   } finally {
@@ -63,28 +77,76 @@ async function runScan() {
 
 function connectWebSocket() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const wsUrl = `${protocol}//${window.location.host}/ws/scan`
+  const token = localStorage.getItem('token')
+  const wsUrl = `${protocol}//${window.location.host}/ws/scan?token=${token}`
   wsConnection.value = new WebSocket(wsUrl)
+
+  wsConnection.value.onopen = () => {
+    wsRetryCount = 0 // Reset on successful connection
+  }
+
   wsConnection.value.onmessage = (event) => {
     const progress = JSON.parse(event.data)
-    const jobIndex = jobs.value.findIndex(j => j.ID === progress.job_id)
-    if (jobIndex !== -1) {
-      jobs.value[jobIndex].status = progress.status
-      jobs.value[jobIndex].progress = progress
-      if (progress.status === 'completed' || progress.status === 'failed') {
+
+    if (progress.type === 'target') {
+      targetProgress.value[progress.target_id] = progress
+      if (progress.status === 'completed') {
+        const tid = progress.target_id
+        const t = setTimeout(() => {
+          delete targetProgress.value[tid]
+        }, 3000)
+        pendingTimers.push(t)
+      }
+    } else {
+      const jobIndex = jobs.value.findIndex(j => j.ID === progress.job_id)
+      if (jobIndex !== -1) {
+        jobs.value[jobIndex].status = progress.status
+        jobs.value[jobIndex].progress = {
+          total: progress.total,
+          completed: progress.completed,
+          percent: progress.percent,
+          running: 0,
+          pending: progress.total - progress.completed,
+          failed: 0,
+        }
+      }
+      if (progress.status === 'completed' || progress.status === 'failed' || progress.status === 'cancelled') {
+        targetProgress.value = {}
         loadData()
       }
     }
   }
-  wsConnection.value.onclose = () => setTimeout(connectWebSocket, 3000)
+
+  // Exponential backoff: 1s, 2s, 4s, 8s, ... max 30s
+  wsConnection.value.onclose = () => {
+    const delay = Math.min(1000 * Math.pow(2, wsRetryCount), 30000)
+    wsRetryCount++
+    wsRetryTimer = setTimeout(connectWebSocket, delay)
+  }
 }
 
 onBeforeUnmount(() => {
+  // Clear reconnection timer
+  if (wsRetryTimer) clearTimeout(wsRetryTimer)
+  // Clear all pending cleanup timers
+  pendingTimers.forEach(t => clearTimeout(t))
+  pendingTimers = []
+  // Close WebSocket
   if (wsConnection.value) {
     wsConnection.value.onclose = null
     wsConnection.value.close()
   }
 })
+
+async function cancelJob(id) {
+  if (!confirm('Cancel this running scan?')) return
+  try {
+    await cancelScan(id)
+    await loadData()
+  } catch (e) {
+    alert(e.response?.data?.error || 'Failed to cancel scan')
+  }
+}
 
 async function removeJob(id) {
   if (!confirm('Delete this scan job and all its results?')) return
@@ -94,6 +156,16 @@ async function removeJob(id) {
   } catch (e) {
     console.error('Failed to delete job:', e)
   }
+}
+
+function targetProgressForJob(jobId) {
+  const result = {}
+  for (const [tid, tp] of Object.entries(targetProgress.value)) {
+    if (tp.job_id === jobId) {
+      result[tid] = tp
+    }
+  }
+  return result
 }
 
 function formatDate(dateStr) {
@@ -116,6 +188,17 @@ onMounted(() => {
       <div>
         <h1 class="text-3xl font-bold text-gray-900">Scans</h1>
         <p class="text-gray-500 mt-1">Manage and run security scans</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <!-- Status Filter -->
+        <select v-model="statusFilter" @change="scanPage = 1; loadData()" class="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white">
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="running">Running</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="failed">Failed</option>
+        </select>
       </div>
       <button
         v-if="targets.length > 0"
@@ -178,7 +261,7 @@ onMounted(() => {
         <div class="mb-4">
           <label class="flex items-center gap-2 mb-3">
             <input v-model="scanForm.selectAll" type="checkbox" class="rounded text-indigo-600" />
-            <span class="text-sm text-gray-700">Scan all targets ({{ targets.length }} websites)</span>
+            <span class="text-sm text-gray-700">Scan all targets ({{ totalTargetCount }} websites)</span>
           </label>
 
           <div v-if="!scanForm.selectAll" class="border border-gray-200 rounded-lg p-3 max-h-60 overflow-y-auto">
@@ -321,6 +404,12 @@ onMounted(() => {
               >
                 View Details
               </button>
+              <button v-if="job.status === 'running'"
+                @click="cancelJob(job.ID)"
+                class="px-3 py-1 text-sm text-orange-600 border border-orange-300 rounded-lg hover:bg-orange-50"
+              >
+                Cancel
+              </button>
               <button
                 @click="removeJob(job.ID)"
                 class="px-3 py-1 text-sm text-red-500 border border-red-300 rounded-lg hover:bg-red-50"
@@ -347,6 +436,31 @@ onMounted(() => {
                 >
                   <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Per-Target Sub-Progress -->
+            <div v-if="job.status === 'running' && Object.keys(targetProgressForJob(job.ID)).length > 0" class="mb-3 space-y-2">
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Live Scanner Progress</p>
+              <div v-for="(tp, tid) in targetProgressForJob(job.ID)" :key="tid"
+                class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div class="flex items-center justify-between mb-1.5">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <div v-if="tp.status === 'scanning'" class="w-2 h-2 rounded-full bg-blue-500 animate-pulse flex-shrink-0"></div>
+                    <div v-else class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
+                    <span class="text-sm font-medium text-gray-800 truncate">{{ tp.target_url }}</span>
+                  </div>
+                  <span class="text-xs font-mono text-gray-500 flex-shrink-0">{{ tp.scanner_index }}/{{ tp.total_scanners }}</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-1.5 mb-1">
+                  <div class="h-full rounded-full transition-all duration-500"
+                    :class="tp.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'"
+                    :style="{ width: Math.round(tp.target_percent) + '%' }"></div>
+                </div>
+                <p class="text-xs text-gray-500">
+                  <span v-if="tp.status === 'scanning'" class="text-blue-600 font-medium">{{ tp.scanner_name }}</span>
+                  <span v-else class="text-green-600 font-medium">{{ tp.message }}</span>
+                </p>
               </div>
             </div>
 
@@ -386,6 +500,17 @@ onMounted(() => {
         </svg>
         <p class="text-lg text-gray-400">No scans yet</p>
         <p class="text-sm text-gray-400 mt-1">Start a new scan to check your targets</p>
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="scanTotalPages > 1" class="flex items-center justify-between mt-4">
+        <p class="text-sm text-gray-500">Page {{ scanPage }} of {{ scanTotalPages }}</p>
+        <div class="flex gap-2">
+          <button @click="scanPage--; loadData()" :disabled="scanPage <= 1"
+            class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Previous</button>
+          <button @click="scanPage++; loadData()" :disabled="scanPage >= scanTotalPages"
+            class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
+        </div>
       </div>
     </div>
   </div>

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getScanJob } from '../api'
 import { Bar } from 'vue-chartjs'
@@ -11,6 +11,11 @@ const route = useRoute()
 const router = useRouter()
 const job = ref(null)
 const loading = ref(true)
+const wsConnection = ref(null)
+const targetProgress = ref({}) // live per-target scanner progress
+let wsRetryCount = 0
+let wsRetryTimer = null
+let pendingTimers = []
 
 const chartData = computed(() => {
   if (!job.value?.results) return { labels: [], datasets: [] }
@@ -57,10 +62,55 @@ function getScoreBg(score) {
   return 'bg-red-100'
 }
 
+function connectWebSocket() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const token = localStorage.getItem('token')
+  const wsUrl = `${protocol}//${window.location.host}/ws/scan?token=${token}`
+  wsConnection.value = new WebSocket(wsUrl)
+
+  wsConnection.value.onopen = () => { wsRetryCount = 0 }
+
+  wsConnection.value.onmessage = (event) => {
+    const progress = JSON.parse(event.data)
+    if (progress.type === 'target' && progress.job_id === job.value?.ID) {
+      targetProgress.value[progress.target_id] = progress
+      if (progress.status === 'completed') {
+        const tid = progress.target_id
+        const t = setTimeout(() => { delete targetProgress.value[tid] }, 3000)
+        pendingTimers.push(t)
+      }
+    } else if (progress.type === 'job' && progress.job_id === job.value?.ID) {
+      if (progress.status === 'completed' || progress.status === 'failed' || progress.status === 'cancelled') {
+        targetProgress.value = {}
+        getScanJob(route.params.id).then(res => { job.value = res.data })
+      }
+    }
+  }
+
+  wsConnection.value.onclose = () => {
+    const delay = Math.min(1000 * Math.pow(2, wsRetryCount), 30000)
+    wsRetryCount++
+    wsRetryTimer = setTimeout(connectWebSocket, delay)
+  }
+}
+
+onBeforeUnmount(() => {
+  if (wsRetryTimer) clearTimeout(wsRetryTimer)
+  pendingTimers.forEach(t => clearTimeout(t))
+  pendingTimers = []
+  if (wsConnection.value) {
+    wsConnection.value.onclose = null
+    wsConnection.value.close()
+  }
+})
+
 onMounted(async () => {
   try {
     const { data } = await getScanJob(route.params.id)
     job.value = data
+    if (data.status === 'running') {
+      connectWebSocket()
+    }
   } catch (e) {
     console.error('Failed to load scan job:', e)
   } finally {
@@ -139,6 +189,17 @@ onMounted(async () => {
                 ]">
                   {{ result.status }}
                 </span>
+                <!-- Live sub-progress for running targets -->
+                <div v-if="targetProgress[result.scan_target_id]" class="mt-2 text-right">
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 mb-1">
+                    <div class="h-full rounded-full bg-blue-500 transition-all duration-500"
+                      :style="{ width: Math.round(targetProgress[result.scan_target_id].target_percent) + '%' }"></div>
+                  </div>
+                  <p class="text-[11px] text-blue-600 font-medium truncate">
+                    {{ targetProgress[result.scan_target_id].scanner_name }}
+                    <span class="text-gray-400">({{ targetProgress[result.scan_target_id].scanner_index }}/{{ targetProgress[result.scan_target_id].total_scanners }})</span>
+                  </p>
+                </div>
               </td>
               <td class="py-4 px-4 text-center">
                 <button
