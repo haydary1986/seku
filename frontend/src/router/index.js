@@ -25,6 +25,7 @@ import Docs from '../views/Docs.vue'
 import Discovery from '../views/Discovery.vue'
 import Directives from '../views/Directives.vue'
 import DataLeak from '../views/DataLeak.vue'
+import SEOSettings from '../views/SEOSettings.vue'
 
 const routes = [
   // Public pages
@@ -55,6 +56,7 @@ const routes = [
   { path: '/data-leak', name: 'DataLeak', component: DataLeak },
   { path: '/users', name: 'Users', component: Users, meta: { admin: true } },
   { path: '/settings', name: 'Settings', component: Settings, meta: { admin: true } },
+  { path: '/seo', name: 'SEOSettings', component: SEOSettings, meta: { admin: true } },
   { path: '/subscriptions', name: 'Subscriptions', component: Subscriptions, meta: { admin: true } },
 ]
 

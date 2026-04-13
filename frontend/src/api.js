@@ -90,6 +90,9 @@ export const deleteUser = (id) => api.delete(`/users/${id}`)
 export const getSettings = () => api.get('/settings')
 export const updateSettings = (data) => api.put('/settings', data)
 
+// Admin: SEO Settings
+export const getSEOSettings = () => api.get('/seo')
+
 // Upgrade Requests
 export const requestUpgrade = (data) => api.post('/upgrade/request', data)
 export const getMyUpgradeRequests = () => api.get('/upgrade/requests')

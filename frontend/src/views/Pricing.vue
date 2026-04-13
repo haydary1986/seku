@@ -1,6 +1,13 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useSEO } from '../composables/useSEO'
+
+useSEO({
+  title: 'الأسعار والخطط — Pricing',
+  description: 'خطط أسعار سيكو: مجاني للأبد، ابتدائي $49، أساسي $149، احترافي $499، أعمال $1,499. خصم 17% للاشتراك السنوي. خصم خاص للجامعات.',
+  keywords: 'أسعار سيكو, خطط Seku, vulnerability scanner pricing, security audit cost',
+})
 
 const router = useRouter()
 const billingCycle = ref('monthly') // 'monthly' or 'yearly'

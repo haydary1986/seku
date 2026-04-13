@@ -1,6 +1,13 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useSEO } from '../composables/useSEO'
+
+useSEO({
+  title: 'فاحص أمان المواقع الإلكترونية',
+  description: 'سيكو منصة فحص أمان المواقع الإلكترونية الأقوى في العراق. 32 فئة فحص أمني، تقييم من 1000 نقطة، تحليل بالذكاء الاصطناعي. ابدأ مجاناً.',
+  keywords: 'فحص أمان المواقع, فاحص ثغرات, أمن المواقع العراقية, سيكو, Seku, vulnerability scanner',
+})
 
 const router = useRouter()
 const showSignupInfo = ref(false)

@@ -1,6 +1,13 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { getScanCriteria } from '../api'
+import { useSEO } from '../composables/useSEO'
+
+useSEO({
+  title: 'منهجية التقييم الأمني — Security Methodology',
+  description: 'منهجية سيكو لتقييم أمان المواقع الإلكترونية. 32 فئة فحص، نظام نقاط من 1000، OWASP Top 10، CVSS v3.1. شفافية كاملة في معايير التقييم.',
+  keywords: 'منهجية أمان, OWASP, CVSS, نظام تقييم, security methodology, scoring system',
+})
 
 const methodology = ref(null)
 const loading = ref(true)

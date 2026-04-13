@@ -33,6 +33,10 @@ func SetupRoutes(app *fiber.App) {
 	// Health check (public)
 	app.Get("/health", HealthCheck)
 
+	// SEO: dynamic sitemap and robots
+	app.Get("/sitemap.xml", GenerateSitemap)
+	app.Get("/robots.txt", GenerateRobots)
+
 	// API routes
 	api := app.Group("/api")
 
@@ -176,6 +180,9 @@ func SetupRoutes(app *fiber.App) {
 	// Settings
 	admin.Get("/settings", GetSettings)
 	admin.Put("/settings", UpdateSettings)
+
+	// SEO settings (admin)
+	admin.Get("/seo", GetSEOSettings)
 
 	// Proxy Pool (admin)
 	admin.Get("/proxy/stats", GetProxyStats)
