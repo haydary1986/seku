@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml"
-        xmlns:image="http://www.google.com/schemas/sitemap-image/0.9">
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
 
   <!-- Homepage -->
   <url>
@@ -11,11 +10,6 @@
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="ar" href="https://sec.erticaz.com/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://sec.erticaz.com/?lang=en" />
-    <image:image>
-      <image:loc>https://sec.erticaz.com/og-image.png</image:loc>
-      <image:title>Seku Web Security Scanner</image:title>
-      <image:caption>منصة فحص أمان المواقع الإلكترونية</image:caption>
-    </image:image>
   </url>
 
   <!-- Pricing -->
@@ -42,20 +36,20 @@
     <priority>0.8</priority>
   </url>
 
-  <!-- Login (low priority) -->
-  <url>
-    <loc>https://sec.erticaz.com/login</loc>
-    <lastmod>2026-03-27</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-
   <!-- Register -->
   <url>
     <loc>https://sec.erticaz.com/register</loc>
     <lastmod>2026-03-27</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
+  </url>
+
+  <!-- Login -->
+  <url>
+    <loc>https://sec.erticaz.com/login</loc>
+    <lastmod>2026-03-27</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
 
 </urlset>
