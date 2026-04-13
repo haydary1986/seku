@@ -2,10 +2,14 @@ package api
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+
+	"seku/internal/config"
 )
 
 // GenerateSitemap serves a dynamic sitemap.xml.
@@ -52,6 +56,80 @@ func GenerateSitemap(c *fiber.Ctx) error {
 	c.Set("Content-Type", "application/xml")
 	c.Set("Cache-Control", "public, max-age=3600")
 	return c.SendString(sb.String())
+}
+
+// UploadOGImage handles uploading the OpenGraph image (PNG/JPG/WebP, max 5MB).
+func UploadOGImage(c *fiber.Ctx) error {
+	file, err := c.FormFile("image")
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "No image file provided"})
+	}
+
+	// Validate size (5MB max)
+	if file.Size > 5*1024*1024 {
+		return c.Status(400).JSON(fiber.Map{"error": "File too large. Maximum 5MB."})
+	}
+
+	// Validate extension
+	filename := strings.ToLower(file.Filename)
+	allowed := false
+	var ext string
+	for _, e := range []string{".png", ".jpg", ".jpeg", ".webp"} {
+		if strings.HasSuffix(filename, e) {
+			allowed = true
+			ext = e
+			break
+		}
+	}
+	if !allowed {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid format. Use PNG, JPG, or WebP."})
+	}
+
+	// Ensure uploads directory exists
+	uploadDir := "uploads"
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create upload directory"})
+	}
+
+	// Save with timestamped name to bust browser cache
+	savedName := fmt.Sprintf("og-image-%d%s", time.Now().Unix(), ext)
+	savedPath := filepath.Join(uploadDir, savedName)
+	if err := c.SaveFile(file, savedPath); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to save file: " + err.Error()})
+	}
+
+	// Build public URL using site_url setting
+	siteURL := getSettingOr("seo_site_url", "https://sec.erticaz.com")
+	siteURL = strings.TrimRight(siteURL, "/")
+	publicURL := siteURL + "/uploads/" + savedName
+
+	// Update setting
+	updateOrCreateSetting("seo_og_image", publicURL)
+
+	return c.JSON(fiber.Map{
+		"url":      publicURL,
+		"filename": savedName,
+		"size":     file.Size,
+	})
+}
+
+func updateOrCreateSetting(key, value string) {
+	var setting struct {
+		ID    uint
+		Key   string
+		Value string
+	}
+	row := config.DB.Table("settings").Where("key = ?", key).First(&setting)
+	if row.Error != nil {
+		config.DB.Table("settings").Create(map[string]interface{}{
+			"key":        key,
+			"value":      value,
+			"created_at": time.Now(),
+			"updated_at": time.Now(),
+		})
+	} else {
+		config.DB.Table("settings").Where("key = ?", key).Update("value", value)
+	}
 }
 
 // GenerateRobots serves robots.txt.
@@ -114,6 +192,20 @@ Sitemap: ` + baseURL + `/sitemap.xml
 	c.Set("Content-Type", "text/plain")
 	c.Set("Cache-Control", "public, max-age=86400")
 	return c.SendString(robots)
+}
+
+// GetPublicSEO returns only public SEO config (no auth required).
+// Used by the frontend to load Google Analytics, verification meta tags, etc.
+func GetPublicSEO(c *fiber.Ctx) error {
+	c.Set("Cache-Control", "public, max-age=300") // 5 min cache
+	return c.JSON(fiber.Map{
+		"google_analytics":      getSetting("seo_google_analytics"),
+		"google_search_console": getSetting("seo_google_search_console"),
+		"bing_verification":     getSetting("seo_bing_verification"),
+		"facebook_app_id":       getSetting("seo_facebook_app_id"),
+		"site_title":            getSettingOr("seo_site_title", "Seku"),
+		"site_description":      getSetting("seo_site_description"),
+	})
 }
 
 // GetSEOSettings returns the current SEO configuration.

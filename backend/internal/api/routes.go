@@ -33,6 +33,9 @@ func SetupRoutes(app *fiber.App) {
 	// Health check (public)
 	app.Get("/health", HealthCheck)
 
+	// Serve uploaded files (public, no auth)
+	app.Static("/uploads", "./uploads")
+
 	// SEO: dynamic sitemap and robots
 	app.Get("/sitemap.xml", GenerateSitemap)
 	app.Get("/robots.txt", GenerateRobots)
@@ -46,6 +49,7 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/criteria", GetScanCriteria) // public page: scan criteria & scoring
 	api.Get("/plans", GetPlans)           // public: plan details with scan categories
 	api.Get("/docs", GetAPIDocs)          // public: API documentation
+	api.Get("/seo/public", GetPublicSEO)  // public: SEO config (GA ID, verification tags)
 
 	// Protected routes
 	protected := api.Group("", AuthRequired())
@@ -183,6 +187,7 @@ func SetupRoutes(app *fiber.App) {
 
 	// SEO settings (admin)
 	admin.Get("/seo", GetSEOSettings)
+	admin.Post("/seo/upload-og-image", UploadOGImage)
 
 	// Proxy Pool (admin)
 	admin.Get("/proxy/stats", GetProxyStats)

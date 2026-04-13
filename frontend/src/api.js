@@ -92,6 +92,13 @@ export const updateSettings = (data) => api.put('/settings', data)
 
 // Admin: SEO Settings
 export const getSEOSettings = () => api.get('/seo')
+export const uploadOGImage = (file) => {
+  const formData = new FormData()
+  formData.append('image', file)
+  return api.post('/seo/upload-og-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
 
 // Upgrade Requests
 export const requestUpgrade = (data) => api.post('/upgrade/request', data)

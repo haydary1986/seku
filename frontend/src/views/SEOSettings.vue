@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { getSEOSettings, updateSettings } from '../api'
+import { getSEOSettings, updateSettings, uploadOGImage } from '../api'
 
 const seo = ref({
   site_url: '',
@@ -78,6 +78,45 @@ async function save() {
   } finally {
     saving.value = false
   }
+}
+
+const uploadingImage = ref(false)
+const fileInput = ref(null)
+
+async function handleImageUpload(event) {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // Validate
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+    message.value = 'الصيغة غير مدعومة. استخدم PNG أو JPG أو WebP'
+    messageType.value = 'error'
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    message.value = 'الحجم أكبر من 5MB'
+    messageType.value = 'error'
+    return
+  }
+
+  uploadingImage.value = true
+  try {
+    const { data } = await uploadOGImage(file)
+    seo.value.og_image = data.url
+    message.value = 'تم رفع الصورة بنجاح'
+    messageType.value = 'success'
+    setTimeout(() => message.value = '', 3000)
+  } catch (e) {
+    message.value = 'فشل الرفع: ' + (e.response?.data?.error || e.message)
+    messageType.value = 'error'
+  } finally {
+    uploadingImage.value = false
+    if (fileInput.value) fileInput.value.value = ''
+  }
+}
+
+function triggerFileInput() {
+  fileInput.value?.click()
 }
 
 function copyToClipboard(text) {
@@ -184,10 +223,52 @@ onMounted(load)
         <!-- SOCIAL TAB -->
         <div v-if="activeTab === 'social'" class="space-y-5">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">صورة المشاركة (OG Image)</label>
-            <input v-model="seo.og_image" type="url" placeholder="https://your-site.com/og-image.png" dir="ltr"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-sm" />
-            <p class="text-xs text-gray-400 mt-1">صورة 1200×630 تظهر عند مشاركة الرابط على Facebook, LinkedIn, WhatsApp</p>
+            <label class="block text-sm font-medium text-gray-700 mb-2">صورة المشاركة (OG Image)</label>
+
+            <!-- Upload zone -->
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-indigo-400 transition-colors">
+              <div v-if="seo.og_image" class="mb-3">
+                <img :src="seo.og_image" alt="OG Image"
+                  class="max-w-full h-auto rounded-lg border border-gray-200 max-h-48 mx-auto"
+                  @error="$event.target.style.display='none'" />
+              </div>
+
+              <input ref="fileInput" type="file" accept="image/png,image/jpeg,image/webp"
+                @change="handleImageUpload" class="hidden" />
+
+              <div class="flex gap-2">
+                <button @click="triggerFileInput" :disabled="uploadingImage"
+                  class="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium flex items-center justify-center gap-2">
+                  <div v-if="uploadingImage" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                  </svg>
+                  {{ uploadingImage ? 'جاري الرفع...' : (seo.og_image ? 'تغيير الصورة' : 'رفع صورة') }}
+                </button>
+                <button v-if="seo.og_image" @click="seo.og_image = ''"
+                  class="px-4 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium">
+                  إزالة
+                </button>
+              </div>
+            </div>
+
+            <!-- Or paste URL -->
+            <div class="mt-3">
+              <label class="block text-xs text-gray-500 mb-1">أو ألصق رابط الصورة مباشرة:</label>
+              <input v-model="seo.og_image" type="url" placeholder="https://your-site.com/og-image.png" dir="ltr"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-xs" />
+            </div>
+
+            <!-- Recommendations -->
+            <div class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-900">
+              <p class="font-semibold mb-1">📏 المواصفات الموصى بها:</p>
+              <ul class="list-disc list-inside space-y-0.5 mr-2">
+                <li>الحجم: <strong>1200 × 630 بكسل</strong> (نسبة 1.91:1)</li>
+                <li>الصيغة: PNG أو JPG أو WebP</li>
+                <li>الحد الأقصى: <strong>5MB</strong></li>
+                <li>يظهر عند مشاركة الرابط على Facebook, LinkedIn, WhatsApp, Twitter</li>
+              </ul>
+            </div>
           </div>
 
           <div>
@@ -223,10 +304,93 @@ onMounted(load)
         <!-- ANALYTICS TAB -->
         <div v-if="activeTab === 'analytics'" class="space-y-5">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Google Analytics Measurement ID</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+              Google Analytics 4 Measurement ID
+              <span v-if="seo.google_analytics" class="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">نشط</span>
+              <span v-else class="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs">غير مفعّل</span>
+            </label>
             <input v-model="seo.google_analytics" type="text" placeholder="G-XXXXXXXXXX" dir="ltr"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-sm" />
             <p class="text-xs text-gray-400 mt-1">من Google Analytics 4 — يبدأ بـ G-</p>
+
+            <!-- GA Setup Guide — Detailed -->
+            <div v-if="!seo.google_analytics" class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
+              <p class="font-bold text-blue-900 mb-3 text-base">📊 خطوات إنشاء Property في Google Analytics 4</p>
+
+              <div class="space-y-3 text-blue-900">
+                <!-- Step 1 -->
+                <div class="bg-white rounded-lg p-3 border border-blue-100">
+                  <p class="font-semibold mb-1">① افتح Google Analytics</p>
+                  <a href="https://analytics.google.com/" target="_blank"
+                    class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 underline">
+                    https://analytics.google.com
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                  </a>
+                  <p class="text-xs text-blue-700 mt-1">سجّل دخول بحساب Google الخاص بك</p>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="bg-white rounded-lg p-3 border border-blue-100">
+                  <p class="font-semibold mb-1">② إنشاء حساب (Account)</p>
+                  <ul class="text-xs text-blue-700 space-y-1 list-disc list-inside mr-2">
+                    <li>اضغط على <strong>الإعدادات (Admin)</strong> ⚙️ في أسفل القائمة اليسرى</li>
+                    <li>اضغط <strong>Create Account</strong> (إنشاء حساب)</li>
+                    <li>أدخل اسم الحساب: مثلاً <code class="bg-blue-50 px-1 rounded">Irtikaz</code></li>
+                    <li>اضغط <strong>Next</strong></li>
+                  </ul>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="bg-white rounded-lg p-3 border border-blue-100">
+                  <p class="font-semibold mb-1">③ إنشاء Property (الأهم)</p>
+                  <ul class="text-xs text-blue-700 space-y-1 list-disc list-inside mr-2">
+                    <li>اسم Property: <code class="bg-blue-50 px-1 rounded">Seku - sec.erticaz.com</code></li>
+                    <li>المنطقة الزمنية: <strong>Iraq (GMT+3)</strong></li>
+                    <li>العملة: <strong>USD</strong> أو <strong>IQD</strong></li>
+                    <li>اضغط <strong>Next</strong> ثم <strong>Create</strong></li>
+                  </ul>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="bg-white rounded-lg p-3 border border-blue-100">
+                  <p class="font-semibold mb-1">④ اختر منصة "Web"</p>
+                  <ul class="text-xs text-blue-700 space-y-1 list-disc list-inside mr-2">
+                    <li>في "Choose a platform" اختر <strong>Web</strong> 🌐</li>
+                    <li>أدخل URL الموقع: <code class="bg-blue-50 px-1 rounded">{{ seo.site_url || 'https://sec.erticaz.com' }}</code></li>
+                    <li>اسم Stream: <code class="bg-blue-50 px-1 rounded">Main Site</code></li>
+                    <li>اضغط <strong>Create stream</strong></li>
+                  </ul>
+                </div>
+
+                <!-- Step 5 -->
+                <div class="bg-white rounded-lg p-3 border-2 border-green-300 bg-green-50">
+                  <p class="font-semibold mb-1 text-green-900">⑤ انسخ Measurement ID</p>
+                  <ul class="text-xs text-green-800 space-y-1 list-disc list-inside mr-2">
+                    <li>سيظهر <strong>Measurement ID</strong> أعلى الصفحة (يبدأ بـ <code class="bg-white px-1 rounded font-bold">G-</code>)</li>
+                    <li>مثال: <code class="bg-white px-1 rounded">G-ABC123XYZ</code></li>
+                    <li>اضغط أيقونة النسخ 📋 بجانبه</li>
+                    <li><strong>الصقه في الحقل أعلاه</strong> واضغط حفظ ✓</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-900">
+                <strong>💡 ملاحظة:</strong> Property ID يختلف عن Measurement ID. نحن نحتاج Measurement ID فقط (يبدأ بـ G-).
+              </div>
+            </div>
+
+            <div v-else class="mt-3 bg-green-50 border border-green-200 rounded-lg p-3 text-xs">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="font-semibold text-green-900">✓ Google Analytics متصل</p>
+                  <p class="text-green-700 mt-1">يتم تتبع الزوار وتحركاتهم تلقائياً عبر جميع الصفحات.</p>
+                </div>
+                <a :href="`https://analytics.google.com/analytics/web/#/p${seo.google_analytics?.replace('G-','')}/reports/intelligenthome`" target="_blank"
+                  class="px-3 py-1.5 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700">
+                  افتح GA Dashboard
+                </a>
+              </div>
+            </div>
           </div>
 
           <div>
