@@ -100,8 +100,18 @@ func DeleteTarget(c *fiber.Ctx) error {
 	if err := ScopedDB(c).First(&target, id).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Target not found"})
 	}
-	config.DB.Delete(&target)
-	return c.JSON(fiber.Map{"message": "Target deleted"})
+
+	// Hard-delete all scan results + check results + AI analyses for this target
+	var results []models.ScanResult
+	config.DB.Unscoped().Where("scan_target_id = ?", target.ID).Find(&results)
+	for _, r := range results {
+		config.DB.Unscoped().Where("scan_result_id = ?", r.ID).Delete(&models.CheckResult{})
+		config.DB.Unscoped().Where("scan_result_id = ?", r.ID).Delete(&models.AIAnalysis{})
+	}
+	config.DB.Unscoped().Where("scan_target_id = ?", target.ID).Delete(&models.ScanResult{})
+	config.DB.Unscoped().Delete(&target)
+
+	return c.JSON(fiber.Map{"message": "Target and all associated data permanently deleted"})
 }
 
 func UpdateTarget(c *fiber.Ctx) error {
@@ -472,16 +482,17 @@ func DeleteScanJob(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Scan job not found"})
 	}
 
-	// Delete associated results and checks
+	// Hard-delete associated results, checks, and AI analyses (no soft-delete leftovers)
 	var results []models.ScanResult
-	config.DB.Where("scan_job_id = ?", job.ID).Find(&results)
+	config.DB.Unscoped().Where("scan_job_id = ?", job.ID).Find(&results)
 	for _, r := range results {
-		config.DB.Where("scan_result_id = ?", r.ID).Delete(&models.CheckResult{})
+		config.DB.Unscoped().Where("scan_result_id = ?", r.ID).Delete(&models.CheckResult{})
+		config.DB.Unscoped().Where("scan_result_id = ?", r.ID).Delete(&models.AIAnalysis{})
 	}
-	config.DB.Where("scan_job_id = ?", job.ID).Delete(&models.ScanResult{})
-	config.DB.Delete(&job)
+	config.DB.Unscoped().Where("scan_job_id = ?", job.ID).Delete(&models.ScanResult{})
+	config.DB.Unscoped().Delete(&job)
 
-	return c.JSON(fiber.Map{"message": "Scan job deleted"})
+	return c.JSON(fiber.Map{"message": "Scan job permanently deleted"})
 }
 
 // --- Dashboard Stats ---
@@ -660,9 +671,11 @@ func GetLeaderboard(c *fiber.Ctx) error {
 			INNER JOIN scan_targets st ON st.id = sr.scan_target_id
 			INNER JOIN (
 				SELECT scan_target_id, MAX(id) AS max_id
-				FROM scan_results WHERE status = 'completed'
+				FROM scan_results
+				WHERE status = 'completed' AND deleted_at IS NULL
 				GROUP BY scan_target_id
 			) latest ON sr.id = latest.max_id
+			WHERE sr.deleted_at IS NULL AND st.deleted_at IS NULL
 			ORDER BY sr.overall_score DESC
 		`).Scan(&ranked)
 	} else {
@@ -674,10 +687,12 @@ func GetLeaderboard(c *fiber.Ctx) error {
 			INNER JOIN scan_targets st ON st.id = sr.scan_target_id
 			INNER JOIN (
 				SELECT scan_target_id, MAX(id) AS max_id
-				FROM scan_results WHERE status = 'completed'
+				FROM scan_results
+				WHERE status = 'completed' AND deleted_at IS NULL
 				GROUP BY scan_target_id
 			) latest ON sr.id = latest.max_id
 			WHERE st.organization_id = ?
+			  AND sr.deleted_at IS NULL AND st.deleted_at IS NULL
 			ORDER BY sr.overall_score DESC
 		`, orgID).Scan(&ranked)
 	}

@@ -18,6 +18,9 @@ func main() {
 	// Initialize database
 	config.InitDatabase()
 
+	// Purge orphaned soft-deleted records (one-time cleanup per startup)
+	config.PurgeSoftDeleted()
+
 	// Seed universities
 	config.SeedUniversities()
 

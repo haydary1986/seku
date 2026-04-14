@@ -67,3 +67,26 @@ func getEnvDefault(key, fallback string) string {
 	}
 	return fallback
 }
+
+// PurgeSoftDeleted permanently removes any records that were previously
+// soft-deleted (deleted_at IS NOT NULL). Runs once at startup to clean
+// up phantom scan_targets / scan_results / check_results / ai_analyses
+// that still linger from older deletes before hard-delete was introduced.
+func PurgeSoftDeleted() {
+	if DB == nil {
+		return
+	}
+	tables := []string{
+		"check_results",
+		"ai_analyses",
+		"scan_results",
+		"scan_jobs",
+		"scan_targets",
+	}
+	for _, t := range tables {
+		if err := DB.Exec(fmt.Sprintf("DELETE FROM %s WHERE deleted_at IS NOT NULL", t)).Error; err != nil {
+			log.Printf("PurgeSoftDeleted: %s: %v", t, err)
+		}
+	}
+	log.Println("PurgeSoftDeleted: orphaned soft-deleted records removed")
+}
