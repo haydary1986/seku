@@ -338,7 +338,36 @@ func NewEngineForPlan(plan string) *Engine {
 	}
 }
 
+// ResumeInterruptedJobs finds jobs that were "running" when the server stopped
+// and restarts them in the background. Called at server startup.
+func ResumeInterruptedJobs() {
+	var jobs []models.ScanJob
+	config.DB.Where("status IN ?", []string{"running", "pending"}).Find(&jobs)
+
+	if len(jobs) == 0 {
+		return
+	}
+
+	fmt.Printf("[Scanner] Resuming %d interrupted scan jobs...\n", len(jobs))
+
+	for i := range jobs {
+		job := jobs[i]
+
+		// Reset any "running" child results back to "pending"
+		config.DB.Model(&models.ScanResult{}).
+			Where("scan_job_id = ? AND status = ?", job.ID, "running").
+			Update("status", "pending")
+
+		// Launch scan in background — scanTarget skips already-completed results
+		go func(j models.ScanJob) {
+			engine := NewEngineForPolicy("deep") // use deep by default for resumed jobs
+			engine.RunScan(&j)
+		}(job)
+	}
+}
+
 // RunScan executes all scanners against a target. Supports cancellation via ActiveScans.
+// If the scan is resumed after server restart, it skips already-completed targets.
 func (e *Engine) RunScan(job *models.ScanJob) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ActiveScans.Register(job.ID, cancel)
@@ -346,17 +375,40 @@ func (e *Engine) RunScan(job *models.ScanJob) {
 
 	now := time.Now()
 	job.Status = "running"
-	job.StartedAt = &now
+	if job.StartedAt == nil {
+		job.StartedAt = &now
+	}
 	config.DB.Save(job)
 
+	// Load all results — will skip completed/failed ones during scan
 	var results []models.ScanResult
 	config.DB.Where("scan_job_id = ?", job.ID).Preload("ScanTarget").Find(&results)
+
+	// Reset "running" targets to "pending" — they were interrupted by restart
+	for i := range results {
+		if results[i].Status == "running" {
+			results[i].Status = "pending"
+			config.DB.Model(&results[i]).Update("status", "pending")
+		}
+	}
 
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, 5)
 	var completedCount int64
 
+	// Count already-completed results to include in progress
+	for _, r := range results {
+		if r.Status == "completed" {
+			atomic.AddInt64(&completedCount, 1)
+		}
+	}
+
 	for i := range results {
+		// Skip already-completed or failed targets (resumption)
+		if results[i].Status == "completed" || results[i].Status == "failed" {
+			continue
+		}
+
 		// Check for cancellation before starting next target
 		select {
 		case <-ctx.Done():

@@ -31,6 +31,9 @@ func main() {
 	scanner.Pool.LoadSettingsFromDB()
 	scanner.Pool.StartUpdater()
 
+	// Resume any scan jobs that were interrupted by restart
+	scanner.ResumeInterruptedJobs()
+
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
 		AppName: "Seku v1.0",

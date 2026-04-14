@@ -1062,6 +1062,86 @@ onMounted(async () => {
                   </div>
                 </div>
 
+                <!-- Common Subdomain Enumeration — detailed table -->
+                <div v-else-if="check.details && check.check_name === 'Common Subdomain Enumeration'" class="mt-2 bg-gray-50 rounded-lg p-3 text-sm">
+                  <p class="font-semibold text-gray-800 mb-2">
+                    {{ parseDetails(check.details).message }}
+                  </p>
+                  <div v-if="parseDetails(check.details).subdomains?.length" class="overflow-x-auto">
+                    <table class="w-full text-xs border-collapse">
+                      <thead>
+                        <tr class="bg-gray-100 border-b border-gray-200">
+                          <th class="text-right py-2 px-2 text-gray-600">#</th>
+                          <th class="text-right py-2 px-2 text-gray-600">Subdomain</th>
+                          <th class="text-center py-2 px-2 text-gray-600">HTTPS</th>
+                          <th class="text-center py-2 px-2 text-gray-600">Cloudflare</th>
+                          <th class="text-right py-2 px-2 text-gray-600">IP Addresses</th>
+                          <th class="text-right py-2 px-2 text-gray-600">CNAME</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(sub, i) in parseDetails(check.details).subdomains" :key="sub.subdomain" class="border-b border-gray-100 hover:bg-white">
+                          <td class="py-2 px-2 text-gray-400">{{ i + 1 }}</td>
+                          <td class="py-2 px-2 font-mono text-gray-800" dir="ltr">{{ sub.subdomain }}</td>
+                          <td class="py-2 px-2 text-center">
+                            <span v-if="sub.has_https" class="inline-block px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-bold">HTTPS ✓</span>
+                            <span v-else class="inline-block px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold">HTTP ✗</span>
+                          </td>
+                          <td class="py-2 px-2 text-center">
+                            <span v-if="sub.is_cloudflare" class="inline-block px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px] font-medium">CF</span>
+                            <span v-else class="text-gray-300">—</span>
+                          </td>
+                          <td class="py-2 px-2 font-mono text-[10px] text-gray-600" dir="ltr">
+                            <div v-if="sub.ips && sub.ips.length">
+                              <span v-for="(ip, idx) in sub.ips.slice(0, 2)" :key="ip" class="inline-block mr-1 px-1 bg-gray-200 rounded">{{ ip }}</span>
+                              <span v-if="sub.ips.length > 2" class="text-gray-400">+{{ sub.ips.length - 2 }}</span>
+                            </div>
+                          </td>
+                          <td class="py-2 px-2 font-mono text-[10px] text-purple-700" dir="ltr">{{ sub.cname || '—' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- Subdomain Security Check — show with/without HTTPS lists -->
+                <div v-else-if="check.details && check.check_name === 'Subdomain Security Check'" class="mt-2 bg-gray-50 rounded-lg p-3 text-sm">
+                  <p class="font-semibold text-gray-800 mb-2">{{ parseDetails(check.details).message }}</p>
+                  <div class="grid grid-cols-2 gap-3 mb-2 text-xs">
+                    <div class="bg-green-50 rounded p-2 border border-green-200">
+                      <p class="font-semibold text-green-700 mb-1">✓ HTTPS enabled ({{ parseDetails(check.details).https_count }})</p>
+                      <ul class="space-y-0.5 text-green-800" dir="ltr">
+                        <li v-for="h in parseDetails(check.details).with_https" :key="h" class="font-mono truncate">{{ h }}</li>
+                      </ul>
+                    </div>
+                    <div class="bg-red-50 rounded p-2 border border-red-200">
+                      <p class="font-semibold text-red-700 mb-1">✗ HTTPS missing ({{ (parseDetails(check.details).without_https || []).length }})</p>
+                      <ul class="space-y-0.5 text-red-800" dir="ltr">
+                        <li v-for="h in parseDetails(check.details).without_https" :key="h" class="font-mono truncate">{{ h }}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Dangling DNS / Takeover — highlight risks -->
+                <div v-else-if="check.details && check.check_name === 'Dangling DNS / Subdomain Takeover Risk'" class="mt-2 bg-gray-50 rounded-lg p-3 text-sm">
+                  <p class="font-semibold text-gray-800 mb-2">{{ parseDetails(check.details).message }}</p>
+                  <div v-if="parseDetails(check.details).potential_takeovers?.length" class="space-y-1 mb-2">
+                    <p class="text-xs font-semibold text-red-700">⚠️ Potential Takeovers:</p>
+                    <div v-for="t in parseDetails(check.details).potential_takeovers" :key="t.subdomain"
+                      class="bg-red-50 border border-red-200 rounded p-2 text-xs" dir="ltr">
+                      <div class="font-mono font-bold text-red-800">{{ t.subdomain }}</div>
+                      <div class="text-red-600">CNAME → {{ t.cname }}</div>
+                    </div>
+                  </div>
+                  <div v-if="parseDetails(check.details).cnames?.length" class="text-xs text-gray-600" dir="ltr">
+                    <p class="font-semibold mb-1">External CNAMEs:</p>
+                    <ul class="space-y-0.5">
+                      <li v-for="c in parseDetails(check.details).cnames" :key="c" class="font-mono">{{ c }}</li>
+                    </ul>
+                  </div>
+                </div>
+
                 <!-- Raw Details (non-subdomain checks) -->
                 <div v-else-if="check.details" class="mt-2 bg-gray-50 rounded-lg p-3 text-sm">
                   <p class="text-xs text-gray-400 mb-1">Technical Details:</p>

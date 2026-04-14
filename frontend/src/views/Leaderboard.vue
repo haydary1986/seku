@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getLeaderboard, exportLeaderboardCSV } from '../api'
+import { getLeaderboard, exportLeaderboardCSV, deleteTarget } from '../api'
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js'
 
@@ -208,7 +208,8 @@ async function downloadCSV() {
 
 // --- Load data ---
 
-onMounted(async () => {
+async function loadLeaderboard() {
+  loading.value = true
   try {
     const res = await getLeaderboard()
     data.value = res.data
@@ -217,7 +218,32 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+// --- Delete target from leaderboard ---
+const deletingId = ref(null)
+
+async function removeTarget(site) {
+  const name = site.name || site.url
+  if (!confirm(`هل أنت متأكد من حذف "${name}" من قائمة المواقع؟\n\nسيتم حذف:\n- الموقع من قائمة الأهداف\n- جميع نتائج الفحص التاريخية\n- جميع السجلات المرتبطة\n\nلا يمكن التراجع عن هذا الإجراء.`)) return
+
+  deletingId.value = site.scan_target_id
+  try {
+    await deleteTarget(site.scan_target_id)
+    // Remove from local list immediately
+    if (data.value?.rankings) {
+      data.value.rankings = data.value.rankings.filter(r => r.scan_target_id !== site.scan_target_id)
+      data.value.total_sites = Math.max(0, (data.value.total_sites || 0) - 1)
+      data.value.scanned_sites = Math.max(0, (data.value.scanned_sites || 0) - 1)
+    }
+  } catch (e) {
+    alert('فشل الحذف: ' + (e.response?.data?.error || e.message))
+  } finally {
+    deletingId.value = null
+  }
+}
+
+onMounted(() => loadLeaderboard())
 </script>
 
 <template>
@@ -399,12 +425,25 @@ onMounted(async () => {
 
                 <!-- Details -->
                 <td class="py-4 px-4 text-center">
-                  <button
-                    @click="router.push(`/results/${site.scan_result_id}`)"
-                    class="px-3 py-1 text-sm text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-colors"
-                  >
-                    View Report
-                  </button>
+                  <div class="flex items-center gap-2 justify-center">
+                    <button
+                      @click="router.push(`/results/${site.scan_result_id}`)"
+                      class="px-3 py-1 text-sm text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-colors"
+                    >
+                      View Report
+                    </button>
+                    <button
+                      @click="removeTarget(site)"
+                      :disabled="deletingId === site.scan_target_id"
+                      class="px-2 py-1 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 inline-flex items-center justify-center"
+                      title="حذف الموقع من القائمة"
+                    >
+                      <svg v-if="deletingId !== site.scan_target_id" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                      <div v-else class="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
