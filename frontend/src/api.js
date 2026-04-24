@@ -41,6 +41,7 @@ export const createBulkTargets = (targets) => api.post('/targets/bulk', { target
 export const updateTarget = (id, data) => api.put(`/targets/${id}`, data)
 export const deleteTarget = (id) => api.delete(`/targets/${id}`)
 export const cleanupDeadTargets = (dryRun = true) => api.post(`/targets/cleanup-dead?dry_run=${dryRun}`)
+export const cleanupDuplicateTargets = (dryRun = true) => api.post(`/targets/cleanup-duplicates?dry_run=${dryRun}`)
 
 // Scans (with pagination & filter)
 export const getScanJobs = (params) => api.get('/scans', { params })

@@ -146,12 +146,33 @@ func CleanupDeadTargets(c *fiber.Ctx) error {
 		Name string `json:"name"`
 	}
 
-	// Check all targets in parallel with 3s timeout per site
+	// Lenient liveness check: 10s timeout, realistic UA, tries multiple URL variants.
+	// A target is considered alive if ANY variant returns ANY response (even 5xx —
+	// that means the server is up, just misbehaving, not dead).
 	client := &http.Client{
-		Timeout: 3 * time.Second,
+		Timeout: 10 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
+			if len(via) >= 5 {
+				return http.ErrUseLastResponse
+			}
+			return nil
 		},
+	}
+
+	probe := func(rawURL string) bool {
+		req, err := http.NewRequest("GET", rawURL, nil)
+		if err != nil {
+			return false
+		}
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+		req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+		req.Header.Set("Accept-Language", "en-US,en;q=0.5")
+		resp, err := client.Do(req)
+		if err != nil {
+			return false
+		}
+		resp.Body.Close()
+		return true // any HTTP response means the server is alive
 	}
 
 	type checkResult struct {
@@ -160,34 +181,32 @@ func CleanupDeadTargets(c *fiber.Ctx) error {
 	}
 
 	results := make(chan checkResult, len(targets))
-	sem := make(chan struct{}, 20) // 20 concurrent checks
+	sem := make(chan struct{}, 20)
 
 	for _, t := range targets {
 		sem <- struct{}{}
 		go func(t models.ScanTarget) {
 			defer func() { <-sem }()
 
-			url := t.URL
-			if !strings.HasPrefix(url, "http") {
-				url = "https://" + url
+			raw := strings.TrimSpace(t.URL)
+			raw = strings.TrimPrefix(raw, "https://")
+			raw = strings.TrimPrefix(raw, "http://")
+			raw = strings.TrimPrefix(raw, "www.")
+			raw = strings.TrimRight(raw, "/")
+
+			// Try 4 variants in order of likelihood
+			variants := []string{
+				"https://" + raw,
+				"https://www." + raw,
+				"http://" + raw,
+				"http://www." + raw,
 			}
 
 			alive := false
-			resp, err := client.Get(url)
-			if err == nil {
-				resp.Body.Close()
-				if resp.StatusCode < 500 {
+			for _, v := range variants {
+				if probe(v) {
 					alive = true
-				}
-			}
-			if !alive {
-				httpURL := strings.Replace(url, "https://", "http://", 1)
-				resp, err := client.Get(httpURL)
-				if err == nil {
-					resp.Body.Close()
-					if resp.StatusCode < 500 {
-						alive = true
-					}
+					break
 				}
 			}
 			results <- checkResult{target: t, alive: alive}
@@ -203,17 +222,18 @@ func CleanupDeadTargets(c *fiber.Ctx) error {
 		}
 	}
 
-	// Delete if not dry run
+	// Hard-delete if not dry run
 	dryRun := c.Query("dry_run", "true")
 	if dryRun == "false" && len(dead) > 0 {
 		for _, d := range dead {
 			var scanResults []models.ScanResult
-			config.DB.Where("scan_target_id = ?", d.ID).Find(&scanResults)
+			config.DB.Unscoped().Where("scan_target_id = ?", d.ID).Find(&scanResults)
 			for _, r := range scanResults {
-				config.DB.Where("scan_result_id = ?", r.ID).Delete(&models.CheckResult{})
+				config.DB.Unscoped().Where("scan_result_id = ?", r.ID).Delete(&models.CheckResult{})
+				config.DB.Unscoped().Where("scan_result_id = ?", r.ID).Delete(&models.AIAnalysis{})
 			}
-			config.DB.Where("scan_target_id = ?", d.ID).Delete(&models.ScanResult{})
-			config.DB.Delete(&models.ScanTarget{}, d.ID)
+			config.DB.Unscoped().Where("scan_target_id = ?", d.ID).Delete(&models.ScanResult{})
+			config.DB.Unscoped().Delete(&models.ScanTarget{}, d.ID)
 		}
 	}
 
@@ -226,6 +246,79 @@ func CleanupDeadTargets(c *fiber.Ctx) error {
 		"message": func() string {
 			if dryRun != "false" {
 				return fmt.Sprintf("Deleted %d dead targets", len(dead))
+			}
+			return "Dry run complete. Review and confirm deletion."
+		}(),
+	})
+}
+
+// CleanupDuplicateTargets finds targets with the same normalized URL
+// (case-insensitive, www stripped, protocol stripped, trailing slash removed)
+// and deletes all but the lowest-ID one. All scan history is preserved on
+// the kept target.
+func CleanupDuplicateTargets(c *fiber.Ctx) error {
+	var targets []models.ScanTarget
+	ScopedDB(c).Order("id ASC").Find(&targets)
+
+	normalize := func(u string) string {
+		s := strings.TrimSpace(strings.ToLower(u))
+		s = strings.TrimPrefix(s, "https://")
+		s = strings.TrimPrefix(s, "http://")
+		s = strings.TrimPrefix(s, "www.")
+		s = strings.TrimRight(s, "/")
+		return s
+	}
+
+	// Group by normalized URL. First occurrence wins.
+	seen := map[string]models.ScanTarget{}
+	type dupEntry struct {
+		ID     uint   `json:"id"`
+		URL    string `json:"url"`
+		Name   string `json:"name"`
+		KeptID uint   `json:"kept_id"`
+	}
+	var duplicates []dupEntry
+
+	for _, t := range targets {
+		key := normalize(t.URL)
+		if key == "" {
+			continue
+		}
+		if kept, ok := seen[key]; ok {
+			duplicates = append(duplicates, dupEntry{
+				ID:     t.ID,
+				URL:    t.URL,
+				Name:   t.Name,
+				KeptID: kept.ID,
+			})
+			continue
+		}
+		seen[key] = t
+	}
+
+	dryRun := c.Query("dry_run", "true")
+	if dryRun == "false" && len(duplicates) > 0 {
+		for _, d := range duplicates {
+			var scanResults []models.ScanResult
+			config.DB.Unscoped().Where("scan_target_id = ?", d.ID).Find(&scanResults)
+			for _, r := range scanResults {
+				config.DB.Unscoped().Where("scan_result_id = ?", r.ID).Delete(&models.CheckResult{})
+				config.DB.Unscoped().Where("scan_result_id = ?", r.ID).Delete(&models.AIAnalysis{})
+			}
+			config.DB.Unscoped().Where("scan_target_id = ?", d.ID).Delete(&models.ScanResult{})
+			config.DB.Unscoped().Delete(&models.ScanTarget{}, d.ID)
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"total_checked":    len(targets),
+		"duplicate_count":  len(duplicates),
+		"unique_count":     len(seen),
+		"dry_run":          dryRun != "false",
+		"duplicates":       duplicates,
+		"message": func() string {
+			if dryRun == "false" {
+				return fmt.Sprintf("Deleted %d duplicate targets", len(duplicates))
 			}
 			return "Dry run complete. Review and confirm deletion."
 		}(),

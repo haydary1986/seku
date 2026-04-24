@@ -72,6 +72,7 @@ func SetupRoutes(app *fiber.App) {
 	targets.Put("/:id", UpdateTarget)
 	targets.Delete("/:id", DeleteTarget)
 	targets.Post("/cleanup-dead", CleanupDeadTargets)
+	targets.Post("/cleanup-duplicates", CleanupDuplicateTargets)
 
 	// Score History & Timeline
 	protected.Get("/targets/:id/history", GetScoreHistory)

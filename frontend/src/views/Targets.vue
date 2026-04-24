@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getTargets, createTarget, createBulkTargets, deleteTarget, cleanupDeadTargets, initiateVerification, getVerificationStatus, checkVerification, getTags, createTag, deleteTag, tagTarget, untagTarget, getTargetTags } from '../api'
+import { getTargets, createTarget, createBulkTargets, deleteTarget, cleanupDeadTargets, cleanupDuplicateTargets, initiateVerification, getVerificationStatus, checkVerification, getTags, createTag, deleteTag, tagTarget, untagTarget, getTargetTags } from '../api'
 
 const targets = ref([])
 const loading = ref(true)
@@ -278,6 +278,37 @@ async function confirmDeleteDead() {
   }
 }
 
+const duplicatesResult = ref(null)
+const duplicatesLoading = ref(false)
+
+async function scanDuplicates() {
+  duplicatesLoading.value = true
+  duplicatesResult.value = null
+  try {
+    const { data } = await cleanupDuplicateTargets(true)
+    duplicatesResult.value = data
+  } catch (e) {
+    alert(e.response?.data?.error || 'Duplicates check failed')
+  } finally {
+    duplicatesLoading.value = false
+  }
+}
+
+async function confirmDeleteDuplicates() {
+  if (!duplicatesResult.value?.duplicate_count) return
+  if (!confirm(`حذف ${duplicatesResult.value.duplicate_count} هدف مكرر؟\n\nسيتم الاحتفاظ بالنسخة الأقدم (أقل ID) من كل موقع مكرر.\nلا يمكن التراجع عن هذا الإجراء.`)) return
+  duplicatesLoading.value = true
+  try {
+    const { data } = await cleanupDuplicateTargets(false)
+    duplicatesResult.value = data
+    await loadTargets()
+  } catch (e) {
+    alert(e.response?.data?.error || 'Delete failed')
+  } finally {
+    duplicatesLoading.value = false
+  }
+}
+
 onMounted(async () => {
   await loadTargets()
   await loadAllTags()
@@ -300,6 +331,15 @@ onMounted(async () => {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
           </svg>
           Cleanup Dead
+        </button>
+        <button @click="scanDuplicates" :disabled="duplicatesLoading"
+          class="px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors text-sm flex items-center gap-1.5"
+          title="البحث عن المواقع المكررة">
+          <div v-if="duplicatesLoading" class="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
+          <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/>
+          </svg>
+          Remove Duplicates
         </button>
         <button
           @click="showManageTags = !showManageTags; showAddForm = false; showBulkForm = false"
@@ -383,6 +423,60 @@ onMounted(async () => {
 
       <div v-else-if="!cleanupResult.dry_run" class="text-center py-2">
         <p class="text-green-600 font-medium">{{ cleanupResult.message }}</p>
+      </div>
+    </div>
+
+    <!-- Duplicates Result -->
+    <div v-if="duplicatesResult" class="mb-4 bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/>
+          </svg>
+          <h3 class="font-semibold text-gray-900">Duplicate Targets</h3>
+        </div>
+        <button @click="duplicatesResult = null" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <div class="bg-gray-50 rounded-lg p-3 text-center">
+          <p class="text-xl font-bold text-gray-700">{{ duplicatesResult.total_checked }}</p>
+          <p class="text-xs text-gray-500">Checked</p>
+        </div>
+        <div class="bg-green-50 rounded-lg p-3 text-center">
+          <p class="text-xl font-bold text-green-600">{{ duplicatesResult.unique_count }}</p>
+          <p class="text-xs text-green-600">Unique</p>
+        </div>
+        <div class="bg-amber-50 rounded-lg p-3 text-center">
+          <p class="text-xl font-bold text-amber-600">{{ duplicatesResult.duplicate_count }}</p>
+          <p class="text-xs text-amber-600">Duplicates</p>
+        </div>
+      </div>
+
+      <div v-if="duplicatesResult.duplicate_count > 0 && duplicatesResult.dry_run" class="space-y-2">
+        <div v-for="d in duplicatesResult.duplicates" :key="d.id" class="flex items-center gap-2 text-sm py-1 border-b border-gray-100 last:border-0">
+          <span class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span>
+          <span class="text-gray-700 truncate">{{ d.name || d.url }}</span>
+          <span class="text-xs text-gray-400 truncate" dir="ltr">{{ d.url }}</span>
+          <span class="text-xs text-gray-400 ml-auto">→ keep #{{ d.kept_id }}</span>
+        </div>
+        <button @click="confirmDeleteDuplicates"
+          class="w-full mt-3 px-4 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          Delete {{ duplicatesResult.duplicate_count }} Duplicate Targets
+        </button>
+      </div>
+
+      <div v-else-if="duplicatesResult.duplicate_count === 0" class="text-center py-2">
+        <p class="text-green-600 font-medium">No duplicates found!</p>
+      </div>
+
+      <div v-else-if="!duplicatesResult.dry_run" class="text-center py-2">
+        <p class="text-green-600 font-medium">{{ duplicatesResult.message }}</p>
       </div>
     </div>
 
