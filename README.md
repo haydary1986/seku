@@ -6,7 +6,7 @@
 
 **The Open-Source Web Security Scanner with 1000-Point Scoring**
 
-Scan websites across **25 security categories** with granular 0–1000 scoring,
+Scan websites across **37 security categories** with granular 0–1000 scoring,
 OWASP Top 10 + CVSS v3.1 mapping, and automated remediation guides.
 
 [![Go Version](https://img.shields.io/badge/Go-1.25-00ADD8?style=flat-square&logo=go)](https://go.dev)
@@ -222,7 +222,7 @@ seku/
 │   │   ├── main.go            # Web server entry point
 │   │   └── cli/main.go        # CLI tool
 │   └── internal/
-│       ├── scanner/           # 22 security scanners
+│       ├── scanner/           # 37 security scanners
 │       ├── api/               # REST API handlers & middleware
 │       ├── models/            # GORM data models
 │       ├── services/          # PDF, SARIF, webhooks
@@ -349,7 +349,7 @@ Every finding maps to OWASP Top 10 (2021) and CWE identifiers:
 
 | Document | Language | Description |
 |----------|----------|-------------|
-| **[Scanner Reference](docs/SCANNERS.md)** | English | Complete technical reference for all 25 scanners, 80+ checks, scoring thresholds, OWASP/CWE/CVSS mappings |
+| **[Scanner Reference](docs/SCANNERS.md)** | English | Complete technical reference for all 37 scanners, 150+ individual checks, scoring thresholds, OWASP/CWE/CVSS mappings |
 | **[مرجع الفاحصات](docs/SCANNERS-AR.md)** | العربية | المرجع التقني الكامل لجميع الفاحصات الـ 25 مع شرح تفصيلي لكل فحص |
 | **[Methodology](/methodology)** | English | Public scoring methodology page |
 | **[منهجية التقييم](/methodology-ar)** | العربية | صفحة معايير التقييم العامة |
@@ -366,7 +366,7 @@ Every finding maps to OWASP Top 10 (2021) and CWE identifiers:
 
 The scoring system uses a **weighted average** approach:
 
-1. Each website is scanned across **25 categories** (80+ individual checks)
+1. Each website is scanned across **37 categories** (150+ individual checks)
 2. Each category contains **multiple checks** with individual weights
 3. Every check produces a score from **0 to 1000**
 4. Category score = weighted average of its checks

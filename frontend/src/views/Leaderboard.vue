@@ -40,6 +40,22 @@ const categoryOptions = [
   { id: 'seo', label: 'SEO & Technical Health' },
   { id: 'third_party', label: 'Third-Party Scripts' },
   { id: 'js_libraries', label: 'JavaScript Libraries' },
+  { id: 'wordpress', label: 'WordPress Basics' },
+  { id: 'wp_deep', label: 'WordPress Deep Security' },
+  { id: 'cms_cve', label: 'CMS CVE Matching' },
+  { id: 'backup_files', label: 'Backup & Sensitive Files' },
+  { id: 'js_secrets', label: 'JavaScript Secrets' },
+  { id: 'secrets', label: 'Inline Secrets' },
+  { id: 'subdomains', label: 'Subdomain Enumeration' },
+  { id: 'tech_stack', label: 'Tech Stack Detection' },
+  { id: 'xss', label: 'XSS' },
+  { id: 'sqli', label: 'SQL Injection' },
+  { id: 'ports', label: 'Port Scanning' },
+  { id: 'open_redirect', label: 'Open Redirect' },
+  { id: 'ssrf', label: 'SSRF' },
+  { id: 'email_security', label: 'Email Security (SPF/DKIM/DMARC)' },
+  { id: 'waf', label: 'WAF Detection' },
+  { id: 'zone_transfer', label: 'DNS Zone Transfer' },
 ]
 
 const categoryLabelMap = Object.fromEntries(categoryOptions.map(c => [c.id, c.label]))

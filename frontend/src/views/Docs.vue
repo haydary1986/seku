@@ -55,7 +55,7 @@ const confidenceLevels = [
 const scanPoliciesData = [
   { name: { en: 'Light', ar: '\u062E\u0641\u064A\u0641' }, cats: 8, timeout: '30s', desc: { en: 'Quick security check: ssl, headers, cookies, mixed_content, performance, dns, seo, content', ar: '\u0641\u062D\u0635 \u0633\u0631\u064A\u0639: ssl\u060C headers\u060C cookies\u060C mixed_content\u060C performance\u060C dns\u060C seo\u060C content' } },
   { name: { en: 'Standard', ar: '\u0642\u064A\u0627\u0633\u064A' }, cats: 16, timeout: '60s', desc: { en: 'Comprehensive audit: adds server_info, directory, ddos, cors, http_methods, info_disclosure, hosting, secrets', ar: '\u0641\u062D\u0635 \u0634\u0627\u0645\u0644: \u064A\u0636\u064A\u0641 server_info\u060C directory\u060C ddos\u060C cors\u060C http_methods\u060C info_disclosure\u060C hosting\u060C secrets' } },
-  { name: { en: 'Deep', ar: '\u0639\u0645\u064A\u0642' }, cats: 25, timeout: '120s', desc: { en: 'Full assessment: all 25 scanners including malware, xss, wordpress, subdomains, and more', ar: '\u062A\u0642\u064A\u064A\u0645 \u0643\u0627\u0645\u0644: \u062C\u0645\u064A\u0639 \u0627\u0644\u0640 25 \u0641\u0627\u062D\u0635 \u0628\u0645\u0627 \u0641\u064A\u0647\u0627 malware\u060C xss\u060C wordpress\u060C subdomains\u060C \u0648\u0627\u0644\u0645\u0632\u064A\u062F' } },
+  { name: { en: 'Deep', ar: '\u0639\u0645\u064A\u0642' }, cats: 36, timeout: '180s', desc: { en: 'Full assessment: all 36 scanners including WordPress Deep Security, plugin/theme CVEs, backup files, JS secrets, CMS CVEs, SQLi, SSRF, and more', ar: '\u062A\u0642\u064A\u064A\u0645 \u0643\u0627\u0645\u0644: \u062C\u0645\u064A\u0639 \u0627\u0644\u0640 25 \u0641\u0627\u062D\u0635 \u0628\u0645\u0627 \u0641\u064A\u0647\u0627 malware\u060C xss\u060C wordpress\u060C subdomains\u060C \u0648\u0627\u0644\u0645\u0632\u064A\u062F' } },
 ]
 
 const reportsData = [
@@ -608,6 +608,73 @@ const scanners = [
       { name: { en: 'Web Framework Detection', ar: '\u0643\u0634\u0641 \u0625\u0637\u0627\u0631 \u0627\u0644\u0648\u064A\u0628' }, owasp: 'Info', cwe: '-', cvss: 0 },
       { name: { en: 'Server Technology Detection', ar: '\u0643\u0634\u0641 \u062A\u0642\u0646\u064A\u0629 \u0627\u0644\u062E\u0627\u062F\u0645' }, owasp: 'Info', cwe: '-', cvss: 0 },
       { name: { en: 'JavaScript Library Inventory', ar: '\u062C\u0631\u062F \u0645\u0643\u062A\u0628\u0627\u062A JavaScript' }, owasp: 'Info', cwe: '-', cvss: 0 },
+    ]
+  },
+  {
+    name: { en: 'Backup & Sensitive Files', ar: 'Backup Files' },
+    category: 'backup_files', weight: 12, checks: 60,
+    plans: ['basic', 'pro', 'business', 'enterprise'],
+    desc: {
+      en: 'Deep enumeration of 60+ sensitive file paths: SQL dumps, config backups, archives, IDE files, log files, git/svn metadata, .env variants, phpMyAdmin, and server-status endpoints.',
+      ar: 'Deep enumeration of 60+ sensitive file paths.'
+    },
+    checksList: [
+      { name: { en: 'SQL Dump Exposed', ar: 'SQL Dump Exposed' }, owasp: 'A05:2021', cwe: 'CWE-538', cvss: 9.8 },
+      { name: { en: 'Config Backup Leaked', ar: 'Config Backup' }, owasp: 'A05:2021', cwe: 'CWE-538', cvss: 9.8 },
+      { name: { en: 'Site Archive Exposed', ar: 'Site Archive' }, owasp: 'A05:2021', cwe: 'CWE-538', cvss: 8.6 },
+      { name: { en: 'Environment File Variants', ar: 'Environment Files' }, owasp: 'A05:2021', cwe: 'CWE-538', cvss: 9.8 },
+      { name: { en: 'Git/SVN Repository Exposure', ar: 'Git/SVN Repository' }, owasp: 'A05:2021', cwe: 'CWE-538', cvss: 9.8 },
+      { name: { en: 'phpMyAdmin / Adminer Exposed', ar: 'phpMyAdmin' }, owasp: 'A07:2021', cwe: 'CWE-284', cvss: 7.5 },
+      { name: { en: 'Server Status / Info Pages', ar: 'Server Status' }, owasp: 'A05:2021', cwe: 'CWE-200', cvss: 7.5 },
+    ]
+  },
+  {
+    name: { en: 'CMS CVE Matching', ar: 'CMS CVE Matching' },
+    category: 'cms_cve', weight: 14, checks: 25,
+    plans: ['basic', 'pro', 'business', 'enterprise'],
+    desc: {
+      en: 'Detects CMS (WordPress, Joomla, Drupal, Moodle, phpBB) and version, then matches against curated database of 25+ critical CVEs.',
+      ar: 'Detects CMS and version, matches 25+ CVEs.'
+    },
+    checksList: [
+      { name: { en: 'CMS Type Detection', ar: 'CMS Type Detection' }, owasp: 'A06:2021', cwe: 'CWE-1395', cvss: 0 },
+      { name: { en: 'CMS Version Fingerprinting', ar: 'CMS Version Fingerprinting' }, owasp: 'A06:2021', cwe: 'CWE-1395', cvss: 5.3 },
+      { name: { en: 'Known CVE Matching', ar: 'Known CVE Matching' }, owasp: 'A06:2021', cwe: 'CWE-1395', cvss: 9.8 },
+    ]
+  },
+  {
+    name: { en: 'JavaScript Secrets', ar: 'JavaScript Secrets' },
+    category: 'js_secrets', weight: 12, checks: 23,
+    plans: ['basic', 'pro', 'business', 'enterprise'],
+    desc: {
+      en: 'Fetches external JavaScript files and scans for 23 types of leaked secrets: AWS, Google, Stripe, GitHub tokens, webhooks, JWT, RSA keys.',
+      ar: 'Scans external JavaScript files for 23 types of leaked secrets.'
+    },
+    checksList: [
+      { name: { en: 'AWS Access Keys Leaked', ar: 'AWS Keys Leaked' }, owasp: 'A07:2021', cwe: 'CWE-798', cvss: 9.8 },
+      { name: { en: 'Google API Keys Leaked', ar: 'Google API Keys' }, owasp: 'A07:2021', cwe: 'CWE-798', cvss: 7.5 },
+      { name: { en: 'Stripe / Payment Keys Leaked', ar: 'Stripe Keys' }, owasp: 'A07:2021', cwe: 'CWE-798', cvss: 9.8 },
+      { name: { en: 'GitHub / GitLab Tokens Leaked', ar: 'GitHub Tokens' }, owasp: 'A07:2021', cwe: 'CWE-798', cvss: 9.8 },
+      { name: { en: 'Webhooks Leaked', ar: 'Webhooks Leaked' }, owasp: 'A07:2021', cwe: 'CWE-798', cvss: 7.5 },
+      { name: { en: 'JWT / RSA Private Keys Leaked', ar: 'JWT / RSA Keys' }, owasp: 'A07:2021', cwe: 'CWE-798', cvss: 9.8 },
+    ]
+  },
+  {
+    name: { en: 'WordPress Deep Security', ar: 'WordPress Deep Security' },
+    category: 'wp_deep', weight: 18, checks: 7,
+    plans: ['basic', 'pro', 'business', 'enterprise'],
+    desc: {
+      en: 'Covers 80% of real-world WordPress attack vectors: plugin/theme enumeration with 25+ known CVEs, user enumeration detection, default admin username check, security plugin presence, wp-cron DoS abuse test.',
+      ar: 'Covers 80% of WordPress attack vectors.'
+    },
+    checksList: [
+      { name: { en: 'Plugin Enumeration + CVE Matching', ar: 'Plugin CVE Matching' }, owasp: 'A06:2021', cwe: 'CWE-1395', cvss: 9.9 },
+      { name: { en: 'Theme Enumeration + CVE Matching', ar: 'Theme CVE Matching' }, owasp: 'A06:2021', cwe: 'CWE-1395', cvss: 9.8 },
+      { name: { en: 'User Enumeration (/?author=N)', ar: 'User Enumeration' }, owasp: 'A01:2021', cwe: 'CWE-200', cvss: 7.5 },
+      { name: { en: 'Default Admin Username Detection', ar: 'Default Admin Username' }, owasp: 'A07:2021', cwe: 'CWE-521', cvss: 7.5 },
+      { name: { en: 'Security Plugin Presence', ar: 'Security Plugin' }, owasp: 'A05:2021', cwe: 'CWE-1188', cvss: 5.3 },
+      { name: { en: 'wp-cron.php DoS Amplification', ar: 'wp-cron DoS' }, owasp: 'A05:2021', cwe: 'CWE-400', cvss: 5.3 },
+      { name: { en: 'License/Install File Leaks', ar: 'License File Leaks' }, owasp: 'A05:2021', cwe: 'CWE-200', cvss: 3.7 },
     ]
   },
 ]

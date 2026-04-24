@@ -206,6 +206,10 @@ const categoryLabels = {
   waf: 'WAF Detection',
   zone_transfer: 'DNS Zone Transfer',
   data_leak: 'Data Leak Detection',
+  backup_files: 'Backup & Sensitive Files',
+  cms_cve: 'CMS CVE Matching',
+  js_secrets: 'JavaScript File Secrets',
+  wp_deep: 'WordPress Deep Security',
 }
 
 const categoryIcons = {
