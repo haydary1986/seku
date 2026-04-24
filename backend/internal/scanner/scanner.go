@@ -85,7 +85,7 @@ var PlanScanners = map[string][]string{
 		"seo",
 		"secrets",
 	},
-	"basic": { // 22 categories - extended security
+	"basic": { // 25 categories - extended security
 		"ssl",
 		"headers",
 		"cookies",
@@ -108,6 +108,9 @@ var PlanScanners = map[string][]string{
 		"secrets",
 		"subdomains",
 		"tech_stack",
+		"backup_files",
+		"cms_cve",
+		"js_secrets",
 	},
 	"pro": { // 28 categories - advanced security
 		"ssl",
@@ -138,6 +141,9 @@ var PlanScanners = map[string][]string{
 		"ssrf",
 		"email_security",
 		"waf",
+		"backup_files",
+		"cms_cve",
+		"js_secrets",
 	},
 	"business": { // 32 categories - full scan
 		"ssl",
@@ -172,6 +178,9 @@ var PlanScanners = map[string][]string{
 		"email_security",
 		"waf",
 		"zone_transfer",
+		"backup_files",
+		"cms_cve",
+		"js_secrets",
 	},
 	"enterprise": { // 32 categories - full scan
 		"ssl",
@@ -206,6 +215,9 @@ var PlanScanners = map[string][]string{
 		"email_security",
 		"waf",
 		"zone_transfer",
+		"backup_files",
+		"cms_cve",
+		"js_secrets",
 	},
 }
 
@@ -239,8 +251,8 @@ var ScanPolicies = map[string]ScanPolicy{
 	},
 	"deep": {
 		Name:        "Deep Scan",
-		Description: "Full security assessment — 32 categories including SQLi, SSRF, WAF, port scanning, ~3 minutes per site",
-		Categories:  []string{"ssl", "headers", "cookies", "server_info", "directory", "performance", "ddos", "cors", "http_methods", "dns", "mixed_content", "info_disclosure", "hosting", "content", "advanced_security", "malware", "threat_intel", "seo", "third_party", "js_libraries", "wordpress", "xss", "secrets", "subdomains", "tech_stack", "sqli", "ports", "open_redirect", "ssrf", "email_security", "waf", "zone_transfer"},
+		Description: "Full security assessment — 35 categories including SQLi, SSRF, WAF, port scanning, CMS CVEs, ~3 minutes per site",
+		Categories:  []string{"ssl", "headers", "cookies", "server_info", "directory", "performance", "ddos", "cors", "http_methods", "dns", "mixed_content", "info_disclosure", "hosting", "content", "advanced_security", "malware", "threat_intel", "seo", "third_party", "js_libraries", "wordpress", "xss", "secrets", "subdomains", "tech_stack", "sqli", "ports", "open_redirect", "ssrf", "email_security", "waf", "zone_transfer", "backup_files", "cms_cve", "js_secrets"},
 		Timeout:     180,
 	},
 }
@@ -281,6 +293,9 @@ func allScanners() []Scanner {
 		NewEmailSecurityScanner(),
 		NewWAFScanner(),
 		NewZoneTransferScanner(),
+		NewBackupFilesScanner(),
+		NewCMSCVEScanner(),
+		NewJSSecretsScanner(),
 	}
 }
 
