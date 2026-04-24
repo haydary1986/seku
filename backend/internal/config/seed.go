@@ -13,30 +13,42 @@ type seedTarget struct {
 }
 
 func SeedUniversities() {
-	var count int64
-	DB.Model(&models.ScanTarget{}).Count(&count)
-	if count > 0 {
-		log.Printf("Database already has %d targets, skipping seed", count)
+	// Get default org
+	var org models.Organization
+	if err := DB.First(&org).Error; err != nil {
+		log.Printf("SeedUniversities: no organization exists yet, skipping")
 		return
 	}
 
-	// Get default org
-	var org models.Organization
-	DB.First(&org)
-
 	targets := getUniversityList()
 
+	added := 0
 	for _, t := range targets {
+		var existing models.ScanTarget
+		// Idempotent: insert only if URL doesn't already exist for this org
+		err := DB.Where("url = ? AND organization_id = ?", t.URL, org.ID).First(&existing).Error
+		if err == nil {
+			continue // already present — skip
+		}
+
 		target := models.ScanTarget{
 			OrganizationID: org.ID,
 			URL:            t.URL,
 			Name:           t.Name,
 			Institution:    t.Institution,
 		}
-		DB.Create(&target)
+		if err := DB.Create(&target).Error; err != nil {
+			log.Printf("SeedUniversities: failed to add %s: %v", t.URL, err)
+			continue
+		}
+		added++
 	}
 
-	log.Printf("Seeded %d university websites", len(targets))
+	if added > 0 {
+		log.Printf("Seeded %d new university websites (total list: %d)", added, len(targets))
+	} else {
+		log.Printf("SeedUniversities: all %d universities already present", len(targets))
+	}
 }
 
 func getUniversityList() []seedTarget {
