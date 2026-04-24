@@ -65,27 +65,28 @@ func InitDatabase() {
 		log.Println("Default organization created: Seku")
 	}
 
-	// Create default admin if no users exist
-	var userCount int64
-	DB.Model(&models.User{}).Count(&userCount)
-	if userCount == 0 {
-		// Read from env vars or use defaults
-		username := os.Getenv("SEKU_ADMIN_USER")
-		password := os.Getenv("SEKU_ADMIN_PASSWORD")
-		if username == "" {
-			username = "haydary1986"
-		}
-		if password == "" {
-			password = "Sakina1990"
-		}
+	// Ensure the configured admin user exists with role="admin".
+	// Runs on every startup so redeployments onto an existing DB still
+	// guarantee there is a working system administrator.
+	username := os.Getenv("SEKU_ADMIN_USER")
+	password := os.Getenv("SEKU_ADMIN_PASSWORD")
+	if username == "" {
+		username = "haydary1986"
+	}
+	if password == "" {
+		password = "Sakina1990"
+	}
 
+	// Get default org (must exist — created above)
+	var org models.Organization
+	DB.First(&org)
+
+	var admin models.User
+	err = DB.Where("username = ?", username).First(&admin).Error
+	if err != nil {
+		// User doesn't exist → create
 		hashed, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-
-		// Get default org
-		var org models.Organization
-		DB.First(&org)
-
-		admin := models.User{
+		admin = models.User{
 			Username: username,
 			Password: string(hashed),
 			FullName: "System Administrator",
@@ -95,15 +96,38 @@ func InitDatabase() {
 		}
 		DB.Create(&admin)
 
-		// Create membership
-		membership := models.OrgMembership{
+		DB.Create(&models.OrgMembership{
 			UserID:         admin.ID,
 			OrganizationID: org.ID,
 			Role:           "owner",
-		}
-		DB.Create(&membership)
-
+		})
 		log.Printf("Default admin user created (username: %s)", username)
+	} else {
+		// User exists → ensure role=admin + active (self-heal)
+		needsUpdate := false
+		if admin.Role != "admin" {
+			admin.Role = "admin"
+			needsUpdate = true
+		}
+		if !admin.IsActive {
+			admin.IsActive = true
+			needsUpdate = true
+		}
+		if needsUpdate {
+			DB.Save(&admin)
+			log.Printf("Admin user %s self-healed: role=admin, active=true", username)
+		}
+
+		// Ensure org membership exists
+		var membership models.OrgMembership
+		if err := DB.Where("user_id = ? AND organization_id = ?", admin.ID, org.ID).First(&membership).Error; err != nil {
+			DB.Create(&models.OrgMembership{
+				UserID:         admin.ID,
+				OrganizationID: org.ID,
+				Role:           "owner",
+			})
+			log.Printf("Admin user %s: org membership created", username)
+		}
 	}
 
 	log.Println("Database initialized successfully")
