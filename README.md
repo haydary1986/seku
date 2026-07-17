@@ -362,19 +362,20 @@ Every finding maps to OWASP Top 10 (2021) and CWE identifiers:
 - 🇮🇶 Arabic — full RTL support with dedicated methodology page
 - Scanner documentation available in both languages
 
-## 📋 Scoring Methodology
+## 📋 Scoring Methodology (v3.0 — scientific)
 
-The scoring system uses a **weighted average** approach:
+Evidence-based and aligned with **CVSS v3.1**, **OWASP Risk Rating**, and the
+grade-cap practice of **SSL Labs** and **Mozilla Observatory**:
 
-1. Each website is scanned across **37 categories** (150+ individual checks)
-2. Each category contains **multiple checks** with individual weights
-3. Every check produces a score from **0 to 1000**
-4. Category score = weighted average of its checks
-5. Overall score = weighted average of all category scores
-6. Each finding mapped to **OWASP Top 10**, **CWE**, and **CVSS v3.1**
+1. Each website is scanned across **37 categories** (150+ individual checks); every check produces a **0–1000** score
+2. **Security and Quality are scored separately** — the headline **Security Score** covers security domains only, while performance / SEO / content / hosting form an independent **Quality Score** (a fast or well-cached site is never rewarded on *security*)
+3. **Two-level aggregation**: category score = mean of its checks; Security Score = severity-weighted mean of security categories, so a many-check domain (e.g. 50+ subdomains) cannot outweigh a single-check one (e.g. SQLi)
+4. **Severity weights** derive from intrinsic risk class — Critical=10, High=6, Medium=3, Low=1 — mapped to CVSS bands, **not** from the outcome
+5. **Grade caps**: a confident (≥70) failure in a **Critical** domain caps the grade at **F**; in a **High** domain at **C** — a vulnerable site cannot earn an A by passing many minor checks
+6. Every finding mapped to **OWASP Top 10**, **CWE**, and **CVSS v3.1**
 
 The full methodology is publicly available and transparent — no black boxes.
-See **[docs/SCANNERS.md](docs/SCANNERS.md)** for complete scoring details.
+See the **[/methodology](/methodology)** endpoint (`GET /api/criteria`) for the machine-readable specification, and **[docs/SCANNERS.md](docs/SCANNERS.md)** for per-check scoring details.
 
 ## 🤝 Contributing
 
