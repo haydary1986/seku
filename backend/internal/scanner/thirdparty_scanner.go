@@ -38,6 +38,11 @@ var trustedCDNs = []string{
 	"twitter.com",
 	"youtube.com",
 	"google-analytics.com",
+	"cloudflareinsights.com", // Cloudflare Web Analytics (auto-injected by Cloudflare)
+	"wp.com",                 // WordPress.com / Jetpack CDN
+	"gravatar.com",           // WordPress avatars
+	"fontawesome.com",        // Font Awesome CDN
+	"recaptcha.net",          // Google reCAPTCHA (alternate domain)
 }
 
 // suspiciousTLDs are TLDs commonly associated with abuse.
@@ -47,7 +52,7 @@ func (s *ThirdPartyScanner) Scan(rawURL string) []models.CheckResult {
 	var results []models.CheckResult
 
 	client := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout:   15 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -385,10 +390,10 @@ func (s *ThirdPartyScanner) checkExternalCSSCount(cssResources []externalResourc
 	check.Status = statusFromScore(score)
 	check.Severity = severityFromScore(score)
 	check.Details = toJSON(map[string]interface{}{
-		"message":         fmt.Sprintf("Found %d external stylesheet(s)", count),
-		"external_css":    count,
-		"unique_domains":  len(hostList),
-		"domains":         hostList,
+		"message":        fmt.Sprintf("Found %d external stylesheet(s)", count),
+		"external_css":   count,
+		"unique_domains": len(hostList),
+		"domains":        hostList,
 	})
 
 	return check
