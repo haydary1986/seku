@@ -70,10 +70,14 @@ server {
 }
 NGINX
 
-# Start script - database stored in /app/data volume for persistence
+# Start script - database stored in /app/data volume for persistence.
+# PORT is pinned to 8080 because nginx owns :80 in this combined image and
+# proxies /api/ and /ws/ to 127.0.0.1:8080. This overrides any PORT injected by
+# the orchestrator (e.g. Coolify sets PORT=80 from the exposed port), which would
+# otherwise make the backend bind :80 and crash with "address already in use".
 COPY <<'SCRIPT' /app/start.sh
 #!/bin/sh
-DB_PATH=/app/data/vscan.db ./vscan-server &
+DB_PATH=/app/data/vscan.db PORT=8080 ./vscan-server &
 nginx -g "daemon off;"
 SCRIPT
 RUN chmod +x /app/start.sh
