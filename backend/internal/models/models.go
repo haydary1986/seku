@@ -51,7 +51,7 @@ type APIKey struct {
 	UserID         uint       `json:"user_id" gorm:"not null"`
 	Name           string     `json:"name" gorm:"not null"`
 	KeyPrefix      string     `json:"key_prefix"` // first 8 chars
-	KeyHash        string     `json:"-"`           // bcrypt hash
+	KeyHash        string     `json:"-"`          // bcrypt hash
 	LastUsedAt     *time.Time `json:"last_used_at"`
 	ExpiresAt      *time.Time `json:"expires_at"`
 	Scopes         string     `json:"scopes"` // JSON array
@@ -61,7 +61,7 @@ type AuditLog struct {
 	gorm.Model
 	OrganizationID uint   `json:"organization_id"`
 	UserID         uint   `json:"user_id"`
-	Action         string `json:"action"`        // scan.create, target.delete, etc.
+	Action         string `json:"action"` // scan.create, target.delete, etc.
 	ResourceType   string `json:"resource_type"`
 	ResourceID     uint   `json:"resource_id"`
 	Details        string `json:"details"`
@@ -124,15 +124,19 @@ type ScanJob struct {
 
 type ScanResult struct {
 	gorm.Model
-	ScanJobID    uint          `json:"scan_job_id" gorm:"not null"`
-	ScanTargetID uint          `json:"scan_target_id" gorm:"not null"`
-	ScanTarget   ScanTarget    `json:"scan_target" gorm:"foreignKey:ScanTargetID"`
-	OverallScore float64       `json:"overall_score"` // 0-1000
-	Status       string        `json:"status" gorm:"default:pending"`
-	StartedAt    *time.Time    `json:"started_at"`
-	EndedAt      *time.Time    `json:"ended_at"`
-	Checks       []CheckResult `json:"checks" gorm:"foreignKey:ScanResultID"`
-	AIAnalysis   *AIAnalysis   `json:"ai_analysis,omitempty" gorm:"foreignKey:ScanResultID"`
+	ScanJobID      uint          `json:"scan_job_id" gorm:"not null"`
+	ScanTargetID   uint          `json:"scan_target_id" gorm:"not null"`
+	ScanTarget     ScanTarget    `json:"scan_target" gorm:"foreignKey:ScanTargetID"`
+	OverallScore   float64       `json:"overall_score"`    // 0-1000 — headline SECURITY score (capped)
+	QualityScore   float64       `json:"quality_score"`    // 0-1000 — separate performance/quality score
+	RawScore       float64       `json:"raw_score"`        // security score before severity caps (transparency)
+	SecurityGrade  string        `json:"security_grade"`   // A+..F derived from OverallScore
+	GradeCapReason string        `json:"grade_cap_reason"` // finding that capped the grade, "" if uncapped
+	Status         string        `json:"status" gorm:"default:pending"`
+	StartedAt      *time.Time    `json:"started_at"`
+	EndedAt        *time.Time    `json:"ended_at"`
+	Checks         []CheckResult `json:"checks" gorm:"foreignKey:ScanResultID"`
+	AIAnalysis     *AIAnalysis   `json:"ai_analysis,omitempty" gorm:"foreignKey:ScanResultID"`
 }
 
 type CheckResult struct {
@@ -141,7 +145,7 @@ type CheckResult struct {
 	Category     string  `json:"category"`
 	CheckName    string  `json:"check_name"`
 	Status       string  `json:"status"`
-	Score        float64 `json:"score"`    // 0-1000
+	Score        float64 `json:"score"` // 0-1000
 	Weight       float64 `json:"weight"`
 	Details      string  `json:"details"`
 	Severity     string  `json:"severity"`
@@ -159,14 +163,14 @@ type CheckResult struct {
 
 type UpgradeRequest struct {
 	gorm.Model
-	OrganizationID uint   `json:"organization_id"`
-	RequestedPlan  string `json:"requested_plan"` // basic, pro, enterprise
-	ContactName    string `json:"contact_name"`
-	ContactEmail   string `json:"contact_email"`
-	ContactPhone   string `json:"contact_phone"`
-	Message        string `json:"message"`
-	Status         string `json:"status" gorm:"default:pending"` // pending, approved, rejected
-	AdminNotes     string `json:"admin_notes"`
+	OrganizationID uint         `json:"organization_id"`
+	RequestedPlan  string       `json:"requested_plan"` // basic, pro, enterprise
+	ContactName    string       `json:"contact_name"`
+	ContactEmail   string       `json:"contact_email"`
+	ContactPhone   string       `json:"contact_phone"`
+	Message        string       `json:"message"`
+	Status         string       `json:"status" gorm:"default:pending"` // pending, approved, rejected
+	AdminNotes     string       `json:"admin_notes"`
 	Organization   Organization `json:"organization,omitempty" gorm:"foreignKey:OrganizationID"`
 }
 
@@ -229,9 +233,9 @@ type Webhook struct {
 	gorm.Model
 	OrganizationID uint   `json:"organization_id"`
 	Name           string `json:"name" gorm:"not null"`
-	Type           string `json:"type" gorm:"not null"`                 // slack, telegram, discord, custom
+	Type           string `json:"type" gorm:"not null"` // slack, telegram, discord, custom
 	URL            string `json:"url" gorm:"not null"`
-	Secret         string `json:"secret"`                               // for telegram bot token or custom auth
+	Secret         string `json:"secret"` // for telegram bot token or custom auth
 	IsActive       bool   `json:"is_active" gorm:"default:true"`
 	Events         string `json:"events" gorm:"default:scan_completed"` // comma-separated: scan_completed, score_drop, critical_found
 	MinSeverity    string `json:"min_severity" gorm:"default:all"`      // all, critical, high, medium

@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -54,7 +55,11 @@ func main() {
 	})
 	app.Get("/ws/scan", websocket.New(ws.HandleWebSocket))
 
-	// Start server
-	log.Println("Seku server starting on :8080")
-	log.Fatal(app.Listen(":8080"))
+	// Start server (PORT env overrides default 8080)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	log.Printf("Seku server starting on :%s", port)
+	log.Fatal(app.Listen(":" + port))
 }

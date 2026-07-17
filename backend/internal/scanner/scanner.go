@@ -3,7 +3,6 @@ package scanner
 import (
 	"context"
 	"fmt"
-	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -504,6 +503,53 @@ scanDone:
 	}
 }
 
+// scannerTimeout bounds how long any single scanner may run. Without it a
+// scanner blocked on slow/flaky DNS resolution or an unresponsive third-party
+// API stalls the whole scan indefinitely — the per-request HTTP timeouts inside
+// scanners do not cover DNS lookups or external API calls. This guard keeps a
+// batch scan of many sites from freezing on one bad target.
+const scannerTimeout = 60 * time.Second
+
+// runScannerBounded runs a scanner with a hard wall-clock deadline. On timeout
+// (or panic) it returns a single weight-0 "error" check — recorded for
+// visibility but excluded from the score — and lets the scan proceed. The
+// worker goroutine uses a buffered channel so it can still finish and exit once
+// the slow call eventually unblocks (no permanent leak).
+func runScannerBounded(s Scanner, url string) []models.CheckResult {
+	ch := make(chan []models.CheckResult, 1)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				ch <- []models.CheckResult{{
+					Category:  s.Category(),
+					CheckName: s.Name() + " (error)",
+					Status:    "error",
+					Score:     0,
+					Weight:    0,
+					Severity:  "info",
+					Details:   toJSON(map[string]string{"error": fmt.Sprintf("scanner panicked: %v", r)}),
+				}}
+			}
+		}()
+		ch <- s.Scan(url)
+	}()
+
+	select {
+	case checks := <-ch:
+		return checks
+	case <-time.After(scannerTimeout):
+		return []models.CheckResult{{
+			Category:  s.Category(),
+			CheckName: s.Name() + " (timeout)",
+			Status:    "error",
+			Score:     0,
+			Weight:    0,
+			Severity:  "info",
+			Details:   toJSON(map[string]string{"error": fmt.Sprintf("scanner exceeded %s deadline and was skipped", scannerTimeout)}),
+		}}
+	}
+}
+
 func (e *Engine) scanTarget(result *models.ScanResult) {
 	now := time.Now()
 	result.Status = "running"
@@ -511,7 +557,6 @@ func (e *Engine) scanTarget(result *models.ScanResult) {
 	config.DB.Save(result)
 
 	var allChecks []models.CheckResult
-	var totalScore, totalWeight float64
 	totalScanners := len(e.scanners)
 
 	for idx, s := range e.scanners {
@@ -529,7 +574,7 @@ func (e *Engine) scanTarget(result *models.ScanResult) {
 			Message:       fmt.Sprintf("[%d/%d] %s", idx+1, totalScanners, s.Name()),
 		})
 
-		checks := s.Scan(result.ScanTarget.URL)
+		checks := runScannerBounded(s, result.ScanTarget.URL)
 		for i := range checks {
 			checks[i].ScanResultID = result.ID
 		}
@@ -565,17 +610,14 @@ func (e *Engine) scanTarget(result *models.ScanResult) {
 		config.DB.Create(&allChecks)
 	}
 
-	// Calculate overall score (0-1000)
-	for _, check := range allChecks {
-		if check.Weight > 0 {
-			totalScore += check.Score * check.Weight
-			totalWeight += check.Weight
-		}
-	}
-
-	if totalWeight > 0 {
-		result.OverallScore = math.Round(totalScore / totalWeight)
-	}
+	// Calculate scores using the scientific methodology (severity-weighted,
+	// two-level aggregation, security/quality split, grade caps). See scoring.go.
+	scores := ComputeScores(allChecks)
+	result.OverallScore = scores.Security
+	result.QualityScore = scores.Quality
+	result.RawScore = scores.RawSecurity
+	result.SecurityGrade = SecurityGrade(scores.Security)
+	result.GradeCapReason = scores.CapReason
 
 	ended := time.Now()
 	result.Status = "completed"

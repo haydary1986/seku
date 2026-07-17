@@ -8,11 +8,29 @@ func GetScanCriteria(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"methodology": fiber.Map{
 			"name":        "Seku Security Assessment Methodology",
-			"version":     "2.0",
+			"version":     "3.0",
 			"max_score":   1000,
-			"description": "Comprehensive website security assessment framework. This methodology evaluates 15 categories across 50+ individual checks to produce a normalized score on a 1000-point scale. Each category carries a percentage weight that reflects its relative importance to the overall security posture of a website.",
+			"description": "Evidence-based website security assessment aligned with CVSS v3.1 severity bands, OWASP Risk Rating (Likelihood × Impact), and the grade-cap practice of SSL Labs and Mozilla Observatory. Security and quality are scored SEPARATELY: the headline Security Score reflects only security domains, while performance, SEO, content and hosting form an independent Quality Score — a fast or well-cached site is never rewarded on security.",
 
-			"scoring_formula": "Overall Score = SUM(category_weighted_score * category_weight) / SUM(category_weight), where each check_score is on a 0-1000 scale across 15 categories.",
+			"scoring_formula": "Two-level aggregation. (1) categoryScore = mean(check_score) within each category. (2) SecurityScore = SUM(categoryScore × severityWeight) / SUM(severityWeight) over security domains only. Severity weights derive from intrinsic risk class — Critical=10, High=6, Medium=3, Low=1 — NOT from the outcome. A confident failure (confidence ≥ 70) in a Critical domain caps the grade at F; in a High domain caps it at C, so a vulnerable site cannot earn an A by passing many minor checks.",
+
+			"score_types": []fiber.Map{
+				{"id": "security", "label": "Security Score", "description": "Headline 0-1000 score over security domains only, after severity caps."},
+				{"id": "quality", "label": "Quality Score", "description": "Independent 0-1000 score over performance, SEO, content and hosting."},
+			},
+
+			"severity_weights": []fiber.Map{
+				{"class": "Critical", "cvss": "9.0–10.0", "weight": 10, "domains": "sqli, xss, ssrf, open_redirect, malware, cms_cve, secrets, js_secrets, backup_files"},
+				{"class": "High", "cvss": "7.0–8.9", "weight": 6, "domains": "ssl, headers, cookies, http_methods, directory, info_disclosure, cors, mixed_content, wp_deep, zone_transfer"},
+				{"class": "Medium", "cvss": "4.0–6.9", "weight": 3, "domains": "wordpress, dns, email_security, ports, waf, ddos, advanced_security, threat_intel, subdomains"},
+				{"class": "Low", "cvss": "0.1–3.9", "weight": 1, "domains": "server_info, third_party, js_libraries"},
+			},
+
+			"grade_caps": []fiber.Map{
+				{"trigger": "Confident failure (confidence ≥ 70) in a Critical domain", "cap_grade": "F", "cap_score": 490},
+				{"trigger": "Confident failure (confidence ≥ 70) in a High domain (no Critical)", "cap_grade": "C", "cap_score": 690},
+				{"note": "Findings below 70% confidence are advisory and never cap the grade (OWASP likelihood gate)."},
+			},
 
 			"categories": []fiber.Map{
 				// ---------------------------------------------------------------
