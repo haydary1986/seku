@@ -34,7 +34,7 @@ func (s *SecretsScanner) Scan(url string) []models.CheckResult {
 
 func (s *SecretsScanner) fetchBody(url string) string {
 	client := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout:   15 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -58,16 +58,17 @@ func (s *SecretsScanner) fetchBody(url string) string {
 type apiKeyPattern struct {
 	name    string
 	pattern *regexp.Regexp
+	public  bool // true for public/browser-side keys (Firebase/Maps, generic apikey-in-JS)
 }
 
 var apiKeyPatterns = []apiKeyPattern{
-	{"AWS Access Key", regexp.MustCompile(`AKIA[0-9A-Z]{16}`)},
-	{"Google API Key", regexp.MustCompile(`AIza[0-9A-Za-z_\-]{35}`)},
-	{"Stripe Secret Key", regexp.MustCompile(`sk_live_[0-9a-zA-Z]{24,}`)},
-	{"GitHub PAT (classic)", regexp.MustCompile(`ghp_[0-9a-zA-Z]{36}`)},
-	{"GitHub PAT (fine-grained)", regexp.MustCompile(`github_pat_[0-9a-zA-Z_]{82}`)},
-	{"Slack Bot Token", regexp.MustCompile(`xoxb-[0-9]{11,13}-[0-9]{11,13}-[a-zA-Z0-9]{24}`)},
-	{"Generic API Key", regexp.MustCompile(`(?i)api[_\-]?key['":\s]*=?\s*['"]?[0-9a-zA-Z]{20,}['"]?`)},
+	{"AWS Access Key", regexp.MustCompile(`AKIA[0-9A-Z]{16}`), false},
+	{"Google API Key", regexp.MustCompile(`AIza[0-9A-Za-z_\-]{35}`), true},
+	{"Stripe Secret Key", regexp.MustCompile(`sk_live_[0-9a-zA-Z]{24,}`), false},
+	{"GitHub PAT (classic)", regexp.MustCompile(`ghp_[0-9a-zA-Z]{36}`), false},
+	{"GitHub PAT (fine-grained)", regexp.MustCompile(`github_pat_[0-9a-zA-Z_]{82}`), false},
+	{"Slack Bot Token", regexp.MustCompile(`xoxb-[0-9]{11,13}-[0-9]{11,13}-[a-zA-Z0-9]{24}`), false},
+	{"Generic API Key", regexp.MustCompile(`(?i)api[_\-]?key['":\s]*=?\s*['"]?[0-9a-zA-Z]{20,}['"]?`), true},
 }
 
 func (s *SecretsScanner) checkAPIKeyExposure(body string) models.CheckResult {
@@ -88,7 +89,8 @@ func (s *SecretsScanner) checkAPIKeyExposure(body string) models.CheckResult {
 		return check
 	}
 
-	var found []map[string]string
+	var found []map[string]string       // genuine server-side secrets (critical)
+	var publicFound []map[string]string // public/browser keys (Firebase/Maps, apikey-in-JS)
 	for _, p := range apiKeyPatterns {
 		matches := p.pattern.FindAllString(body, 5)
 		for _, m := range matches {
@@ -97,44 +99,65 @@ func (s *SecretsScanner) checkAPIKeyExposure(body string) models.CheckResult {
 			if len(m) > 8 {
 				redacted = m[:8] + strings.Repeat("*", len(m)-8)
 			}
-			found = append(found, map[string]string{
+			entry := map[string]string{
 				"type":  p.name,
 				"match": redacted,
-			})
+			}
+			if p.public {
+				publicFound = append(publicFound, entry)
+			} else {
+				found = append(found, entry)
+			}
 		}
 	}
 
 	details := map[string]interface{}{
-		"keys_found": len(found),
+		"keys_found": len(found) + len(publicFound),
 	}
 
 	switch {
-	case len(found) == 0:
+	case len(found) == 0 && len(publicFound) == 0:
 		check.Status = "pass"
 		check.Score = MaxScore
 		check.Severity = "info"
 		details["message"] = "No API keys detected in page source"
+	case len(found) == 0:
+		// Only public/publishable browser keys (Firebase/Maps, generic apikey-in-JS).
+		// These legitimately ship in front-end code, so do not treat as critical.
+		check.Status = "warn"
+		check.Score = 700
+		check.Severity = "low"
+		details["message"] = "Possible public/browser key — verify it is domain-restricted"
+		details["findings"] = publicFound
 	case len(found) == 1:
 		check.Status = "fail"
 		check.Score = 100
 		check.Severity = "critical"
 		details["message"] = "1 potential API key found in page source"
 		details["findings"] = found
+		if len(publicFound) > 0 {
+			details["public_keys"] = publicFound
+		}
 	default:
 		check.Status = "fail"
 		check.Score = 0
 		check.Severity = "critical"
 		details["message"] = fmt.Sprintf("%d potential API keys found in page source", len(found))
 		details["findings"] = found
+		if len(publicFound) > 0 {
+			details["public_keys"] = publicFound
+		}
 	}
 
 	check.Details = toJSON(details)
 	return check
 }
 
+// privateKeyPatterns match PRIVATE key material only. A certificate
+// (-----BEGIN CERTIFICATE-----) is PUBLIC by design and is intentionally NOT
+// included here — flagging it produced false positives.
 var privateKeyPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`-----BEGIN\s+(RSA\s+|EC\s+|DSA\s+)?PRIVATE KEY-----`),
-	regexp.MustCompile(`-----BEGIN CERTIFICATE-----`),
+	regexp.MustCompile(`-----BEGIN\s+(RSA\s+|EC\s+|DSA\s+|OPENSSH\s+)?PRIVATE KEY-----`),
 }
 
 func (s *SecretsScanner) checkPrivateKeyExposure(body string) models.CheckResult {
@@ -168,13 +191,13 @@ func (s *SecretsScanner) checkPrivateKeyExposure(body string) models.CheckResult
 		check.Status = "fail"
 		check.Score = 0
 		check.Severity = "critical"
-		details["message"] = fmt.Sprintf("Private key or certificate material found in page source (%d pattern(s) matched)", len(found))
+		details["message"] = fmt.Sprintf("Private key material found in page source (%d pattern(s) matched)", len(found))
 		details["patterns_matched"] = found
 	} else {
 		check.Status = "pass"
 		check.Score = MaxScore
 		check.Severity = "info"
-		details["message"] = "No private keys or certificate material detected in page source"
+		details["message"] = "No private keys detected in page source"
 	}
 
 	check.Details = toJSON(details)
@@ -288,10 +311,25 @@ func (s *SecretsScanner) checkDBConnectionString(body string) models.CheckResult
 	return check
 }
 
+// passwordAssignRe matches an inline password assignment, capturing the value so
+// common placeholder/dummy values can be excluded before scoring.
+var passwordAssignRe = regexp.MustCompile(`(?i)password\s*[:=]\s*['"]([^'"]{3,})['"]`)
+
 var emailPasswordPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)password\s*[:=]\s*['"][^'"]{3,}['"]`),
 	regexp.MustCompile(`(?i)(smtp_pass|mail_password|email_password)\s*[:=]\s*['"][^'"]+['"]`),
 	regexp.MustCompile(`(?i)(DB_PASSWORD|APP_KEY|SECRET_KEY|API_SECRET)\s*=\s*[^\s<>]+`),
+}
+
+// secretsPasswordPlaceholders are dummy values that must NOT be scored as a real
+// leaked password when they appear as an inline `password:` value.
+var secretsPasswordPlaceholders = map[string]bool{
+	"password": true, "changeme": true, "example": true, "your_password": true,
+	"xxxxx": true, "*****": true, "secret": true, "123456": true,
+	"placeholder": true, "test": true,
+}
+
+func secretsIsPlaceholderPassword(value string) bool {
+	return secretsPasswordPlaceholders[strings.ToLower(strings.TrimSpace(value))]
 }
 
 func (s *SecretsScanner) checkEmailPasswordExposure(body string) models.CheckResult {
@@ -313,6 +351,20 @@ func (s *SecretsScanner) checkEmailPasswordExposure(body string) models.CheckRes
 	}
 
 	var found []string
+
+	// Inline password assignments — skip common placeholder/dummy values so a
+	// lone `password: "changeme"` is not flagged as a critical leak.
+	for _, m := range passwordAssignRe.FindAllStringSubmatch(body, 5) {
+		if secretsIsPlaceholderPassword(m[1]) {
+			continue
+		}
+		redacted := m[0]
+		if len(redacted) > 15 {
+			redacted = redacted[:15] + "***"
+		}
+		found = append(found, redacted)
+	}
+
 	for _, p := range emailPasswordPatterns {
 		matches := p.FindAllString(body, 3)
 		for _, m := range matches {

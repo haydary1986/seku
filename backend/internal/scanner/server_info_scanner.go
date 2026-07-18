@@ -23,7 +23,7 @@ func (s *ServerInfoScanner) Scan(url string) []models.CheckResult {
 	var results []models.CheckResult
 
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -87,27 +87,21 @@ func (s *ServerInfoScanner) checkServerHeader(resp *http.Response) models.CheckR
 				"server":  server,
 			})
 		} else if hasVersion {
-			check.Status = "fail"
-			check.Score = 250
-			check.Severity = "high"
-			check.Details = toJSON(map[string]string{
-				"message": "Server header exposes software name and version",
-				"server":  server,
-			})
-		} else if strings.Contains(lower, "apache") || strings.Contains(lower, "nginx") || strings.Contains(lower, "iis") || strings.Contains(lower, "litespeed") {
+			// A version banner is a MINOR information disclosure, not high severity
 			check.Status = "warn"
-			check.Score = 450
-			check.Severity = "medium"
+			check.Score = 700
+			check.Severity = "low"
 			check.Details = toJSON(map[string]string{
-				"message": "Server header exposes software name",
+				"message": "Server header exposes software name and version (minor information disclosure)",
 				"server":  server,
 			})
 		} else {
-			check.Status = "warn"
-			check.Score = 650
-			check.Severity = "low"
+			// Bare product name with no version (e.g. hardened ServerTokens Prod) — acceptable
+			check.Status = "pass"
+			check.Score = 1000
+			check.Severity = "info"
 			check.Details = toJSON(map[string]string{
-				"message": "Server header is present with generic value",
+				"message": "Server header shows product name without a version (hardened)",
 				"server":  server,
 			})
 		}
@@ -130,22 +124,22 @@ func (s *ServerInfoScanner) checkPoweredBy(resp *http.Response) models.CheckResu
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{"message": "X-Powered-By header is not exposed"})
 	} else {
-		// X-Powered-By with version info is worse
+		// X-Powered-By is a MINOR disclosure — downgrade to low/warn, not high fail
 		hasVersion := strings.ContainsAny(poweredBy, "0123456789./")
 		if hasVersion {
-			check.Status = "fail"
-			check.Score = 125
-			check.Severity = "high"
+			check.Status = "warn"
+			check.Score = 650
+			check.Severity = "low"
 			check.Details = toJSON(map[string]string{
-				"message":    "X-Powered-By header exposes technology stack with version",
+				"message":    "X-Powered-By header exposes technology stack with version (minor information disclosure)",
 				"powered_by": poweredBy,
 			})
 		} else {
-			check.Status = "fail"
-			check.Score = 225
-			check.Severity = "high"
+			check.Status = "warn"
+			check.Score = 700
+			check.Severity = "low"
 			check.Details = toJSON(map[string]string{
-				"message":    "X-Powered-By header exposes technology stack",
+				"message":    "X-Powered-By header exposes technology stack (minor information disclosure)",
 				"powered_by": poweredBy,
 			})
 		}
@@ -162,7 +156,7 @@ func (s *ServerInfoScanner) detectCMS(resp *http.Response, url string) models.Ch
 	}
 
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -186,7 +180,9 @@ func (s *ServerInfoScanner) detectCMS(resp *http.Response, url string) models.Ch
 				continue
 			}
 			checkResp.Body.Close()
-			if checkResp.StatusCode == 200 || checkResp.StatusCode == 403 || checkResp.StatusCode == 302 {
+			// Only a 200 is proof; a WAF 403 or a 302 redirect on /wp-admin/
+			// is NOT evidence that the CMS is present.
+			if checkResp.StatusCode == 200 {
 				cms = cmsName
 				detected = true
 				break
@@ -210,26 +206,12 @@ func (s *ServerInfoScanner) detectCMS(resp *http.Response, url string) models.Ch
 	}
 
 	if detected {
-		// CMS detected - not necessarily bad, but reduces obscurity
-		// Well-known CMS like WordPress is frequently targeted
-		var score float64
-		switch cms {
-		case "WordPress":
-			score = 550 // Most targeted CMS
-		case "Joomla":
-			score = 600
-		case "Drupal":
-			score = 650 // Generally considered more secure
-		case "Moodle":
-			score = 625
-		default:
-			score = 600
-		}
-		check.Status = statusFromScore(score)
-		check.Score = score
-		check.Severity = severityFromScore(score)
+		// Detecting a CMS is NOT a vulnerability — report it as informational.
+		check.Status = "pass"
+		check.Score = 1000
+		check.Severity = "info"
 		check.Details = toJSON(map[string]string{
-			"message": fmt.Sprintf("CMS detected: %s", cms),
+			"message": fmt.Sprintf("CMS detected: %s (informational — running a known CMS is not itself a vulnerability)", cms),
 			"cms":     cms,
 		})
 	} else {

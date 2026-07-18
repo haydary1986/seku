@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -24,7 +25,7 @@ func (s *DirectoryScanner) Scan(url string) []models.CheckResult {
 	var results []models.CheckResult
 
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -125,6 +126,16 @@ func (s *DirectoryScanner) Scan(url string) []models.CheckResult {
 						"path":    sp.path,
 						"message": "WordPress admin panel detected — this is standard CMS behavior, not a vulnerability. Protected by authentication.",
 					})
+				} else if typed, confirmed := directoryContentConfirmsExposure(sp.path, bodyStr); typed && !confirmed {
+					// 200 OK but the body lacks the expected signature for this
+					// file type (e.g. a soft-404 serving the site's normal HTML).
+					check.Status = "pass"
+					check.Score = 900
+					check.Severity = "info"
+					check.Details = toJSON(map[string]string{
+						"path":    sp.path,
+						"message": fmt.Sprintf("Path returned 200 but content does not match the expected sensitive-file signature (likely soft-404): %s", sp.path),
+					})
 				} else {
 					// Truly sensitive path accessible without protection
 					var score float64
@@ -145,33 +156,17 @@ func (s *DirectoryScanner) Scan(url string) []models.CheckResult {
 					})
 				}
 			}
-		} else if resp.StatusCode == 403 {
-			// 403 can mean WAF/CDN protection (Cloudflare, etc.) or server config
-			// Check if it's a WAF/CDN blocking (which is good security)
-			isWAFProtected := resp.Header.Get("CF-RAY") != "" ||
-				resp.Header.Get("Server") == "cloudflare" ||
-				resp.Header.Get("X-Sucuri-ID") != "" ||
-				resp.Header.Get("X-CDN") != ""
-
-			if isWAFProtected {
-				// WAF/CDN is blocking access - this is good protection
-				check.Status = "pass"
-				check.Score = 900
-				check.Severity = "info"
-				check.Details = toJSON(map[string]string{
-					"path":    sp.path,
-					"message": fmt.Sprintf("Path blocked by WAF/CDN (403): %s - well protected", sp.path),
-				})
-			} else {
-				// Server returns 403 without WAF - path confirmed to exist
-				check.Status = "warn"
-				check.Score = 725
-				check.Severity = "low"
-				check.Details = toJSON(map[string]string{
-					"path":    sp.path,
-					"message": fmt.Sprintf("Path exists but forbidden (403): %s", sp.path),
-				})
-			}
+		} else if resp.StatusCode == 401 || resp.StatusCode == 403 {
+			// 401/403 means access is DENIED — the sensitive path is protected.
+			// This is good security whether a WAF/CDN or the origin server
+			// enforced it, so it is a pass regardless of CDN headers.
+			check.Status = "pass"
+			check.Score = 900
+			check.Severity = "info"
+			check.Details = toJSON(map[string]string{
+				"path":    sp.path,
+				"message": fmt.Sprintf("Access denied (%d) — path is protected: %s", resp.StatusCode, sp.path),
+			})
 		} else {
 			check.Status = "pass"
 			check.Score = 1000
@@ -194,4 +189,41 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen] + "..."
+}
+
+// directoryEnvKeyRe matches an UPPERCASE environment-variable assignment line
+// (e.g. "APP_ENV=production"), used to confirm a genuine .env file body.
+var directoryEnvKeyRe = regexp.MustCompile(`(?m)^\s*[A-Z][A-Z0-9_]*\s*=`)
+
+// directoryContentConfirmsExposure decides whether a 200 body genuinely confirms
+// a sensitive file/path is exposed, rather than a soft-404 serving the site's
+// normal HTML page. It returns (typed, confirmed): typed is true when the path is
+// a recognized sensitive file type, and confirmed is true when the body carries
+// the expected content signature for that type. Non-HTML file types additionally
+// reject bodies that look like HTML.
+func directoryContentConfirmsExposure(path, body string) (typed bool, confirmed bool) {
+	p := strings.ToLower(path)
+	lower := strings.ToLower(body)
+	switch {
+	case strings.Contains(p, ".env"):
+		return true, !bodyLooksLikeHTML(body) && directoryEnvKeyRe.MatchString(body)
+	case strings.Contains(p, ".git/config"):
+		return true, !bodyLooksLikeHTML(body) && strings.Contains(lower, "[core]")
+	case strings.Contains(p, ".git/head"):
+		return true, !bodyLooksLikeHTML(body) && strings.Contains(lower, "ref:")
+	case strings.Contains(p, "phpinfo"):
+		// phpinfo() output is itself HTML, so only require its signature strings.
+		return true, strings.Contains(lower, "phpinfo()") || strings.Contains(lower, "php version")
+	case strings.Contains(p, "wp-config") || strings.HasSuffix(p, ".bak") ||
+		strings.HasSuffix(p, ".php.old") || strings.HasSuffix(p, ".php~"):
+		return true, !bodyLooksLikeHTML(body) &&
+			(strings.Contains(lower, "<?php") || strings.Contains(lower, "db_password") || strings.Contains(lower, "db_name"))
+	case strings.HasSuffix(p, ".sql"):
+		return true, !bodyLooksLikeHTML(body) &&
+			(strings.Contains(lower, "insert into") || strings.Contains(lower, "create table") || strings.Contains(lower, "-- mysql dump"))
+	case strings.HasSuffix(p, ".htaccess"):
+		// A real .htaccess is plain text; an HTML body here is a soft-404.
+		return true, !bodyLooksLikeHTML(body)
+	}
+	return false, false
 }

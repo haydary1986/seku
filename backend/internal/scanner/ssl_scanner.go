@@ -19,8 +19,8 @@ var strongCipherSuites = map[uint16]bool{
 	tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384:   true,
 	tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256: true,
 	tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384: true,
-	tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305:     true,
-	tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305:   true,
+	tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305:    true,
+	tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305:  true,
 }
 
 type SSLScanner struct{}
@@ -59,7 +59,7 @@ func (s *SSLScanner) checkHTTPS(url string) models.CheckResult {
 	}
 
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -301,7 +301,7 @@ func (s *SSLScanner) checkHTTPSRedirect(url string) models.CheckResult {
 	if err != nil {
 		// Cannot reach HTTP version - check if HTTPS works directly
 		httpsClient := &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout:   10 * time.Second,
 			Transport: ScanTransport,
 		}
 		httpsURL := ensureHTTPS(url)
@@ -318,11 +318,14 @@ func (s *SSLScanner) checkHTTPSRedirect(url string) models.CheckResult {
 		}
 		defer httpsResp.Body.Close()
 
-		check.Status = "warning"
-		check.Score = 400
-		check.Severity = "medium"
+		// Port 80 is closed entirely while HTTPS works: cleartext access is fully
+		// disabled, which is MORE secure than an HTTP->HTTPS redirect. Treat it as
+		// a pass, not a warning.
+		check.Status = "pass"
+		check.Score = 950
+		check.Severity = "info"
 		check.Details = toJSON(map[string]string{
-			"message": "HTTP not reachable but HTTPS works directly",
+			"message": "Port 80 (HTTP) is closed; HTTPS works directly - cleartext access is fully disabled (more secure)",
 		})
 		return check
 	}
@@ -362,7 +365,7 @@ func (s *SSLScanner) checkHTTPSRedirect(url string) models.CheckResult {
 
 	// No redirect to HTTPS - check if HTTPS is available separately
 	httpsClient := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
 		Transport: ScanTransport,
 	}
 	httpsURL := ensureHTTPS(url)

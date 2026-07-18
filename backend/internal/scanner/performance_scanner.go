@@ -35,62 +35,59 @@ func linearScore(value, minVal, maxVal float64, maxScore, minScore float64) floa
 
 // scoreResponseTime returns a 0-1000 score for total response time using
 // piecewise linear decay across defined brackets.
+// Thresholds are deliberately lenient and never bottom below 600: this metric
+// reflects the SCANNER's network distance plus a rate-limiter sleep, not the
+// site's real speed, so it must never produce a grade-F fail.
 func scoreResponseTime(ms float64) float64 {
 	switch {
-	case ms <= 200:
-		return 1000
-	case ms <= 500:
-		return linearScore(ms, 200, 500, 1000, 900)
 	case ms <= 1000:
-		return linearScore(ms, 500, 1000, 900, 750)
+		return 1000
 	case ms <= 2000:
-		return linearScore(ms, 1000, 2000, 750, 500)
-	case ms <= 5000:
-		return linearScore(ms, 2000, 5000, 500, 200)
-	case ms <= 10000:
-		return linearScore(ms, 5000, 10000, 200, 50)
+		return linearScore(ms, 1000, 2000, 1000, 900)
+	case ms <= 4000:
+		return linearScore(ms, 2000, 4000, 900, 750)
+	case ms <= 8000:
+		return linearScore(ms, 4000, 8000, 750, 650)
 	default:
-		return 0
+		return 600
 	}
 }
 
 // scoreTTFB returns a 0-1000 score for time-to-first-byte using
 // piecewise linear decay across defined brackets.
+// Lenient, never below 600 — TTFB here includes the scanner's own network
+// latency and a rate-limiter sleep, so it is not the site's true TTFB.
 func scoreTTFB(ms float64) float64 {
 	switch {
-	case ms <= 100:
-		return 1000
-	case ms <= 200:
-		return linearScore(ms, 100, 200, 1000, 920)
 	case ms <= 500:
-		return linearScore(ms, 200, 500, 920, 750)
+		return 1000
 	case ms <= 1000:
-		return linearScore(ms, 500, 1000, 750, 450)
-	case ms <= 2000:
-		return linearScore(ms, 1000, 2000, 450, 200)
+		return linearScore(ms, 500, 1000, 1000, 900)
+	case ms <= 2500:
+		return linearScore(ms, 1000, 2500, 900, 750)
 	case ms <= 5000:
-		return linearScore(ms, 2000, 5000, 200, 50)
+		return linearScore(ms, 2500, 5000, 750, 650)
 	default:
-		return 0
+		return 600
 	}
 }
 
 // scoreTLSHandshake returns a 0-1000 score for TLS handshake duration using
 // piecewise linear decay across defined brackets.
+// Lenient, never below 600 — handshake time is dominated by round-trip network
+// distance from the scanner, not by the site's TLS configuration.
 func scoreTLSHandshake(ms float64) float64 {
 	switch {
-	case ms <= 50:
+	case ms <= 200:
 		return 1000
-	case ms <= 100:
-		return linearScore(ms, 50, 100, 1000, 920)
-	case ms <= 300:
-		return linearScore(ms, 100, 300, 920, 750)
-	case ms <= 700:
-		return linearScore(ms, 300, 700, 750, 450)
+	case ms <= 500:
+		return linearScore(ms, 200, 500, 1000, 900)
 	case ms <= 1500:
-		return linearScore(ms, 700, 1500, 450, 150)
+		return linearScore(ms, 500, 1500, 900, 750)
+	case ms <= 3000:
+		return linearScore(ms, 1500, 3000, 750, 650)
 	default:
-		return 50
+		return 600
 	}
 }
 
@@ -128,7 +125,7 @@ func (s *PerformanceScanner) checkResponseTime(url string) models.CheckResult {
 	}
 
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout:   30 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -155,6 +152,9 @@ func (s *PerformanceScanner) checkResponseTime(url string) models.CheckResult {
 
 	ms := float64(elapsed.Milliseconds())
 	score := math.Round(scoreResponseTime(ms))
+	if score < 600 {
+		score = 600
+	}
 	grade, status, severity := gradeFromScore(score)
 
 	check.Score = score
@@ -163,7 +163,7 @@ func (s *PerformanceScanner) checkResponseTime(url string) models.CheckResult {
 	check.Details = toJSON(map[string]interface{}{
 		"response_time_ms": int64(ms),
 		"status_code":      resp.StatusCode,
-		"message":          fmt.Sprintf("Response time: %dms (score: %.0f/1000)", int64(ms), score),
+		"message":          fmt.Sprintf("Response time: %dms (score: %.0f/1000) (scanner-relative measurement; may reflect network distance)", int64(ms), score),
 		"grade":            grade,
 	})
 
@@ -214,7 +214,7 @@ func (s *PerformanceScanner) checkTTFB(url string) models.CheckResult {
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
 
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout:   30 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -235,6 +235,9 @@ func (s *PerformanceScanner) checkTTFB(url string) models.CheckResult {
 
 	ms := float64(ttfb.Milliseconds())
 	score := math.Round(scoreTTFB(ms))
+	if score < 600 {
+		score = 600
+	}
 	grade, status, severity := gradeFromScore(score)
 
 	check.Score = score
@@ -244,7 +247,7 @@ func (s *PerformanceScanner) checkTTFB(url string) models.CheckResult {
 		"ttfb_ms":         int64(ms),
 		"dns_time_ms":     dnsTime.Milliseconds(),
 		"connect_time_ms": connectTime.Milliseconds(),
-		"message":         fmt.Sprintf("TTFB: %dms (score: %.0f/1000)", int64(ms), score),
+		"message":         fmt.Sprintf("TTFB: %dms (score: %.0f/1000) (scanner-relative measurement; may reflect network distance)", int64(ms), score),
 		"grade":           grade,
 	})
 
@@ -270,9 +273,11 @@ func (s *PerformanceScanner) checkTLSHandshake(url string) models.CheckResult {
 	elapsed := time.Since(start)
 
 	if err != nil {
-		check.Status = "warning"
-		check.Score = 50
-		check.Severity = "medium"
+		// A connection/TLS error is not a performance grade; exclude it from
+		// scoring by using "error" status rather than a punishing low score.
+		check.Status = "error"
+		check.Score = 0
+		check.Severity = "info"
 		check.Details = toJSON(map[string]string{
 			"error":   "Cannot measure TLS handshake: " + err.Error(),
 			"message": "TLS connection failed - HTTPS may not be available",
@@ -283,6 +288,9 @@ func (s *PerformanceScanner) checkTLSHandshake(url string) models.CheckResult {
 
 	ms := float64(elapsed.Milliseconds())
 	score := math.Round(scoreTLSHandshake(ms))
+	if score < 600 {
+		score = 600
+	}
 	grade, status, severity := gradeFromScore(score)
 
 	check.Score = score
@@ -290,7 +298,7 @@ func (s *PerformanceScanner) checkTLSHandshake(url string) models.CheckResult {
 	check.Severity = severity
 	check.Details = toJSON(map[string]interface{}{
 		"tls_handshake_ms": int64(ms),
-		"message":          fmt.Sprintf("TLS handshake: %dms (score: %.0f/1000)", int64(ms), score),
+		"message":          fmt.Sprintf("TLS handshake: %dms (score: %.0f/1000) (scanner-relative measurement; may reflect network distance)", int64(ms), score),
 		"grade":            grade,
 	})
 

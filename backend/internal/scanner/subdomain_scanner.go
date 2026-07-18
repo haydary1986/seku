@@ -456,31 +456,36 @@ func (s *SubdomainScanner) checkSubdomainEnumeration(found []discoveredSubdomain
 		"subdomains":       found,
 	}
 
-	switch {
-	case count <= 5:
-		check.Status = "pass"
-		check.Score = MaxScore
-		check.Severity = "info"
-		details["message"] = fmt.Sprintf("Small attack surface: %d subdomains discovered", count)
-	case count <= 15:
-		check.Status = "pass"
-		check.Score = 800
-		check.Severity = "low"
-		details["message"] = fmt.Sprintf("Moderate attack surface: %d subdomains discovered", count)
-	case count <= 30:
-		check.Status = "warn"
-		check.Score = 600
-		check.Severity = "medium"
-		details["message"] = fmt.Sprintf("Large attack surface: %d subdomains discovered", count)
-	default:
-		check.Status = "warn"
-		check.Score = 400
-		check.Severity = "medium"
-		details["message"] = fmt.Sprintf("Very large attack surface: %d subdomains discovered", count)
-	}
+	// A large subdomain count is normal for universities and is not itself a
+	// vulnerability. The count is sourced from external passive datasets
+	// (CT logs, passive DNS, web archive), so it is purely informational.
+	check.Status = "pass"
+	check.Score = MaxScore
+	check.Severity = "info"
+	details["message"] = fmt.Sprintf("%d subdomains discovered (informational; a large count is normal for universities and is not a vulnerability)", count)
 
 	check.Details = toJSON(details)
 	return check
+}
+
+// subdomainNonWebPrefixes are leftmost labels for subdomains that legitimately
+// serve non-HTTP services (mail, DNS, VPN, FTP). They have no reason to expose
+// 443 or web security headers, so assessing them as web endpoints is a false
+// positive.
+var subdomainNonWebPrefixes = map[string]bool{
+	"mail": true, "smtp": true, "imap": true, "pop": true, "pop3": true,
+	"ftp": true, "vpn": true, "mx": true, "mx1": true, "mx2": true,
+	"ns": true, "ns1": true, "ns2": true, "ns3": true, "ns4": true,
+}
+
+// subdomainIsNonWeb reports whether the leftmost label of fqdn is a known
+// non-web service prefix that should be excluded from web security assessment.
+func subdomainIsNonWeb(fqdn string) bool {
+	label := strings.ToLower(fqdn)
+	if i := strings.Index(label, "."); i >= 0 {
+		label = label[:i]
+	}
+	return subdomainNonWebPrefixes[label]
 }
 
 func (s *SubdomainScanner) checkSubdomainSecurity(found []discoveredSubdomain) models.CheckResult {
@@ -490,19 +495,30 @@ func (s *SubdomainScanner) checkSubdomainSecurity(found []discoveredSubdomain) m
 		Weight:    2.0,
 	}
 
-	if len(found) == 0 {
+	// Only assess subdomains that could plausibly serve web content over HTTPS.
+	// Exclude non-web service prefixes (mail, ns, vpn, ftp, ...) which have no
+	// 443 and no web headers by design.
+	var webCandidates []discoveredSubdomain
+	for _, sub := range found {
+		if subdomainIsNonWeb(sub.Subdomain) {
+			continue
+		}
+		webCandidates = append(webCandidates, sub)
+	}
+
+	if len(webCandidates) == 0 {
 		check.Status = "pass"
 		check.Score = MaxScore
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{
-			"message": "No subdomains to check for HTTPS",
+			"message": "No web-serving subdomains to assess for HTTPS",
 		})
 		return check
 	}
 
 	httpsCount := 0
 	var withHTTPS, withoutHTTPS []string
-	for _, sub := range found {
+	for _, sub := range webCandidates {
 		if sub.HasHTTPS {
 			httpsCount++
 			withHTTPS = append(withHTTPS, sub.Subdomain)
@@ -511,7 +527,7 @@ func (s *SubdomainScanner) checkSubdomainSecurity(found []discoveredSubdomain) m
 		}
 	}
 
-	total := len(found)
+	total := len(webCandidates)
 	ratio := float64(httpsCount) / float64(total)
 	details := map[string]interface{}{
 		"checked":       total,
@@ -521,27 +537,25 @@ func (s *SubdomainScanner) checkSubdomainSecurity(found []discoveredSubdomain) m
 		"without_https": withoutHTTPS,
 	}
 
+	// HTTPS coverage of discovered subdomains is informational about those
+	// subdomains — it must never fail/high the parent site. Cap severity at
+	// low.
 	switch {
 	case ratio >= 1.0:
 		check.Status = "pass"
 		check.Score = MaxScore
 		check.Severity = "info"
-		details["message"] = "All checked subdomains support HTTPS"
+		details["message"] = "All web-serving subdomains support HTTPS"
 	case ratio >= 0.8:
 		check.Status = "pass"
 		check.Score = 800
 		check.Severity = "low"
-		details["message"] = fmt.Sprintf("%.0f%% of checked subdomains support HTTPS", ratio*100)
-	case ratio >= 0.5:
-		check.Status = "warn"
-		check.Score = 600
-		check.Severity = "medium"
-		details["message"] = fmt.Sprintf("Only %.0f%% of checked subdomains support HTTPS", ratio*100)
+		details["message"] = fmt.Sprintf("%.0f%% of web-serving subdomains support HTTPS", ratio*100)
 	default:
-		check.Status = "fail"
-		check.Score = 300
-		check.Severity = "high"
-		details["message"] = fmt.Sprintf("Only %.0f%% of checked subdomains support HTTPS", ratio*100)
+		check.Status = "pass"
+		check.Score = 750
+		check.Severity = "low"
+		details["message"] = fmt.Sprintf("%.0f%% of web-serving subdomains support HTTPS (informational)", ratio*100)
 	}
 
 	check.Details = toJSON(details)
@@ -594,9 +608,11 @@ func (s *SubdomainScanner) checkDanglingDNS(baseDomain string, found []discovere
 		cnameLower := strings.ToLower(sub.CNAME)
 		for _, target := range takeoverTargets {
 			if strings.HasSuffix(cnameLower, target) {
-				// CNAME points to a takeover-vulnerable service; check if it returns 404
-				is404 := s.probeReturns404(sub.Subdomain)
-				if is404 {
+				// CNAME points to a takeover-vulnerable service; only flag it if
+				// the provider actually serves an "unclaimed resource"
+				// fingerprint. An unreachable host is NOT treated as dangling.
+				unclaimed := s.probeTakeoverFingerprint(sub.Subdomain)
+				if unclaimed {
 					potentialTakeovers = append(potentialTakeovers, map[string]string{
 						"subdomain": sub.Subdomain,
 						"cname":     sub.CNAME,
@@ -642,8 +658,31 @@ func (s *SubdomainScanner) checkDanglingDNS(baseDomain string, found []discovere
 	return check
 }
 
-// probeReturns404 checks whether the given host returns a 404 via HTTP or HTTPS.
-func (s *SubdomainScanner) probeReturns404(host string) bool {
+// takeoverFingerprints are provider-specific "unclaimed resource" response
+// bodies that genuinely indicate a dangling subdomain that can be taken over.
+// An unreachable host or a generic 404 is NOT one of these.
+var takeoverFingerprints = []string{
+	"there isn't a github pages site here",
+	"no such app",
+	"herokucdn.com/error-pages/no-such-app.html",
+	"nosuchbucket",
+	"the specified bucket does not exist",
+	"repository not found",
+	"project not found",
+	"do not have access to this app",
+	"sorry, this shop is currently unavailable",
+	"is not a registered incapsula",
+	"trying to access your account",
+	"fastly error: unknown domain",
+	"unrecognized domain",
+	"this domain is not configured",
+	"the request could not be satisfied",
+}
+
+// probeTakeoverFingerprint reports whether the host serves a provider-specific
+// "unclaimed resource" page, which is real evidence of subdomain takeover risk.
+// An unreachable host returns false (not treated as dangling).
+func (s *SubdomainScanner) probeTakeoverFingerprint(host string) bool {
 	client := &http.Client{
 		Timeout: 3 * time.Second,
 		Transport: &http.Transport{
@@ -660,14 +699,18 @@ func (s *SubdomainScanner) probeReturns404(host string) bool {
 		if err != nil {
 			continue
 		}
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
 		resp.Body.Close()
-		if resp.StatusCode == 404 {
-			return true
+		bodyLower := strings.ToLower(string(body))
+		for _, fp := range takeoverFingerprints {
+			if strings.Contains(bodyLower, fp) {
+				return true
+			}
 		}
-		return false
+		return false // reachable but no unclaimed fingerprint → not dangling
 	}
-	// If neither scheme could be reached, treat as potentially dangling
-	return true
+	// Neither scheme reachable: an unreachable host is NOT dangling.
+	return false
 }
 
 // scanIndividualSubdomains runs a lightweight security scan on each discovered
@@ -711,13 +754,25 @@ func (s *SubdomainScanner) scanOneSubdomain(sub discoveredSubdomain) models.Chec
 	}
 
 	findings := map[string]interface{}{
-		"subdomain": sub.Subdomain,
-		"ips":       sub.IPs,
-		"has_https":    sub.HasHTTPS,
+		"subdomain":     sub.Subdomain,
+		"ips":           sub.IPs,
+		"has_https":     sub.HasHTTPS,
 		"is_cloudflare": sub.IsCloudflare,
 	}
 	if sub.CNAME != "" {
 		findings["cname"] = sub.CNAME
+	}
+
+	// Non-web subdomains (mail, ns, vpn, ftp, ...) legitimately do not serve
+	// HTML or web security headers. Do not assess them as web endpoints.
+	if subdomainIsNonWeb(sub.Subdomain) {
+		check.Status = "pass"
+		check.Score = MaxScore
+		check.Severity = "info"
+		findings["status"] = "non-web service"
+		findings["message"] = fmt.Sprintf("%s: non-web service subdomain, not assessed for web security headers", sub.Subdomain)
+		check.Details = toJSON(findings)
+		return check
 	}
 
 	client := &http.Client{
@@ -743,11 +798,13 @@ func (s *SubdomainScanner) scanOneSubdomain(sub discoveredSubdomain) models.Chec
 	}
 
 	if err != nil || resp == nil {
-		check.Status = "warn"
-		check.Score = 500
-		check.Severity = "medium"
+		// A DNS record that does not answer over HTTP/HTTPS is not a defect of
+		// the parent site; it is simply informational.
+		check.Status = "pass"
+		check.Score = 900
+		check.Severity = "info"
 		findings["status"] = "unreachable"
-		findings["message"] = "Subdomain resolved in DNS but is not reachable via HTTP/HTTPS"
+		findings["message"] = "Subdomain resolved in DNS but is not reachable via HTTP/HTTPS (not assessed)"
 		check.Details = toJSON(findings)
 		return check
 	}
@@ -826,29 +883,20 @@ func (s *SubdomainScanner) scanOneSubdomain(sub discoveredSubdomain) models.Chec
 	findings["issues_count"] = len(issues)
 	findings["good_count"] = len(good)
 
-	// Score based on issue count
+	// Header findings on a *discovered* subdomain are informational only. The
+	// parent site's own headers are assessed by the dedicated header scanners,
+	// so per-subdomain header gaps must never fail/high the parent result.
 	issueCount := len(issues)
-	switch {
-	case issueCount == 0:
+	if issueCount == 0 {
 		check.Status = "pass"
 		check.Score = MaxScore
 		check.Severity = "info"
 		findings["message"] = fmt.Sprintf("%s: All security checks passed", sub.Subdomain)
-	case issueCount <= 2:
+	} else {
 		check.Status = "pass"
-		check.Score = 750
-		check.Severity = "low"
-		findings["message"] = fmt.Sprintf("%s: %d minor issue(s) found", sub.Subdomain, issueCount)
-	case issueCount <= 4:
-		check.Status = "warn"
-		check.Score = 500
-		check.Severity = "medium"
-		findings["message"] = fmt.Sprintf("%s: %d issue(s) found", sub.Subdomain, issueCount)
-	default:
-		check.Status = "fail"
-		check.Score = 250
-		check.Severity = "high"
-		findings["message"] = fmt.Sprintf("%s: %d issue(s) found — needs attention", sub.Subdomain, issueCount)
+		check.Score = 800
+		check.Severity = "info"
+		findings["message"] = fmt.Sprintf("%s: %d informational finding(s) on discovered subdomain", sub.Subdomain, issueCount)
 	}
 
 	check.Details = toJSON(findings)

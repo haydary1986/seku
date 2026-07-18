@@ -55,9 +55,11 @@ func (s *HostingScanner) checkHTTP2Support(url string) models.CheckResult {
 		},
 	)
 	if err != nil {
+		// A connection/TLS error tells us nothing about HTTP/2 support; do not
+		// score it as a critical failure. Use "error" status so it is excluded.
 		check.Score = 0
-		check.Status = statusFromScore(0)
-		check.Severity = severityFromScore(0)
+		check.Status = "error"
+		check.Severity = "info"
 		check.Details = toJSON(map[string]interface{}{
 			"supported_protocol": "none",
 			"error":              err.Error(),
@@ -102,7 +104,7 @@ func (s *HostingScanner) checkHTTP3Support(url string) models.CheckResult {
 	targetURL := ensureHTTPS(url)
 
 	client := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout:   15 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -122,20 +124,22 @@ func (s *HostingScanner) checkHTTP3Support(url string) models.CheckResult {
 	altSvc := resp.Header.Get("Alt-Svc")
 	h3Supported := strings.Contains(altSvc, "h3=") || strings.Contains(altSvc, "h3\"")
 
+	// No HTTP/3 is the common norm, not a defect: treat its absence as neutral
+	// (info, no penalty) and its presence as a bonus.
 	var score float64
 	if h3Supported {
 		score = 1000
 	} else {
-		score = 400
+		score = 800
 	}
 
 	check.Score = math.Round(score)
-	check.Status = statusFromScore(score)
-	check.Severity = severityFromScore(score)
+	check.Status = "pass"
+	check.Severity = "info"
 	check.Details = toJSON(map[string]interface{}{
 		"alt_svc_header": altSvc,
 		"h3_supported":   h3Supported,
-		"message":        fmt.Sprintf("HTTP/3 (QUIC) supported: %v (score: %.0f/1000)", h3Supported, score),
+		"message":        fmt.Sprintf("HTTP/3 (QUIC) supported: %v (score: %.0f/1000; absence is neutral)", h3Supported, score),
 	})
 
 	return check
@@ -249,21 +253,23 @@ func (s *HostingScanner) checkIPv6Support(url string) models.CheckResult {
 
 	hasIPv6 := len(ipv6Addrs) > 0
 
+	// IPv4-only is the common norm, not a defect: treat missing IPv6 as neutral
+	// (info, no penalty) and IPv6 availability as a bonus.
 	var score float64
 	if hasIPv6 {
 		score = 1000
 	} else {
-		score = 350
+		score = 800
 	}
 
 	check.Score = math.Round(score)
-	check.Status = statusFromScore(score)
-	check.Severity = severityFromScore(score)
+	check.Status = "pass"
+	check.Severity = "info"
 	check.Details = toJSON(map[string]interface{}{
 		"ipv4_addresses": ipv4Addrs,
 		"ipv6_addresses": ipv6Addrs,
 		"ipv6_supported": hasIPv6,
-		"message":        fmt.Sprintf("IPv6 supported: %v (score: %.0f/1000)", hasIPv6, score),
+		"message":        fmt.Sprintf("IPv6 supported: %v (score: %.0f/1000; absence is neutral)", hasIPv6, score),
 	})
 
 	return check
@@ -280,7 +286,7 @@ func (s *HostingScanner) checkKeepAlive(url string) models.CheckResult {
 	targetURL := ensureHTTPS(url)
 
 	client := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout:   15 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -365,9 +371,10 @@ func (s *HostingScanner) checkDNSResolutionTime(url string) models.CheckResult {
 	elapsed := time.Since(start)
 
 	if err != nil {
+		// A resolver failure is the scanner's own DNS path; do not hard-fail on it.
 		check.Score = 0
-		check.Status = statusFromScore(0)
-		check.Severity = severityFromScore(0)
+		check.Status = "error"
+		check.Severity = "info"
 		check.Details = toJSON(map[string]interface{}{
 			"error":   err.Error(),
 			"message": "DNS resolution failed",
@@ -377,14 +384,19 @@ func (s *HostingScanner) checkDNSResolutionTime(url string) models.CheckResult {
 
 	ms := float64(elapsed.Milliseconds())
 	score := math.Round(scoreDNSResolution(ms))
+	// This times the SCANNER's resolver, not the site. Never fail on it: cap the
+	// worst outcome at warn/low (min score 700) and label it scanner-relative.
+	if score < 700 {
+		score = 700
+	}
 
 	check.Score = score
 	check.Status = statusFromScore(score)
 	check.Severity = severityFromScore(score)
 	check.Details = toJSON(map[string]interface{}{
-		"dns_resolution_ms": int64(ms),
+		"dns_resolution_ms":  int64(ms),
 		"resolved_addresses": addrs,
-		"message":            fmt.Sprintf("DNS resolution: %dms (score: %.0f/1000)", int64(ms), score),
+		"message":            fmt.Sprintf("DNS resolution: %dms (score: %.0f/1000) (scanner-relative measurement; may reflect resolver/network distance)", int64(ms), score),
 	})
 
 	return check

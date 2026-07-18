@@ -54,11 +54,12 @@ var jsSecretPatterns = []secretPattern{
 		9.8,
 	},
 	{
+		// Client-side Google (Firebase/Maps) key — legitimately public; demoted.
 		"Google API Key",
-		"high",
+		"low",
 		regexp.MustCompile(`AIza[0-9A-Za-z\-_]{35}`),
-		"CWE-798",
-		7.5,
+		"CWE-200",
+		3.1,
 	},
 	{
 		"Google OAuth Client ID",
@@ -131,11 +132,12 @@ var jsSecretPatterns = []secretPattern{
 		7.5,
 	},
 	{
+		// Public Mapbox token (pk.*) — legitimately shipped client-side; demoted.
 		"Mapbox Access Token",
-		"medium",
+		"low",
 		regexp.MustCompile(`pk\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`),
-		"CWE-798",
-		5.3,
+		"CWE-200",
+		3.1,
 	},
 	{
 		"SendGrid API Key",
@@ -315,6 +317,16 @@ type fileFinding struct {
 	secrets []foundSecret
 }
 
+// jsTwilioAccountSIDRe matches a Twilio Account SID, used to corroborate that a
+// bare SK-prefixed 32-hex string is really a Twilio API key.
+var jsTwilioAccountSIDRe = regexp.MustCompile(`AC[a-f0-9]{32}`)
+
+// jsTwilioCorroborated reports whether a JS body carries context indicating a
+// Twilio secret: a Twilio Account SID (AC...) or the literal word "twilio".
+func jsTwilioCorroborated(body string) bool {
+	return strings.Contains(strings.ToLower(body), "twilio") || jsTwilioAccountSIDRe.MatchString(body)
+}
+
 func (s *JSSecretsScanner) scanForSecrets(body string) []foundSecret {
 	var found []foundSecret
 	seen := map[string]bool{}
@@ -322,6 +334,20 @@ func (s *JSSecretsScanner) scanForSecrets(body string) []foundSecret {
 	for _, p := range jsSecretPatterns {
 		matches := p.regex.FindAllString(body, -1)
 		for _, m := range matches {
+			// Suppress ubiquitous 32-char asset/integrity hashes that collide with
+			// the Twilio (SK...) and Mailgun (key-...) key shapes unless the file
+			// also carries corroborating vendor context.
+			switch p.name {
+			case "Twilio API Key":
+				if !jsTwilioCorroborated(body) {
+					continue
+				}
+			case "Mailgun API Key":
+				if !strings.Contains(strings.ToLower(body), "mailgun") {
+					continue
+				}
+			}
+
 			key := p.name + "|" + m
 			if seen[key] {
 				continue

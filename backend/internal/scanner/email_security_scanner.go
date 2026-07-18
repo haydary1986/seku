@@ -95,11 +95,14 @@ func (s *EmailSecurityScanner) checkDKIM(host string) models.CheckResult {
 		details["message"] = "DKIM record found"
 		details["record"] = foundRecord
 	} else {
-		check.Status = "fail"
-		check.Score = 0
-		check.Severity = "high"
-		details["message"] = "No DKIM record found for any common selector"
-		details["recommendation"] = "Configure DKIM signing for your email domain to prevent email spoofing"
+		// DKIM selectors are arbitrary, so probing a fixed list (default,
+		// selector1, google) cannot prove DKIM is absent. Treat a miss as
+		// inconclusive rather than a confirmed failure.
+		check.Status = "pass"
+		check.Score = 800
+		check.Severity = "info"
+		details["message"] = "DKIM could not be confirmed for common selectors (default, selector1, google); selectors are arbitrary so absence cannot be proven by probing a fixed list"
+		details["recommendation"] = "If this domain sends email, ensure DKIM signing is configured for your actual selector"
 	}
 
 	check.Details = toJSON(details)

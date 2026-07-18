@@ -44,7 +44,7 @@ func (s *ContentScanner) checkCacheHeaders(url string) models.CheckResult {
 	}
 
 	client := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout:   15 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -91,9 +91,9 @@ func (s *ContentScanner) checkCacheHeaders(url string) models.CheckResult {
 		score = 550
 		message = fmt.Sprintf("Minimal caching: Cache-Control with max-age=%d", extractMaxAge(ccLower))
 
-	case cacheControl != "" && (strings.Contains(ccLower, "no-cache") || strings.Contains(ccLower, "no-store")):
+	case cacheControl != "" && (strings.Contains(ccLower, "no-cache") || strings.Contains(ccLower, "no-store") || strings.Contains(ccLower, "private")):
 		score = 800
-		message = "Cache-Control set to no-cache/no-store (acceptable for HTML documents)"
+		message = "Cache-Control set to no-cache/no-store/private (correct for dynamic or authenticated HTML)"
 
 	case expires != "" && cacheControl == "":
 		score = 500
@@ -169,7 +169,7 @@ func (s *ContentScanner) checkPageSize(url string) models.CheckResult {
 	}
 
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout:   30 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -249,7 +249,7 @@ func (s *ContentScanner) checkCompressionRatio(url string) models.CheckResult {
 	}
 
 	client := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout:   15 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -323,6 +323,21 @@ func (s *ContentScanner) checkCompressionRatio(url string) models.CheckResult {
 	}
 	plainResp.Body.Close()
 
+	// When the uncompressed body is already small, compression yields negligible
+	// benefit (and can even be counter-productive), so a missing/poor ratio is
+	// NOT a defect. Treat it as pass/info rather than failing the site.
+	if uncompressedSize > 0 && uncompressedSize < 2048 {
+		check.Score = 950
+		check.Status = statusFromScore(check.Score)
+		check.Severity = severityFromScore(check.Score)
+		check.Details = toJSON(map[string]interface{}{
+			"uncompressed_size": uncompressedSize,
+			"content_encoding":  compContentEncoding,
+			"message":           fmt.Sprintf("Body is small (%d bytes); compression is unnecessary", uncompressedSize),
+		})
+		return check
+	}
+
 	var score float64
 	var message string
 
@@ -339,12 +354,12 @@ func (s *ContentScanner) checkCompressionRatio(url string) models.CheckResult {
 		check.Status = statusFromScore(score)
 		check.Severity = severityFromScore(score)
 		check.Details = toJSON(map[string]interface{}{
-			"ratio":              math.Round(ratio*1000) / 1000,
-			"savings_percent":    math.Round(savings*10) / 10,
-			"compressed_size":    compressedSize,
-			"uncompressed_size":  uncompressedSize,
-			"content_encoding":   compContentEncoding,
-			"message":            message,
+			"ratio":             math.Round(ratio*1000) / 1000,
+			"savings_percent":   math.Round(savings*10) / 10,
+			"compressed_size":   compressedSize,
+			"uncompressed_size": uncompressedSize,
+			"content_encoding":  compContentEncoding,
+			"message":           message,
 		})
 	} else if compContentEncoding != "" {
 		// Can't determine sizes but encoding is present
@@ -359,9 +374,12 @@ func (s *ContentScanner) checkCompressionRatio(url string) models.CheckResult {
 			"message":          message,
 		})
 	} else {
-		// No compression detected
-		score = 200
-		message = "No compression detected (no Content-Encoding header in response)"
+		// No Content-Encoding header: compression could not be reliably inferred
+		// (the origin may compress selectively, or an intermediary stripped the
+		// header). This is not conclusive evidence of a defect, so treat it as
+		// neutral rather than a failure.
+		score = 750
+		message = "Compression could not be reliably determined (no Content-Encoding header in response)"
 
 		check.Score = score
 		check.Status = statusFromScore(score)

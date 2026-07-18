@@ -25,7 +25,7 @@ func (s *InfoDisclosureScanner) Scan(url string) []models.CheckResult {
 	var results []models.CheckResult
 
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -99,13 +99,21 @@ func (s *InfoDisclosureScanner) checkErrorPages(client *http.Client, baseURL str
 	if pathPattern.MatchString(bodyStr) {
 		disclosures = append(disclosures, "Server file paths exposed")
 	}
-	// Check for SQL errors
-	if strings.Contains(bodyStr, "sql") && (strings.Contains(bodyStr, "error") || strings.Contains(bodyStr, "syntax")) {
-		disclosures = append(disclosures, "SQL error messages exposed")
+	// Check for SQL errors — specific database error signatures only, never the
+	// generic word "error" (which appears on any normal 404 page).
+	for _, sig := range []string{"sql syntax", "sqlstate", "mysql_fetch", "ora-0", "warning: pg_", "unclosed quotation"} {
+		if strings.Contains(bodyStr, sig) {
+			disclosures = append(disclosures, "SQL error messages exposed")
+			break
+		}
 	}
-	// Debug mode indicators
-	if strings.Contains(bodyStr, "debug") && (strings.Contains(bodyStr, "true") || strings.Contains(bodyStr, "mode")) {
-		disclosures = append(disclosures, "Debug mode may be enabled")
+	// Framework debug pages / stack traces — specific signatures only, never the
+	// bare word "debug".
+	for _, sig := range []string{"whoops, looks like", "traceback (most recent call last)", "symfony\\component", "stack trace:"} {
+		if strings.Contains(bodyStr, sig) {
+			disclosures = append(disclosures, "Framework debug/stack trace exposed")
+			break
+		}
 	}
 
 	if len(disclosures) >= 3 {
@@ -145,6 +153,15 @@ func (s *InfoDisclosureScanner) checkErrorPages(client *http.Client, baseURL str
 	return check
 }
 
+// commentSecretValueRe matches an assigned secret-looking VALUE inside a comment
+// (e.g. `password: hunter2`, `api_key = ab12cd34`). commentSecretAssignRe matches
+// a named secret assignment even without capturing the value length. Bare
+// keywords like "admin", "bug" or "debug" are intentionally NOT flagged.
+var (
+	commentSecretValueRe  = regexp.MustCompile(`(?i)(password|passwd|api[_-]?key|secret|token)\s*[:=]\s*\S{6,}`)
+	commentSecretAssignRe = regexp.MustCompile(`(?i)(db_password|aws_secret)\s*[:=]`)
+)
+
 func (s *InfoDisclosureScanner) checkHTMLComments(body string) models.CheckResult {
 	check := models.CheckResult{
 		Category:  s.Category(),
@@ -155,66 +172,34 @@ func (s *InfoDisclosureScanner) checkHTMLComments(body string) models.CheckResul
 	commentPattern := regexp.MustCompile(`<!--[\s\S]*?-->`)
 	comments := commentPattern.FindAllString(body, -1)
 
-	sensitiveKeywords := []string{"password", "todo", "fixme", "hack", "bug", "secret", "api_key", "token", "admin", "debug", "database", "db_"}
+	// Only flag a comment when it contains an actual assigned secret-looking VALUE,
+	// not a bare keyword like "admin", "debug" or "bug" (harmless in dev comments).
 	sensitiveComments := []string{}
-
-	// Track how critical the keywords are
-	criticalFound := false
 	for _, comment := range comments {
-		lower := strings.ToLower(comment)
-		for _, keyword := range sensitiveKeywords {
-			if strings.Contains(lower, keyword) {
-				if len(comment) > 100 {
-					comment = comment[:100] + "..."
-				}
-				sensitiveComments = append(sensitiveComments, comment)
-				// These keywords indicate truly sensitive data
-				if keyword == "password" || keyword == "secret" || keyword == "api_key" || keyword == "token" || keyword == "database" {
-					criticalFound = true
-				}
-				break
+		if commentSecretValueRe.MatchString(comment) || commentSecretAssignRe.MatchString(comment) {
+			c := comment
+			if len(c) > 100 {
+				c = c[:100] + "..."
 			}
+			sensitiveComments = append(sensitiveComments, c)
 		}
 	}
 
 	if len(sensitiveComments) > 0 {
-		if criticalFound {
-			// Comments contain highly sensitive keywords like passwords, secrets, tokens
-			check.Status = "fail"
-			check.Score = 175
-			check.Severity = "high"
-			check.Details = toJSON(map[string]interface{}{
-				"message":  "HTML comments contain potentially critical sensitive information (credentials, secrets, tokens)",
-				"count":    len(sensitiveComments),
-				"examples": sensitiveComments[:min(len(sensitiveComments), 3)],
-			})
-		} else if len(sensitiveComments) > 3 {
-			// Many comments with less-critical but still concerning keywords
-			check.Status = "warn"
-			check.Score = 325
-			check.Severity = "medium"
-			check.Details = toJSON(map[string]interface{}{
-				"message":  "Many HTML comments contain potentially sensitive information",
-				"count":    len(sensitiveComments),
-				"examples": sensitiveComments[:min(len(sensitiveComments), 3)],
-			})
-		} else {
-			// A few comments with dev-related keywords (todo, fixme, bug)
-			check.Status = "warn"
-			check.Score = 475
-			check.Severity = "medium"
-			check.Details = toJSON(map[string]interface{}{
-				"message":  "HTML comments contain potentially sensitive information",
-				"count":    len(sensitiveComments),
-				"examples": sensitiveComments[:min(len(sensitiveComments), 3)],
-			})
-		}
+		check.Status = "fail"
+		check.Score = 175
+		check.Severity = "high"
+		check.Details = toJSON(map[string]interface{}{
+			"message":  "HTML comments contain an assigned secret-looking value (credentials, API key, secret or token)",
+			"count":    len(sensitiveComments),
+			"examples": sensitiveComments[:min(len(sensitiveComments), 3)],
+		})
 	} else {
 		check.Status = "pass"
 		check.Score = 1000
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{
-			"message":        "No sensitive information found in HTML comments",
+			"message":        "No assigned secret values found in HTML comments",
 			"total_comments": fmt.Sprintf("%d", len(comments)),
 		})
 	}
@@ -238,14 +223,17 @@ func (s *InfoDisclosureScanner) checkVersionDisclosure(body string, resp *http.R
 		disclosures = append(disclosures, "Generator: "+matches[1])
 	}
 
-	// Check for WordPress version
-	wpPattern := regexp.MustCompile(`(?i)wp-content|wp-includes|wordpress\s*([\d.]+)?`)
-	if wpPattern.MatchString(body) {
-		disclosures = append(disclosures, "WordPress detected in page source")
+	// Check for WordPress version — only count an ACTUAL version number, not the
+	// bare wp-content/wp-includes asset paths (which every WP site exposes and
+	// which carry no version information).
+	wpPattern := regexp.MustCompile(`(?i)wordpress[\s/v]*(\d+\.\d+(?:\.\d+)?)`)
+	if matches := wpPattern.FindStringSubmatch(body); len(matches) > 1 {
+		disclosures = append(disclosures, "WordPress version: "+matches[1])
 	}
 
-	// Check for jQuery version
-	jqPattern := regexp.MustCompile(`(?i)jquery[.-]?([\d.]+)`)
+	// Check for jQuery version — require a real version number (major.minor), not
+	// a lone "jquery.min.js" reference without a version.
+	jqPattern := regexp.MustCompile(`(?i)jquery[-./]?v?(\d+\.\d+(?:\.\d+)?)`)
 	if matches := jqPattern.FindStringSubmatch(body); len(matches) > 1 {
 		disclosures = append(disclosures, "jQuery version: "+matches[1])
 	}

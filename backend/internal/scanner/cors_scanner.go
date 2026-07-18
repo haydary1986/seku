@@ -34,7 +34,7 @@ func (s *CORSScanner) checkCORSWildcard(url string) models.CheckResult {
 	}
 
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -63,17 +63,27 @@ func (s *CORSScanner) checkCORSWildcard(url string) models.CheckResult {
 	defer resp.Body.Close()
 
 	acao := resp.Header.Get("Access-Control-Allow-Origin")
+	acac := resp.Header.Get("Access-Control-Allow-Credentials")
 
 	details := map[string]interface{}{
 		"access_control_allow_origin": acao,
 	}
 
 	if acao == "*" {
-		// Wildcard origin - problematic but less severe than reflecting arbitrary origins
-		check.Status = "warn"
-		check.Score = 375
-		check.Severity = "medium"
-		details["message"] = "CORS allows all origins (*) - may expose data to any domain"
+		if acac == "true" {
+			// Wildcard together with credentials is a critical misconfiguration
+			check.Status = "fail"
+			check.Score = 0
+			check.Severity = "critical"
+			details["message"] = "CORS allows all origins (*) together with credentials - critical vulnerability"
+		} else {
+			// Wildcard WITHOUT credentials is safe/recommended for public,
+			// non-credentialed assets
+			check.Status = "pass"
+			check.Score = 1000
+			check.Severity = "info"
+			details["message"] = "CORS allows all origins (*) without credentials - safe for public, non-credentialed assets"
+		}
 	} else if acao == "https://cors-check.example.com" {
 		// Reflects arbitrary origins - critical vulnerability
 		check.Status = "fail"
@@ -106,7 +116,7 @@ func (s *CORSScanner) checkCORSCredentials(url string) models.CheckResult {
 	}
 
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -149,11 +159,12 @@ func (s *CORSScanner) checkCORSCredentials(url string) models.CheckResult {
 		check.Severity = "critical"
 		details["message"] = "CORS allows credentials with wildcard/reflected origin - critical vulnerability"
 	} else if acac == "true" && acao != "" {
-		// Credentials allowed with a specific origin - worth reviewing
-		check.Status = "warn"
-		check.Score = 575
-		check.Severity = "medium"
-		details["message"] = "CORS allows credentials - ensure origins are properly restricted"
+		// Credentials allowed for a single specific (non-wildcard, non-reflected)
+		// origin - this is the correct secure pattern
+		check.Status = "pass"
+		check.Score = 1000
+		check.Severity = "info"
+		details["message"] = "CORS allows credentials for a single specific origin - correct secure pattern"
 	} else if acac == "true" && acao == "" {
 		// Credentials header present but no origin reflected
 		check.Status = "warn"

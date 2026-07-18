@@ -45,7 +45,7 @@ func (s *ThreatIntelScanner) checkCryptojacking(url string) models.CheckResult {
 	}
 
 	client := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout:   15 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -65,76 +65,39 @@ func (s *ThreatIntelScanner) checkCryptojacking(url string) models.CheckResult {
 
 	threats := []string{}
 
-	// WebWorker crypto mining
-	workerPatterns := []struct {
-		pattern string
-		name    string
-	}{
-		{"new worker", "WebWorker instantiation (potential mining worker)"},
-		{"importscripts", "Worker importScripts (may load mining script)"},
-		{"webassembly.instantiate", "WebAssembly instantiation (potential WASM miner)"},
-		{"webassembly.compile", "WebAssembly compilation"},
-		{"crypto.subtle", "Web Crypto API usage"},
-		{"sharedarraybuffer", "SharedArrayBuffer (used by advanced miners)"},
+	// Require an ACTUAL miner signature. Generic JS APIs (WebWorker, WASM,
+	// crypto.subtle) plus common words (mine/hash/block/pool) fire on ordinary
+	// minified bundles, so those heuristics were removed. Only unambiguous
+	// known-miner scripts/domains and a real stratum WebSocket count.
+	minerSignatures := []string{
+		"coinhive", "coin-hive", "cryptonight", "webminepool",
+		"crypto-loot", "cryptoloot", "coinimp", "jsecoin",
+		"minero.cc", "cryptonoter", "deepminer", "minexmr", "webmine.pro",
 	}
-
-	for _, wp := range workerPatterns {
-		if strings.Contains(bodyLower, wp.pattern) {
-			// Check context - these are legitimate APIs, so look for mining-specific context
-			idx := strings.Index(bodyLower, wp.pattern)
-			start := idx - 100
-			if start < 0 {
-				start = 0
-			}
-			end := idx + len(wp.pattern) + 100
-			if end > len(bodyLower) {
-				end = len(bodyLower)
-			}
-			context := bodyLower[start:end]
-
-			// Only flag if mining-related keywords are nearby
-			miningKeywords := []string{"mine", "hash", "nonce", "block", "stratum", "pool", "monero", "xmr", "cryptonight"}
-			for _, kw := range miningKeywords {
-				if strings.Contains(context, kw) {
-					threats = append(threats, fmt.Sprintf("%s (near '%s')", wp.name, kw))
-					break
-				}
-			}
+	for _, sig := range minerSignatures {
+		if strings.Contains(bodyLower, sig) {
+			threats = append(threats, "Known miner signature: "+sig)
 		}
 	}
 
-	// High CPU indicators in meta/headers
-	if strings.Contains(bodyLower, "cpu") && strings.Contains(bodyLower, "throttle") {
-		threats = append(threats, "CPU throttle references found (mining control)")
-	}
-
-	// Known cryptojacking WebSocket patterns
-	wsPattern := regexp.MustCompile(`(?i)wss?://[^"'\s]*(mine|pool|hash|stratum|xmr|monero)[^"'\s]*`)
-	if matches := wsPattern.FindAllString(bodyLower, -1); len(matches) > 0 {
-		for _, m := range matches {
-			threats = append(threats, "Mining WebSocket: "+m)
-		}
+	// Real mining WebSocket / stratum handshake to a mining pool endpoint.
+	wsPattern := regexp.MustCompile(`(?i)wss?://[^"'\s]*(stratum|xmr|monero|cryptonight|minexmr|coinhive|nanopool|minergate)[^"'\s]*`)
+	for _, m := range wsPattern.FindAllString(bodyLower, -1) {
+		threats = append(threats, "Mining WebSocket: "+m)
 	}
 
 	if len(threats) == 0 {
 		check.Score = 1000
 		check.Status = "pass"
 		check.Severity = "info"
-		check.Details = toJSON(map[string]string{"message": "No cryptojacking indicators detected"})
-	} else if len(threats) >= 3 {
+		check.Details = toJSON(map[string]string{"message": "No cryptojacking miner signatures detected"})
+	} else {
+		// The remaining signatures are unambiguous — any hit is a real finding.
 		check.Score = 0
 		check.Status = "fail"
 		check.Severity = "critical"
 		check.Details = toJSON(map[string]interface{}{
-			"message": fmt.Sprintf("Strong cryptojacking indicators: %d", len(threats)),
-			"threats": threats,
-		})
-	} else {
-		check.Score = 300
-		check.Status = "fail"
-		check.Severity = "high"
-		check.Details = toJSON(map[string]interface{}{
-			"message": fmt.Sprintf("Possible cryptojacking indicators: %d", len(threats)),
+			"message": fmt.Sprintf("Cryptojacking miner signature(s) detected: %d", len(threats)),
 			"threats": threats,
 		})
 	}
@@ -151,7 +114,7 @@ func (s *ThreatIntelScanner) checkC2Callbacks(url string) models.CheckResult {
 	}
 
 	client := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout:   15 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -194,25 +157,23 @@ func (s *ThreatIntelScanner) checkC2Callbacks(url string) models.CheckResult {
 		}
 	}
 
-	// Known C2 framework indicators
+	// Known-malicious C2 framework indicators only. Generic filenames
+	// (upload.php, connect.php, beacon.js, cmd.php, shell.php) and the standard
+	// Let's Encrypt path (/.well-known/acme-challenge/) were removed: they are
+	// benign on ordinary sites and produced false positives.
 	c2Frameworks := []struct {
 		indicator string
 		name      string
 	}{
 		{"cobaltstrike", "Cobalt Strike beacon"},
 		{"meterpreter", "Meterpreter payload"},
-		{"empire", "PowerShell Empire"},
-		{"/.well-known/acme-challenge/", "Suspicious ACME challenge abuse"},
-		{"beacon.js", "C2 Beacon script"},
-		{"shell.php", "PHP Shell reference"},
-		{"cmd.php", "Command execution script"},
-		{"upload.php", "File upload script"},
-		{"connect.php", "Connection script"},
 	}
 
+	frameworkHit := false
 	for _, fw := range c2Frameworks {
 		if strings.Contains(bodyLower, fw.indicator) {
 			threats = append(threats, "C2 framework indicator: "+fw.name)
+			frameworkHit = true
 		}
 	}
 
@@ -222,25 +183,30 @@ func (s *ThreatIntelScanner) checkC2Callbacks(url string) models.CheckResult {
 		threats = append(threats, fmt.Sprintf("Data exfiltration pattern detected: %d instances", len(matches)))
 	}
 
-	if len(threats) == 0 {
+	switch {
+	case len(threats) == 0:
 		check.Score = 1000
 		check.Status = "pass"
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{"message": "No C2 communication indicators detected"})
-	} else if len(threats) >= 3 {
+	case frameworkHit || len(threats) >= 3:
+		// A known-malicious framework signature, or several corroborating
+		// heuristic indicators, is a real finding.
 		check.Score = 0
 		check.Status = "fail"
 		check.Severity = "critical"
 		check.Details = toJSON(map[string]interface{}{
-			"message": fmt.Sprintf("Multiple C2 communication indicators: %d", len(threats)),
+			"message": fmt.Sprintf("C2 communication indicators (high confidence): %d", len(threats)),
 			"threats": threats,
 		})
-	} else {
-		check.Score = 200
-		check.Status = "fail"
-		check.Severity = "high"
+	default:
+		// One or two heuristic-only indicators (e.g. a fetch to a raw IP) are
+		// not sufficient evidence of C2 — report informationally, do not fail.
+		check.Score = 800
+		check.Status = "pass"
+		check.Severity = "low"
 		check.Details = toJSON(map[string]interface{}{
-			"message": fmt.Sprintf("C2 communication indicators found: %d", len(threats)),
+			"message": fmt.Sprintf("Low-confidence heuristic indicator(s), not treated as C2: %d", len(threats)),
 			"threats": threats,
 		})
 	}
@@ -288,6 +254,10 @@ func (s *ThreatIntelScanner) checkBlacklists(host string) models.CheckResult {
 	reversed := parts[3] + "." + parts[2] + "." + parts[1] + "." + parts[0]
 
 	// Check against major DNS blacklists
+	// Range-based lists were removed: dnsbl-1.uceprotect.net (UCEPROTECT L1) and
+	// the SORBS lists (dnsbl.sorbs.net / spam.dnsbl.sorbs.net) list whole ranges
+	// / neighbouring IPs, which false-positives on shared or institutional
+	// hosting. Only precise, reputable lists remain.
 	blacklists := []struct {
 		dnsbl string
 		name  string
@@ -295,10 +265,7 @@ func (s *ThreatIntelScanner) checkBlacklists(host string) models.CheckResult {
 		{"zen.spamhaus.org", "Spamhaus ZEN"},
 		{"bl.spamcop.net", "SpamCop"},
 		{"b.barracudacentral.org", "Barracuda"},
-		{"dnsbl.sorbs.net", "SORBS"},
-		{"spam.dnsbl.sorbs.net", "SORBS Spam"},
 		{"cbl.abuseat.org", "CBL (Composite Blocking List)"},
-		{"dnsbl-1.uceprotect.net", "UCEPROTECT Level 1"},
 		{"psbl.surriel.com", "PSBL"},
 	}
 
@@ -332,27 +299,36 @@ func (s *ThreatIntelScanner) checkBlacklists(host string) models.CheckResult {
 	}
 
 	details := map[string]interface{}{
-		"ip":               ip,
+		"ip":                 ip,
 		"blacklists_checked": checked,
-		"blacklists_listed": len(listed),
+		"blacklists_listed":  len(listed),
 	}
 
-	if len(listed) == 0 {
+	switch {
+	case len(listed) == 0:
 		check.Score = 1000
 		check.Status = "pass"
 		check.Severity = "info"
 		details["message"] = fmt.Sprintf("Not listed on any of %d checked blacklists", checked)
-	} else if len(listed) >= 3 {
+	case len(listed) == 1:
+		// A single hit is low-confidence (possible transient/neighbour noise) —
+		// report it but do not fail on it.
+		check.Score = 700
+		check.Status = "warn"
+		check.Severity = "low"
+		details["message"] = fmt.Sprintf("Listed on 1 of %d blacklists (single low-confidence hit)", checked)
+		details["listed_on"] = listed
+	case len(listed) >= 3:
 		check.Score = 50
 		check.Status = "fail"
 		check.Severity = "critical"
 		details["message"] = fmt.Sprintf("Listed on %d blacklists (out of %d checked)", len(listed), checked)
 		details["listed_on"] = listed
-	} else if len(listed) >= 1 {
-		check.Score = 350
+	default: // exactly 2 independent reputable-list hits
+		check.Score = 300
 		check.Status = "fail"
 		check.Severity = "high"
-		details["message"] = fmt.Sprintf("Listed on %d blacklist(s)", len(listed))
+		details["message"] = fmt.Sprintf("Listed on %d independent blacklists", len(listed))
 		details["listed_on"] = listed
 	}
 
@@ -457,20 +433,23 @@ func (s *ThreatIntelScanner) checkDomainAge(host string) models.CheckResult {
 		}
 	}
 
-	// Calculate score based on indicators
-	score := 500.0 // Base score
+	// A resolvable domain is presumed legitimate: start from a neutral-good
+	// base. MX is NOT required for a website, and missing RDAP data (common for
+	// .iq / .edu.iq) must not dock the score — the age component is only applied
+	// when RDAP actually returns a registration date.
+	score := 900.0
 	indicators := []string{}
 
 	if hasMX {
-		score += 100
+		score += 30
 		indicators = append(indicators, "Has MX records (email configured)")
 	}
 	if hasNS {
-		score += 50
+		score += 30
 		indicators = append(indicators, fmt.Sprintf("Has NS records (%d nameservers)", len(ns)))
 	}
 	if hasTXT {
-		score += 50
+		score += 40
 		indicators = append(indicators, fmt.Sprintf("Has TXT records (%d records - SPF/DKIM/etc.)", txtCount))
 	}
 	if domainAge != "" {
@@ -478,19 +457,23 @@ func (s *ThreatIntelScanner) checkDomainAge(host string) models.CheckResult {
 		t, err := time.Parse(time.RFC3339, domainAge)
 		if err == nil {
 			years := time.Since(t).Hours() / 24 / 365
-			if years >= 5 {
-				score += 250
+			switch {
+			case years >= 5:
+				score += 100
 				indicators = append(indicators, fmt.Sprintf("Domain registered: %s (%.0f years - well established)", domainAge[:10], years))
-			} else if years >= 2 {
-				score += 150
-				indicators = append(indicators, fmt.Sprintf("Domain registered: %s (%.0f years)", domainAge[:10], years))
-			} else if years >= 1 {
+			case years >= 2:
 				score += 50
+				indicators = append(indicators, fmt.Sprintf("Domain registered: %s (%.0f years)", domainAge[:10], years))
+			case years >= 1:
 				indicators = append(indicators, fmt.Sprintf("Domain registered: %s (%.0f year)", domainAge[:10], years))
-			} else {
+			default:
+				// Only a genuinely new domain (RDAP-confirmed) is a negative.
+				score -= 200
 				indicators = append(indicators, fmt.Sprintf("Domain registered: %s (less than 1 year - new domain)", domainAge[:10]))
 			}
 		}
+	} else {
+		indicators = append(indicators, "Registration date unavailable via RDAP (common for .iq/.edu.iq) - treated as neutral")
 	}
 	if registrar != "" {
 		indicators = append(indicators, "Registrar: "+registrar)
@@ -498,6 +481,9 @@ func (s *ThreatIntelScanner) checkDomainAge(host string) models.CheckResult {
 
 	if score > 1000 {
 		score = 1000
+	}
+	if score < 0 {
+		score = 0
 	}
 
 	check.Score = score

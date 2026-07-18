@@ -3,6 +3,7 @@ package scanner
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -188,6 +189,15 @@ func (s *BackupFilesScanner) Scan(url string) []models.CheckResult {
 				return
 			}
 
+			// Raw-file-typed paths (.sql/.zip/.tar.gz/.bak/.env/.php config): a real
+			// dump/archive/config is never an HTML document, and where a positive
+			// signature is known it must be present. This rejects soft-404s that
+			// serve the site's normal page with a 200/206 status.
+			if typed, confirmed := backupRawFileConfirmed(p.path, body); typed && !confirmed {
+				results <- backupCheckResult{path: p, found: false}
+				return
+			}
+
 			// If mustContain is set, require match
 			if p.mustContain != "" && !strings.Contains(body, p.mustContain) {
 				results <- backupCheckResult{path: p, found: false}
@@ -316,4 +326,50 @@ func statusFromSeverity(sev string) string {
 		return "warn"
 	}
 	return "pass"
+}
+
+// backupEnvKeyRe matches an UPPERCASE environment-variable assignment line.
+var backupEnvKeyRe = regexp.MustCompile(`(?m)^\s*[A-Z][A-Z0-9_]*\s*=`)
+
+// backupRawFileConfirmed decides whether a raw-file-typed path genuinely serves
+// file content (SQL dump, archive, .env, PHP/config backup) rather than a
+// soft-404 HTML page returned with a 200/206 status. It returns (typed,
+// confirmed): typed is true for recognized raw-file extensions, and confirmed is
+// true when the body is not HTML and carries the expected signature (where one is
+// defined). Non-raw paths return typed=false and keep their existing handling.
+func backupRawFileConfirmed(path, body string) (typed bool, confirmed bool) {
+	p := strings.ToLower(path)
+	lower := strings.ToLower(body)
+	switch {
+	case strings.HasSuffix(p, ".zip"):
+		// ZIP local file header magic bytes.
+		return true, strings.HasPrefix(body, "PK\x03\x04")
+	case strings.HasSuffix(p, ".sql"):
+		if bodyLooksLikeHTML(body) {
+			return true, false
+		}
+		return true, strings.Contains(lower, "insert into") ||
+			strings.Contains(lower, "create table") ||
+			strings.Contains(lower, "mysqldump") ||
+			strings.Contains(lower, "-- mysql dump")
+	case strings.Contains(p, ".env"):
+		if bodyLooksLikeHTML(body) {
+			return true, false
+		}
+		return true, backupEnvKeyRe.MatchString(body)
+	case strings.HasSuffix(p, ".php.bak") || strings.HasSuffix(p, ".php~") ||
+		strings.HasSuffix(p, ".php.old") || strings.HasSuffix(p, ".bak"):
+		if bodyLooksLikeHTML(body) {
+			return true, false
+		}
+		return true, strings.Contains(lower, "<?php") ||
+			strings.Contains(lower, "db_password") ||
+			strings.Contains(lower, "db_name")
+	case strings.HasSuffix(p, ".tar.gz") || strings.HasSuffix(p, ".gz") ||
+		strings.HasSuffix(p, ".tar") || strings.HasSuffix(p, ".rar"):
+		// Binary archives: can't match text signatures on a small sample, but a
+		// real archive is never served as an HTML document.
+		return true, !bodyLooksLikeHTML(body)
+	}
+	return false, false
 }

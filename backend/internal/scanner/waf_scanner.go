@@ -124,10 +124,12 @@ func (s *WAFScanner) detectWAF(targetURL string) models.CheckResult {
 		check.Severity = "info"
 		details["message"] = "Unknown WAF detected (blocked suspicious request)"
 	} else {
-		check.Status = "warn"
-		check.Score = 400
-		check.Severity = "medium"
-		details["message"] = "No WAF detected — website may be directly exposed to attacks"
+		// A WAF is optional defense-in-depth and many are header-invisible, so
+		// the absence of a detectable signature is not itself a vulnerability.
+		check.Status = "pass"
+		check.Score = 750
+		check.Severity = "low"
+		details["message"] = "No WAF signature detected (a WAF is optional defense-in-depth; many are header-invisible)"
 		details["recommendation"] = "Consider enabling a Web Application Firewall (Cloudflare, AWS WAF, or ModSecurity)"
 	}
 

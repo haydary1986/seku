@@ -24,7 +24,7 @@ func (s *MixedContentScanner) Scan(url string) []models.CheckResult {
 	var results []models.CheckResult
 
 	client := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout:   15 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -61,9 +61,13 @@ func (s *MixedContentScanner) checkMixedScripts(body string) models.CheckResult 
 		Weight:    3.0,
 	}
 
-	// Match http:// in src= or href= for scripts and CSS
-	scriptPattern := regexp.MustCompile(`(?i)(src|href)\s*=\s*["']http://[^"']+\.(js|css)["']`)
-	matches := scriptPattern.FindAllString(body, -1)
+	// src=http://...(js|css) is always an actively-loaded resource on the page.
+	srcPattern := regexp.MustCompile(`(?i)src\s*=\s*["']http://[^"']+\.(js|css)["']`)
+	// href=http://...css only counts as mixed content when it is a <link>
+	// (i.e. a loaded stylesheet). An <a> hyperlink or plain-text href to a
+	// .css/.js URL is NOT mixed content.
+	linkCSSPattern := regexp.MustCompile(`(?i)<link\b[^>]*\bhref\s*=\s*["']http://[^"']+\.css["'][^>]*>`)
+	matches := append(srcPattern.FindAllString(body, -1), linkCSSPattern.FindAllString(body, -1)...)
 
 	if len(matches) > 5 {
 		// Many mixed active content resources - extremely dangerous
@@ -218,4 +222,3 @@ func (s *MixedContentScanner) checkMixedForms(body string) models.CheckResult {
 
 	return check
 }
-

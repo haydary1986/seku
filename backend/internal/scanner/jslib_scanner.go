@@ -24,7 +24,7 @@ func (s *JSLibScanner) Weight() float64  { return 6.0 }
 
 func (s *JSLibScanner) Scan(url string) []models.CheckResult {
 	client := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout:   15 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -71,21 +71,7 @@ func (s *JSLibScanner) checkjQuery(body string) models.CheckResult {
 
 	lower := strings.ToLower(body)
 
-	// Search for jQuery version patterns
-	patterns := []*regexp.Regexp{
-		regexp.MustCompile(`(?i)jquery[/.\-](\d+\.\d+\.\d+)`),
-		regexp.MustCompile(`(?i)jQuery v(\d+\.\d+\.\d+)`),
-		regexp.MustCompile(`(?i)jquery\.min\.js\?ver=(\d+\.\d+\.\d+)`),
-	}
-
-	var detectedVersion string
-	for _, pattern := range patterns {
-		matches := pattern.FindStringSubmatch(lower)
-		if len(matches) > 1 {
-			detectedVersion = matches[1]
-			break
-		}
-	}
+	detectedVersion := jslibDetectJQueryVersion(lower)
 
 	if detectedVersion == "" {
 		// jQuery not found - not using it is safe
@@ -153,6 +139,37 @@ func parseVersion(version string) (int, int, int) {
 	return major, minor, patch
 }
 
+// jslibDetectJQueryVersion extracts the *core* jQuery version from a lowercased
+// page body. It deliberately ignores jQuery UI, jQuery Migrate, and jQuery
+// plugins (separate products whose version numbers are NOT the core jQuery
+// version) and ignores WordPress "?ver=" query values (an unreliable version
+// source). Returns "" when no reliable core-jQuery version can be read.
+func jslibDetectJQueryVersion(lower string) string {
+	// 1. Core jQuery filename carrying a version, e.g. jquery-3.6.0.min.js,
+	//    jquery.3.6.0.js, jquery/3.6.0/. Reject jquery-ui / migrate / plugin refs.
+	fileRe := regexp.MustCompile(`jquery[/.\-](\d+\.\d+\.\d+)`)
+	for _, m := range fileRe.FindAllStringSubmatchIndex(lower, -1) {
+		ref := lower[m[0]:]
+		if len(ref) > 48 {
+			ref = ref[:48]
+		}
+		if strings.HasPrefix(ref, "jquery-ui") || strings.HasPrefix(ref, "jquery.ui") ||
+			strings.Contains(ref, "migrate") || strings.Contains(ref, "plugin") {
+			continue
+		}
+		return lower[m[2]:m[3]]
+	}
+
+	// 2. Authentic jQuery banner comment: "jQuery v3.6.0" or
+	//    "jQuery JavaScript Library v3.6.0". jQuery UI's banner is
+	//    "jQuery UI - vX" and is intentionally not matched here.
+	if m := regexp.MustCompile(`jquery(?: javascript library)? v(\d+\.\d+\.\d+)`).FindStringSubmatch(lower); len(m) > 1 {
+		return m[1]
+	}
+
+	return ""
+}
+
 // ---------------------------------------------------------------------------
 // Known Vulnerable Libraries  (Weight: 2.0)
 // ---------------------------------------------------------------------------
@@ -203,10 +220,17 @@ func (s *JSLibScanner) checkVulnerableLibraries(body string) models.CheckResult 
 		}
 	}
 
-	// Moment.js (any version) - deprecated, ReDoS vulnerabilities
-	momentRe := regexp.MustCompile(`(?i)(moment[/.\-v]\d+\.\d+|moment\.min\.js)`)
-	if momentRe.MatchString(lower) {
-		vulnerableLibs = append(vulnerableLibs, "Moment.js (deprecated, ReDoS vulnerabilities)")
+	// Moment.js - deprecation is NOT a vulnerability. Only flag a version with an
+	// actual CVE: ReDoS CVE-2022-31129 (<2.29.4) / path traversal CVE-2022-24785
+	// (<2.29.2). A bare moment.min.js with no parseable version is not flagged.
+	momentRe := regexp.MustCompile(`(?i)moment[/.\-v@](\d+)\.(\d+)\.(\d+)`)
+	if matches := momentRe.FindStringSubmatch(lower); len(matches) > 3 {
+		mMajor, _ := strconv.Atoi(matches[1])
+		mMinor, _ := strconv.Atoi(matches[2])
+		mPatch, _ := strconv.Atoi(matches[3])
+		if mMajor < 2 || (mMajor == 2 && mMinor < 29) || (mMajor == 2 && mMinor == 29 && mPatch < 4) {
+			vulnerableLibs = append(vulnerableLibs, fmt.Sprintf("Moment.js %d.%d.%d (ReDoS CVE-2022-31129)", mMajor, mMinor, mPatch))
+		}
 	}
 
 	// Vue.js < 2.5.0 - XSS vulnerability
@@ -331,9 +355,9 @@ func (s *JSLibScanner) checkInlineScripts(body string) models.CheckResult {
 	check.Status = statusFromScore(score)
 	check.Severity = severityFromScore(score)
 	check.Details = toJSON(map[string]interface{}{
-		"inline_script_count":  inlineCount,
-		"dangerous_patterns":   dangerousPatterns,
-		"message":              message,
+		"inline_script_count": inlineCount,
+		"dangerous_patterns":  dangerousPatterns,
+		"message":             message,
 	})
 	return check
 }

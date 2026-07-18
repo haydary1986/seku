@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,17 +27,17 @@ func (s *WordPressScanner) Weight() float64  { return 8.0 }
 
 // WordPress check weights
 const (
-	weightWPVersion     = 2.0
-	weightWPLogin       = 1.5
-	weightWPXMLRPC      = 1.5
-	weightWPRESTUsers   = 1.0
-	weightWPReadme      = 1.0
-	weightWPDebug       = 1.0
+	weightWPVersion   = 2.0
+	weightWPLogin     = 1.5
+	weightWPXMLRPC    = 1.5
+	weightWPRESTUsers = 1.0
+	weightWPReadme    = 1.0
+	weightWPDebug     = 1.0
 )
 
 func (s *WordPressScanner) newHTTPClient() *http.Client {
 	return &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
 		Transport: ScanTransport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 5 {
@@ -224,31 +225,34 @@ func (s *WordPressScanner) checkWordPressVersion(client *http.Client, baseURL st
 // scoreWordPressVersion returns a 0-1000 score based on the detected WP version.
 func scoreWordPressVersion(version string) float64 {
 	if version == "" {
-		return 600 // Unknown version — moderate risk
+		return 950 // Version hidden — this is GOOD (obscures the fingerprint)
 	}
 
 	parts := strings.SplitN(version, ".", 3)
 	if len(parts) < 2 {
-		return 600
+		return 900 // Could not parse — inconclusive, not a vulnerability
 	}
 
 	major, err1 := strconv.Atoi(parts[0])
 	minor, err2 := strconv.Atoi(parts[1])
 	if err1 != nil || err2 != nil {
-		return 600
+		return 900
 	}
 
+	// An older-but-still-supported branch is NOT a vulnerability on its own —
+	// it can be back-patched. Only an actual CVE match (handled by the deep
+	// scanner) should produce a fail. Keep everything here at low/info.
 	switch {
 	case major > 6 || (major == 6 && minor >= 8):
 		return 1000 // Latest (6.8+)
 	case major == 6 && minor == 7:
-		return 800 // One major version behind
+		return 900 // One branch behind — still supported
 	case major == 6 && minor == 6:
-		return 600 // Two behind
+		return 800 // Older but patchable (low)
 	case major == 6 && minor >= 0:
-		return 400 // Old (6.0-6.5)
+		return 750 // Older branch, can be back-patched (low)
 	default:
-		return 100 // Very old (<6.0)
+		return 700 // Old, but not matched to a specific CVE here (low)
 	}
 }
 
@@ -265,7 +269,7 @@ func (s *WordPressScanner) checkLoginPageExposure(client *http.Client, baseURL s
 
 	// Use a non-redirecting client to see the actual response
 	noRedirectClient := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
 		Transport: ScanTransport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
@@ -319,9 +323,9 @@ func (s *WordPressScanner) checkLoginPageExposure(client *http.Client, baseURL s
 				strings.Contains(bodyStr, "two-factor")
 
 			if hasProtection {
-				// Login page visible but protected by security plugin — acceptable
-				result.Score = 850
-				result.Status = statusFromScore(850)
+				// Login page visible but protected by security plugin — good
+				result.Score = 950
+				result.Status = statusFromScore(950)
 				result.Severity = "info"
 				result.Details = toJSON(map[string]string{
 					"path":        "/wp-login.php",
@@ -331,14 +335,15 @@ func (s *WordPressScanner) checkLoginPageExposure(client *http.Client, baseURL s
 				return result
 			}
 
-			// Login visible without any detected protection
-			result.Score = 600
-			result.Status = statusFromScore(600)
-			result.Severity = severityFromScore(600)
+			// An accessible /wp-login.php is DEFAULT WordPress, not a vulnerability.
+			// Report as a low-severity hardening tip, not a fail.
+			result.Score = 750
+			result.Status = statusFromScore(750)
+			result.Severity = severityFromScore(750)
 			result.Details = toJSON(map[string]string{
 				"path":        "/wp-login.php",
 				"status_code": fmt.Sprintf("%d", resp.StatusCode),
-				"message":     "Login page is publicly accessible. Consider adding brute-force protection (Wordfence, Limit Login Attempts, or reCAPTCHA)",
+				"message":     "Login page is publicly accessible (default WordPress behaviour). Hardening tip: add brute-force protection (Wordfence, Limit Login Attempts, or reCAPTCHA)",
 			})
 			return result
 		}
@@ -491,22 +496,38 @@ func (s *WordPressScanner) checkRESTAPIUserEnum(client *http.Client, baseURL str
 
 	if resp.StatusCode == 200 {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
-		bodyStr := strings.TrimSpace(string(body))
 
-		// Empty array or no user data
-		if bodyStr == "[]" || bodyStr == "" || bodyStr == "null" {
-			result.Score = 800
-			result.Status = statusFromScore(800)
-			result.Severity = severityFromScore(800)
+		// Only flag if the body is a NON-EMPTY JSON array of user objects.
+		// A 200 returning a JSON error object (e.g. {"code":"rest_..."}) or an
+		// empty array must NOT be flagged.
+		var users []map[string]interface{}
+		exposesUsers := false
+		if err := json.Unmarshal(body, &users); err == nil && len(users) > 0 {
+			for _, u := range users {
+				if _, ok := u["slug"]; ok {
+					exposesUsers = true
+					break
+				}
+				if _, ok := u["name"]; ok {
+					exposesUsers = true
+					break
+				}
+			}
+		}
+
+		if !exposesUsers {
+			result.Score = 900
+			result.Status = statusFromScore(900)
+			result.Severity = "info"
 			result.Details = toJSON(map[string]string{
 				"path":        "/wp-json/wp/v2/users",
 				"status_code": "200",
-				"message":     "REST API users endpoint returns empty data",
+				"message":     "REST API users endpoint does not disclose user objects (empty array or error response)",
 			})
 			return result
 		}
 
-		// Contains user data (exposes usernames)
+		// Contains a non-empty JSON array of user objects (exposes usernames)
 		result.Score = 200
 		result.Status = statusFromScore(200)
 		result.Severity = severityFromScore(200)

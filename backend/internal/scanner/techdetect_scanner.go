@@ -66,7 +66,7 @@ func (s *TechDetectScanner) Scan(url string) []models.CheckResult {
 
 func (s *TechDetectScanner) fetchPage(url string) techFetchResult {
 	client := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout:   15 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -202,9 +202,9 @@ var knownServers = []struct {
 }
 
 var knownCDNs = []struct {
-	header  string
-	value   string
-	name    string
+	header string
+	value  string
+	name   string
 }{
 	{"Server", "cloudflare", "Cloudflare"},
 	{"X-CDN", "", "CDN detected"},
@@ -351,7 +351,7 @@ type jsLibSignature struct {
 	name           string
 	bodyPatterns   []string
 	versionRegex   string
-	latestMajor    int // latest known major version (for outdated detection)
+	latestMajor    int    // latest known major version (for outdated detection)
 	outdatedBefore string // version string; anything below this is considered outdated
 }
 
@@ -365,31 +365,31 @@ var jsLibSignatures = []jsLibSignature{
 	{
 		"React",
 		[]string{"react.production.min.js", "react.development.js", "react@"},
-		`react(?:\.min)?\.js.*?([0-9]+\.[0-9]+\.[0-9]+)`,
+		`react[@/v.\-]([0-9]+\.[0-9]+\.[0-9]+)`,
 		18, "17.0.0",
 	},
 	{
 		"Vue.js",
 		[]string{"vue.min.js", "vue.global", "vue@", "vue.js"},
-		`vue(?:\.min)?\.js.*?([0-9]+\.[0-9]+\.[0-9]+)`,
+		`vue[@/v.\-]([0-9]+\.[0-9]+\.[0-9]+)`,
 		3, "2.7.0",
 	},
 	{
 		"Angular",
 		[]string{"angular.min.js", "angular.js", "@angular/core"},
-		`angular(?:\.min)?\.js.*?([0-9]+\.[0-9]+\.[0-9]+)`,
+		`angular[@/v.\-]([0-9]+\.[0-9]+\.[0-9]+)`,
 		17, "14.0.0",
 	},
 	{
 		"Lodash",
 		[]string{"lodash.min.js", "lodash.js", "lodash@"},
-		`lodash(?:\.min)?\.js.*?([0-9]+\.[0-9]+\.[0-9]+)`,
+		`lodash[@/v.\-]([0-9]+\.[0-9]+\.[0-9]+)`,
 		4, "4.17.21",
 	},
 	{
 		"Moment.js",
 		[]string{"moment.min.js", "moment.js", "moment@"},
-		`moment(?:\.min)?\.js.*?([0-9]+\.[0-9]+\.[0-9]+)`,
+		`moment[@/v.\-]([0-9]+\.[0-9]+\.[0-9]+)`,
 		2, "2.29.0",
 	},
 	{

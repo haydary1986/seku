@@ -20,7 +20,7 @@ func (s *CookieScanner) Weight() float64  { return 10.0 }
 
 func (s *CookieScanner) Scan(url string) []models.CheckResult {
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -62,20 +62,32 @@ func (s *CookieScanner) Scan(url string) []models.CheckResult {
 		score := 1000.0
 		issues := []string{}
 
-		// Missing Secure flag is a significant issue (allows cookie over HTTP)
+		// Missing Secure flag is a real issue (cookie can travel over HTTP)
 		if !cookie.Secure {
 			score -= 350
 			issues = append(issues, "Missing Secure flag")
 		}
+
+		// HttpOnly and SameSite are defense-in-depth. When the cookie is
+		// already Secure their absence is far less severe (SameSite defaults to
+		// Lax in modern browsers), so apply a reduced deduction that does not
+		// drag an otherwise-secure cookie down to a fail.
+		httpOnlyPenalty := 325.0
+		sameSitePenalty := 325.0
+		if cookie.Secure {
+			httpOnlyPenalty = 120.0
+			sameSitePenalty = 100.0
+		}
+
 		// Missing HttpOnly exposes cookie to JavaScript (XSS risk)
 		if !cookie.HttpOnly {
-			score -= 325
+			score -= httpOnlyPenalty
 			issues = append(issues, "Missing HttpOnly flag")
 		}
 		// Missing SameSite leaves cookie vulnerable to CSRF
 		if cookie.SameSite == http.SameSiteDefaultMode || cookie.SameSite == 0 {
-			score -= 325
-			issues = append(issues, "Missing SameSite attribute")
+			score -= sameSitePenalty
+			issues = append(issues, "Missing SameSite attribute (defaults to Lax in modern browsers)")
 		}
 
 		if score < 0 {

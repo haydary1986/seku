@@ -24,7 +24,7 @@ func (s *DDoSScanner) Scan(url string) []models.CheckResult {
 	var results []models.CheckResult
 
 	client := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout:   15 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -169,10 +169,12 @@ func (s *DDoSScanner) checkCDNProtection(resp *http.Response) models.CheckResult
 		check.Severity = severityFromScore(bestScore)
 		details["message"] = fmt.Sprintf("DDoS protection detected: %s", strings.Join(detected, ", "))
 	} else {
-		check.Status = "fail"
-		check.Score = 0
-		check.Severity = "critical"
-		details["message"] = "No CDN or DDoS protection service detected"
+		// Not using a commercial CDN is a valid architecture, not a security
+		// defect. Many institutions serve directly from their own infrastructure.
+		check.Status = "pass"
+		check.Score = 800
+		check.Severity = "info"
+		details["message"] = "No commercial CDN detected (serving from origin infrastructure is a valid architecture, not a vulnerability)"
 	}
 
 	check.Details = toJSON(details)
@@ -230,10 +232,13 @@ func (s *DDoSScanner) checkRateLimiting(resp *http.Response) models.CheckResult 
 		check.Severity = "low"
 		details["message"] = "Minimal rate limiting header detected"
 	} else {
-		check.Status = "warn"
-		check.Score = 250
-		check.Severity = "high"
-		details["message"] = "No rate limiting headers detected (may still be configured server-side)"
+		// Rate limiting is commonly enforced at the edge/proxy without
+		// advertising X-RateLimit headers. Absent headers are not proof of an
+		// unprotected endpoint.
+		check.Status = "pass"
+		check.Score = 750
+		check.Severity = "info"
+		details["message"] = "No rate limiting headers advertised (rate limiting is often enforced at the edge without X-RateLimit headers)"
 	}
 
 	check.Details = toJSON(details)
@@ -336,10 +341,12 @@ func (s *DDoSScanner) checkWAF(resp *http.Response, baseURL string, client *http
 		check.Severity = severityFromScore(wafScore)
 		details["message"] = "Web Application Firewall detected"
 	} else {
-		check.Status = "fail"
-		check.Score = 75
-		check.Severity = "critical"
-		details["message"] = "No Web Application Firewall detected"
+		// A WAF is optional defense-in-depth and many are header-invisible.
+		// Absence of visible WAF indicators is not a critical vulnerability.
+		check.Status = "pass"
+		check.Score = 700
+		check.Severity = "low"
+		details["message"] = "No Web Application Firewall signature detected (a WAF is optional defense-in-depth; many are header-invisible)"
 	}
 
 	check.Details = toJSON(details)

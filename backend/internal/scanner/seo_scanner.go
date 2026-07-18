@@ -27,7 +27,7 @@ func (s *SEOScanner) Scan(url string) []models.CheckResult {
 
 	// Fetch the page HTML once and reuse it for multiple checks
 	client := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout:   15 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -44,6 +44,25 @@ func (s *SEOScanner) Scan(url string) []models.CheckResult {
 		if readErr == nil {
 			html = string(body)
 		}
+	}
+
+	// When the page could not be fetched, emit a SINGLE error-status check for
+	// the HTML-dependent metrics instead of four separate "critical" results
+	// (which otherwise cascade into a misleading failing grade). The URL-based
+	// checks (sitemap, robots.txt) do their own fetches and still run.
+	if html == "" {
+		results = append(results, models.CheckResult{
+			Category:  s.Category(),
+			CheckName: "Page HTML Fetch",
+			Weight:    2.0,
+			Status:    "error",
+			Score:     0,
+			Severity:  "info",
+			Details:   toJSON(map[string]string{"message": "Could not fetch page HTML; on-page SEO checks skipped"}),
+		})
+		results = append(results, s.checkSitemap(targetURL))
+		results = append(results, s.checkRobotsTxt(targetURL, client))
+		return results
 	}
 
 	results = append(results, s.checkMetaTags(html))
@@ -223,6 +242,11 @@ func (s *SEOScanner) checkOpenGraphTags(html string) models.CheckResult {
 	if score > 1000 {
 		score = 1000
 	}
+	// Open Graph tags are OPTIONAL social metadata. Their absence is not a
+	// defect, so floor the score to low/info rather than letting it fail.
+	if score < 700 {
+		score = 700
+	}
 
 	findings["score_breakdown"] = "og:title(250) + og:description(250) + og:image(250) + og:url(125) + og:type(125)"
 	check.Score = score
@@ -249,7 +273,7 @@ func (s *SEOScanner) checkSitemap(baseURL string) models.CheckResult {
 	sitemapPaths := []string{"/sitemap.xml", "/sitemap_index.xml"}
 
 	noRedirectClient := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout:   15 * time.Second,
 		Transport: ScanTransport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
@@ -304,9 +328,11 @@ func (s *SEOScanner) checkSitemap(baseURL string) models.CheckResult {
 		}
 	}
 
-	// No sitemap found
-	check.Score = 200
-	findings["message"] = "No sitemap found at /sitemap.xml or /sitemap_index.xml"
+	// No sitemap found. A missing /sitemap.xml is common (it may be referenced
+	// via robots.txt or simply absent on small sites), so treat it as low/info
+	// rather than a failing result.
+	check.Score = 700
+	findings["message"] = "No sitemap found at /sitemap.xml or /sitemap_index.xml (may be referenced via robots.txt)"
 	check.Status = statusFromScore(check.Score)
 	check.Severity = severityFromScore(check.Score)
 	check.Details = toJSON(findings)

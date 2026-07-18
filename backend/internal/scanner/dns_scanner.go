@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -9,6 +10,17 @@ import (
 
 	"seku/internal/models"
 )
+
+// dnsRegistrableDomain drops a leading "www." label so that scanning
+// www.example.edu queries example.edu for SPF/DMARC/CAA records. It only strips
+// the "www." prefix to stay correct for multi-label public suffixes (e.g.
+// edu.iq), where naive label stripping would be wrong.
+func dnsRegistrableDomain(host string) string {
+	host = strings.ToLower(strings.TrimSpace(host))
+	host = strings.TrimSuffix(host, ".")
+	host = strings.TrimPrefix(host, "www.")
+	return host
+}
 
 type DNSScanner struct{}
 
@@ -38,15 +50,24 @@ func (s *DNSScanner) checkSPF(host string) models.CheckResult {
 		Weight:    3.0,
 	}
 
-	txtRecords, err := net.LookupTXT(host)
+	domain := dnsRegistrableDomain(host)
+	txtRecords, err := net.LookupTXT(domain)
 	if err != nil {
-		check.Status = "warn"
-		check.Score = 275
-		check.Severity = "high"
-		check.Details = toJSON(map[string]string{
-			"message": "Cannot lookup TXT records: " + err.Error(),
-		})
-		return check
+		var dnsErr *net.DNSError
+		if !errors.As(err, &dnsErr) || !dnsErr.IsNotFound {
+			// SERVFAIL / timeout / temporary failure: the lookup is
+			// inconclusive, not proof that SPF is missing.
+			check.Status = "pass"
+			check.Score = 800
+			check.Severity = "info"
+			check.Details = toJSON(map[string]string{
+				"message": "SPF lookup inconclusive (DNS error, not a confirmed absence): " + err.Error(),
+			})
+			return check
+		}
+		// NXDOMAIN / NODATA: genuinely no TXT records — fall through to the
+		// "no SPF record found" finding below.
+		txtRecords = nil
 	}
 
 	spfFound := false
@@ -110,16 +131,25 @@ func (s *DNSScanner) checkDMARC(host string) models.CheckResult {
 		Weight:    3.0,
 	}
 
-	dmarcHost := fmt.Sprintf("_dmarc.%s", host)
+	domain := dnsRegistrableDomain(host)
+	dmarcHost := fmt.Sprintf("_dmarc.%s", domain)
 	txtRecords, err := net.LookupTXT(dmarcHost)
 	if err != nil {
-		check.Status = "fail"
-		check.Score = 0
-		check.Severity = "critical"
-		check.Details = toJSON(map[string]string{
-			"message": "No DMARC record found - domain is vulnerable to email spoofing",
-		})
-		return check
+		var dnsErr *net.DNSError
+		if !errors.As(err, &dnsErr) || !dnsErr.IsNotFound {
+			// SERVFAIL / timeout / temporary failure: inconclusive, not proof
+			// that DMARC is missing.
+			check.Status = "pass"
+			check.Score = 800
+			check.Severity = "info"
+			check.Details = toJSON(map[string]string{
+				"message": "DMARC lookup inconclusive (DNS error, not a confirmed absence): " + err.Error(),
+			})
+			return check
+		}
+		// NXDOMAIN: the _dmarc record genuinely does not exist — fall through to
+		// the "no DMARC record found" finding below.
+		txtRecords = nil
 	}
 
 	dmarcFound := false
@@ -184,9 +214,7 @@ func (s *DNSScanner) checkCAA(host string) models.CheckResult {
 		Weight:    2.0,
 	}
 
-	// Use net.LookupTXT on a subdomain trick won't work for CAA
-	// Use exec to call dig for CAA records if available
-	// Fallback: check via DNS lookup of known CAA-related patterns
+	domain := dnsRegistrableDomain(host)
 	resolver := &net.Resolver{
 		PreferGo: true,
 		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
@@ -195,51 +223,29 @@ func (s *DNSScanner) checkCAA(host string) models.CheckResult {
 		},
 	}
 
-	// Try to resolve the domain first to verify DNS works
-	_, err := resolver.LookupHost(context.Background(), host)
-	if err != nil {
-		check.Status = "warn"
-		check.Score = 525
-		check.Severity = "medium"
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
+	defer cancel()
+
+	// Verify the domain resolves at all; if not, the check is inconclusive.
+	if _, err := resolver.LookupHost(ctx, domain); err != nil {
+		check.Status = "pass"
+		check.Score = 800
+		check.Severity = "info"
 		check.Details = toJSON(map[string]string{
-			"message": "Cannot resolve domain for CAA check",
+			"message": "CAA check inconclusive: domain did not resolve",
 		})
 		return check
 	}
 
-	// Check if NS records exist (indicates proper DNS setup)
-	ns, _ := net.LookupNS(host)
-	hasCloudflare := false
-	for _, n := range ns {
-		if strings.Contains(strings.ToLower(n.Host), "cloudflare") {
-			hasCloudflare = true
-			break
-		}
-	}
-
-	if hasCloudflare {
-		// Cloudflare automatically handles CAA and provides certificate management
-		check.Status = "pass"
-		check.Score = 925
-		check.Severity = "info"
-		check.Details = toJSON(map[string]string{
-			"message": "Domain uses Cloudflare DNS which provides automatic CAA management and certificate issuance control",
-		})
-	} else if len(ns) > 0 {
-		check.Status = "warn"
-		check.Score = 675
-		check.Severity = "low"
-		check.Details = toJSON(map[string]string{
-			"message": "DNS configured. Consider adding CAA records to restrict certificate issuance.",
-		})
-	} else {
-		check.Status = "warn"
-		check.Score = 525
-		check.Severity = "medium"
-		check.Details = toJSON(map[string]string{
-			"message": "Cannot verify CAA records. Consider adding CAA records.",
-		})
-	}
-
+	// The standard library resolver cannot query CAA records directly, and no
+	// DNS library is vendored. Absence of CAA is not a vulnerability — it is a
+	// low-severity best practice. The recommendation is independent of the DNS
+	// provider (do NOT pass/warn based on whether the nameserver is Cloudflare).
+	check.Status = "warn"
+	check.Score = 750
+	check.Severity = "low"
+	check.Details = toJSON(map[string]string{
+		"message": "Consider adding CAA records to restrict which certificate authorities may issue certificates for this domain.",
+	})
 	return check
 }

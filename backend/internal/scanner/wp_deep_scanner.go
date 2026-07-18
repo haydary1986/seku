@@ -668,14 +668,14 @@ func (s *WPDeepScanner) checkDefaultAdminUsername(client *http.Client, baseURL s
 
 func (s *WPDeepScanner) checkSecurityPlugin(client *http.Client, baseURL, homeBody string) models.CheckResult {
 	securityPlugins := map[string]string{
-		"wordfence":                      "Wordfence Security",
-		"better-wp-security":             "iThemes Security (legacy)",
-		"ithemes-security-pro":           "iThemes Security Pro",
-		"sucuri-scanner":                 "Sucuri Scanner",
+		"wordfence":                           "Wordfence Security",
+		"better-wp-security":                  "iThemes Security (legacy)",
+		"ithemes-security-pro":                "iThemes Security Pro",
+		"sucuri-scanner":                      "Sucuri Scanner",
 		"all-in-one-wp-security-and-firewall": "All In One WP Security",
-		"wp-cerber":                      "WP Cerber Security",
-		"shield-security":                "Shield Security",
-		"defender-security":              "WP Defender",
+		"wp-cerber":                           "WP Cerber Security",
+		"shield-security":                     "Shield Security",
+		"defender-security":                   "WP Defender",
 	}
 
 	found := []string{}
@@ -707,20 +707,19 @@ func (s *WPDeepScanner) checkSecurityPlugin(client *http.Client, baseURL, homeBo
 		}
 	}
 
+	// A front-end asset was not found — but server-side security plugins
+	// (Wordfence, WAF-style plugins) do not expose front-end assets, so their
+	// absence here is NOT proof that no protection exists. Report as
+	// informational/inconclusive rather than a penalty.
 	return models.CheckResult{
 		Category:   s.Category(),
-		CheckName:  "No Security Plugin Detected",
-		Status:     "warn",
-		Score:      400,
+		CheckName:  "Security Plugin Detection Inconclusive",
+		Status:     "pass",
+		Score:      900,
 		Weight:     s.Weight(),
-		Severity:   "medium",
-		CWE:        "CWE-1188",
-		CWEName:    "Insecure Default Initialization of Resource",
-		OWASP:      "A05",
-		OWASPName:  "Security Misconfiguration",
-		Confidence: 70,
-		CVSSScore:  5.3,
-		Details:    "No major WordPress security plugin detected (Wordfence, iThemes, Sucuri, AIOWPS, WP Cerber, Shield, Defender).\n\nA security plugin provides essential protections: login brute-force lockout, malware scanning, file integrity monitoring, two-factor auth, and IP blocking. Strong recommendation: install Wordfence (free) at minimum.",
+		Severity:   "info",
+		Confidence: 40,
+		Details:    "No security-plugin front-end asset was found in the home page HTML. Note: server-side plugins such as Wordfence run invisibly and expose no front-end assets, so this is NOT evidence that the site is unprotected. Informational recommendation: confirm a security plugin (e.g. Wordfence) is installed for login lockout, malware scanning, and file integrity monitoring.",
 	}
 }
 
@@ -805,14 +804,17 @@ func (s *WPDeepScanner) checkLicenseLeaks(client *http.Client, baseURL string) m
 
 	exposed := []string{}
 	for _, l := range leaks {
-		req, _ := http.NewRequest("HEAD", baseURL+l.path, nil)
+		// Use GET (not HEAD) so we can verify the body content — a bare 200
+		// with no matching content is a false positive.
+		req, _ := http.NewRequest("GET", baseURL+l.path, nil)
 		req.Header.Set("User-Agent", "Mozilla/5.0")
 		resp, err := client.Do(req)
 		if err != nil {
 			continue
 		}
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 32*1024))
 		resp.Body.Close()
-		if resp.StatusCode == 200 {
+		if resp.StatusCode == 200 && s.confirmLicenseLeak(l.path, string(body)) {
 			exposed = append(exposed, fmt.Sprintf("%s (%s)", l.label, l.path))
 		}
 	}
@@ -844,6 +846,25 @@ func (s *WPDeepScanner) checkLicenseLeaks(client *http.Client, baseURL string) m
 		Confidence: 90,
 		CVSSScore:  3.7,
 		Details:    "Exposed:\n• " + strings.Join(exposed, "\n• ") + "\n\nThese files leak version info or directory contents. Block via .htaccess or nginx rules.",
+	}
+}
+
+// confirmLicenseLeak verifies that a 200 response body actually contains the
+// content expected for the given path, so a generic 200 (soft-404, redirect
+// landing page, empty file) is not counted as a real leak.
+func (s *WPDeepScanner) confirmLicenseLeak(path, body string) bool {
+	low := strings.ToLower(body)
+	switch {
+	case strings.Contains(path, "/wp-content/uploads/"):
+		// Only a genuine directory listing counts.
+		return strings.Contains(body, "Index of") || strings.Contains(low, "index of /")
+	case strings.HasSuffix(path, ".txt"):
+		// License/readme text files reveal the WordPress/GPL banner.
+		return strings.Contains(low, "wordpress") || strings.Contains(low, "gnu general public")
+	default:
+		// Install/upgrade admin scripts: require a WordPress marker to avoid
+		// flagging blank output or a redirect landing page.
+		return strings.Contains(low, "wordpress")
 	}
 }
 

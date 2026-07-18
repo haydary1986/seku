@@ -65,16 +65,19 @@ func (s *ZoneTransferScanner) checkZoneTransfer(domain string) models.CheckResul
 
 	details := map[string]interface{}{
 		"nameservers_checked": len(nsRecords),
-		"vulnerable_ns":      vulnerableNS,
-		"safe_ns":            safeNS,
+		"vulnerable_ns":       vulnerableNS,
+		"safe_ns":             safeNS,
 	}
 
 	if len(vulnerableNS) > 0 {
-		check.Status = "warn"
-		check.Score = 500
-		check.Severity = "medium"
-		details["message"] = fmt.Sprintf("%d nameserver(s) have TCP/53 open — potential zone transfer risk", len(vulnerableNS))
-		details["recommendation"] = "Restrict zone transfers (AXFR) to authorized secondary nameservers only"
+		// An open TCP/53 is normal: virtually every authoritative nameserver
+		// listens on TCP/53 to serve responses larger than 512 bytes. It is NOT
+		// evidence of an allowed AXFR. Without an actual zone-transfer attempt
+		// (no DNS library vendored), an open port alone is not a finding.
+		check.Status = "pass"
+		check.Score = 950
+		check.Severity = "info"
+		details["message"] = fmt.Sprintf("%d nameserver(s) accept TCP/53 (normal for authoritative NS; no AXFR was permitted/attempted)", len(vulnerableNS))
 	} else {
 		check.Status = "pass"
 		check.Score = MaxScore

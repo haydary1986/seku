@@ -162,6 +162,16 @@ func (s *HeaderScanner) checkCSP(headers http.Header) models.CheckResult {
 	lower := strings.ToLower(value)
 	hasUnsafeInline := strings.Contains(lower, "'unsafe-inline'")
 	hasUnsafeEval := strings.Contains(lower, "'unsafe-eval'")
+	// Per the CSP spec, browsers IGNORE 'unsafe-inline' whenever a nonce, a hash
+	// (sha256/384/512-), or 'strict-dynamic' is present. This is exactly the
+	// shape of Google's recommended strict CSP, so 'unsafe-inline' alongside them
+	// must not be penalized.
+	hasNonceHashOrStrictDynamic := strings.Contains(lower, "nonce-") ||
+		strings.Contains(lower, "sha256-") ||
+		strings.Contains(lower, "sha384-") ||
+		strings.Contains(lower, "sha512-") ||
+		strings.Contains(lower, "strict-dynamic")
+	penalizeUnsafeInline := hasUnsafeInline && !hasNonceHashOrStrictDynamic
 	tooPermissive := strings.Contains(lower, "default-src *") ||
 		strings.Contains(lower, "default-src *;") ||
 		strings.TrimSpace(lower) == "default-src *"
@@ -173,15 +183,18 @@ func (s *HeaderScanner) checkCSP(headers http.Header) models.CheckResult {
 	case tooPermissive:
 		score = 200
 		message = "CSP present but too permissive (default-src *)"
-	case hasUnsafeInline && hasUnsafeEval:
+	case penalizeUnsafeInline && hasUnsafeEval:
 		score = 400
 		message = "CSP present but uses both 'unsafe-inline' and 'unsafe-eval'"
-	case hasUnsafeInline && !hasUnsafeEval:
+	case penalizeUnsafeInline && !hasUnsafeEval:
 		score = 700
 		message = "CSP present with 'unsafe-inline' but no 'unsafe-eval'"
+	case hasUnsafeEval:
+		score = 700
+		message = "CSP present with 'unsafe-eval'"
 	default:
 		score = 1000
-		message = "CSP present with specific sources and no unsafe directives"
+		message = "CSP present with specific sources; nonce/hash/strict-dynamic neutralizes 'unsafe-inline'"
 	}
 
 	result.Score = score
