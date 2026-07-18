@@ -204,6 +204,15 @@ func (s *BackupFilesScanner) Scan(url string) []models.CheckResult {
 				return
 			}
 
+			// Catch-all soft-404 guard: a backup/dump/config file is not an HTML
+			// document. When no positive signature is required and the body is
+			// HTML, this is the site's normal page returned for a nonexistent path
+			// (common on WordPress/shared-cPanel origins that 200 everything).
+			if p.mustContain == "" && bodyLooksLikeHTML(body) {
+				results <- backupCheckResult{path: p, found: false}
+				return
+			}
+
 			results <- backupCheckResult{path: p, found: true, body: body}
 		}(p)
 	}

@@ -53,21 +53,45 @@ func TestComputeScores_CriticalFailCapsGrade(t *testing.T) {
 	}
 }
 
-// A confident HIGH failure (no critical) caps at C, not F.
-func TestComputeScores_HighFailCapsAtC(t *testing.T) {
+// A confident HIGH failure lowers the score via the weighted average but must
+// NOT hard-cap the grade — otherwise every site with a missing header collapses
+// to the same value and the ranking loses all variance.
+func TestComputeScores_HighFailDoesNotHardCap(t *testing.T) {
 	checks := []models.CheckResult{
 		chk("xss", "Reflected XSS Detection", "pass", 1000, 80),
 		chk("sqli", "SQL Injection Test", "pass", 1000, 70),
 		chk("ssl", "TLS Version", "pass", 1000, 100),
-		// one confident high failure:
-		chk("http_methods", "Dangerous HTTP Methods", "fail", 50, 95),
+		// one confident high failure (a missing header):
+		chk("headers", "HSTS", "fail", 0, 100),
 	}
 	r := ComputeScores(checks)
-	if r.Security > capHighFail {
-		t.Errorf("a confident high fail must cap at C (<=%d), got %.0f", capHighFail, r.Security)
+	if r.CapReason != "" {
+		t.Errorf("a high-severity fail must not cap; got cap %q", r.CapReason)
 	}
-	if g := SecurityGrade(r.Security); g != "C" {
-		t.Errorf("expected C, got %s (score %.0f)", g, r.Security)
+	// It should reduce the score below a clean site but not floor it to a fixed cap.
+	if r.Security < 700 {
+		t.Errorf("one high fail among strong checks should stay well above C, got %.0f", r.Security)
+	}
+}
+
+// Two sites that differ only in how many headers they miss must get DIFFERENT
+// scores (variance preserved) rather than both collapsing to one capped value.
+func TestComputeScores_HighFailsPreserveVariance(t *testing.T) {
+	base := []models.CheckResult{
+		chk("xss", "Reflected XSS Detection", "pass", 1000, 80),
+		chk("sqli", "SQL Injection Test", "pass", 1000, 70),
+		chk("ssl", "TLS Version", "pass", 1000, 100),
+	}
+	oneGap := append(append([]models.CheckResult{}, base...), chk("headers", "HSTS", "fail", 0, 100))
+	manyGaps := append(append([]models.CheckResult{}, base...),
+		chk("headers", "HSTS", "fail", 0, 100),
+		chk("cookies", "Cookie Security", "fail", 0, 100),
+		chk("cors", "CORS Wildcard Origin", "fail", 0, 100),
+	)
+	a := ComputeScores(oneGap).Security
+	b := ComputeScores(manyGaps).Security
+	if !(a > b) {
+		t.Errorf("more high-severity gaps must score lower (variance), got one-gap=%.0f many-gaps=%.0f", a, b)
 	}
 }
 

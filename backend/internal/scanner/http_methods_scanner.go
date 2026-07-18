@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -31,6 +32,13 @@ func (s *HTTPMethodsScanner) Scan(url string) []models.CheckResult {
 
 	targetURL := ensureHTTPS(url)
 
+	// GET baseline. Many origins (WordPress/Apache/cPanel) serve the homepage with
+	// a 200 for ANY method without processing it — so a 2xx alone is a false
+	// positive. We only flag a method whose response shows it was actually handled
+	// (201/204, a substantially different body, or a TRACE that echoes the request).
+	getBody, _, _ := fetchLowerBody(client, targetURL, 64*1024)
+	getLen := len(getBody)
+
 	// Check dangerous HTTP methods
 	dangerousMethods := []string{"TRACE", "DELETE", "PUT", "PATCH"}
 	allowedDangerous := []string{}
@@ -44,14 +52,10 @@ func (s *HTTPMethodsScanner) Scan(url string) []models.CheckResult {
 		if err != nil {
 			continue
 		}
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
 		resp.Body.Close()
 
-		// A method is only "enabled" if the server actually PROCESSES it — i.e.
-		// returns a 2xx. A 3xx redirect (canonical/HTTPS), or a 4xx (400/404/405/
-		// 501/403) means the method is not handled. Treating any non-405/501/403
-		// as "enabled" produced false positives on CDN/redirect-everything sites
-		// that answer PUT/DELETE with 301/200.
-		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		if httpMethodProcessed(method, resp.StatusCode, len(body), getLen, string(body)) {
 			allowedDangerous = append(allowedDangerous, fmt.Sprintf("%s (HTTP %d)", method, resp.StatusCode))
 		}
 	}

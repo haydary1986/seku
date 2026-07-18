@@ -31,6 +31,10 @@ func (s *DirectoryScanner) Scan(url string) []models.CheckResult {
 
 	baseURL := ensureHTTPS(url)
 
+	// Soft-404 baseline: many sites (and shared cPanel hosts) answer 200 with the
+	// homepage for ANY path. If so, a 200 on a "sensitive" path proves nothing.
+	soft404Prefix, isSoft404 := directorySoft404Prefix(client, baseURL)
+
 	// Common sensitive paths to check
 	sensitivePaths := []struct {
 		path     string
@@ -136,6 +140,15 @@ func (s *DirectoryScanner) Scan(url string) []models.CheckResult {
 						"path":    sp.path,
 						"message": fmt.Sprintf("Path returned 200 but content does not match the expected sensitive-file signature (likely soft-404): %s", sp.path),
 					})
+				} else if isSoft404 && directoryPrefixMatches(bodyStr, soft404Prefix) {
+					// Same page a nonexistent path returns → soft-404, not exposure.
+					check.Status = "pass"
+					check.Score = 900
+					check.Severity = "info"
+					check.Details = toJSON(map[string]string{
+						"path":    sp.path,
+						"message": fmt.Sprintf("Path returned 200 but is a soft-404 (identical to a nonexistent path): %s", sp.path),
+					})
 				} else {
 					// Truly sensitive path accessible without protection
 					var score float64
@@ -226,4 +239,39 @@ func directoryContentConfirmsExposure(path, body string) (typed bool, confirmed 
 		return true, !bodyLooksLikeHTML(body)
 	}
 	return false, false
+}
+
+// directorySoft404Prefix probes a random, certainly-nonexistent path and returns
+// the lowercased first ~1KB of its body if the site answers 200 (i.e. it serves
+// soft-404s). The prefix is used to recognise the same page returned for a
+// "sensitive" path.
+func directorySoft404Prefix(client *http.Client, baseURL string) (string, bool) {
+	u := strings.TrimRight(baseURL, "/") + "/vscan-404-probe-a8f3x9q2z7t1/"
+	resp, err := client.Get(u)
+	if err != nil {
+		return "", false
+	}
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+	resp.Body.Close()
+	if resp.StatusCode == 200 && len(body) > 0 {
+		return strings.ToLower(string(body)), true
+	}
+	return "", false
+}
+
+// directoryPrefixMatches reports whether two response bodies begin with the same
+// content (the static <head> of a homepage), i.e. a sensitive path returned the
+// same soft-404 page as a nonexistent path.
+func directoryPrefixMatches(body, soft404 string) bool {
+	n := 300
+	if len(body) < n {
+		n = len(body)
+	}
+	if len(soft404) < n {
+		n = len(soft404)
+	}
+	if n < 50 {
+		return false
+	}
+	return strings.EqualFold(body[:n], soft404[:n])
 }

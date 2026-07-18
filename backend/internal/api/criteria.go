@@ -12,7 +12,7 @@ func GetScanCriteria(c *fiber.Ctx) error {
 			"max_score":   1000,
 			"description": "Evidence-based website security assessment aligned with CVSS v3.1 severity bands, OWASP Risk Rating (Likelihood × Impact), and the grade-cap practice of SSL Labs and Mozilla Observatory. Security and quality are scored SEPARATELY: the headline Security Score reflects only security domains, while performance, SEO, content and hosting form an independent Quality Score — a fast or well-cached site is never rewarded on security.",
 
-			"scoring_formula": "Two-level aggregation. (1) categoryScore = mean(check_score) within each category. (2) SecurityScore = SUM(categoryScore × severityWeight) / SUM(severityWeight) over security domains only. Severity weights derive from intrinsic risk class — Critical=10, High=6, Medium=3, Low=1 — NOT from the outcome. A confident failure (confidence ≥ 70) in a Critical domain caps the grade at F; in a High domain caps it at C, so a vulnerable site cannot earn an A by passing many minor checks.",
+			"scoring_formula": "Two-level aggregation. (1) categoryScore = mean(check_score) within each category. (2) SecurityScore = SUM(categoryScore × severityWeight) / SUM(severityWeight) over security domains only. Severity weights derive from intrinsic risk class — Critical=10, High=6, Medium=3, Low=1 — NOT from the outcome. A confident failure (confidence ≥ 70) in a Critical domain (confirmed exploitable issue) caps the grade at F. High-severity hardening gaps reduce the weighted score but do not cap the grade, preserving genuine variance across sites.",
 
 			"score_types": []fiber.Map{
 				{"id": "security", "label": "Security Score", "description": "Headline 0-1000 score over security domains only, after severity caps."},
@@ -27,8 +27,8 @@ func GetScanCriteria(c *fiber.Ctx) error {
 			},
 
 			"grade_caps": []fiber.Map{
-				{"trigger": "Confident failure (confidence ≥ 70) in a Critical domain", "cap_grade": "F", "cap_score": 490},
-				{"trigger": "Confident failure (confidence ≥ 70) in a High domain (no Critical)", "cap_grade": "C", "cap_score": 690},
+				{"trigger": "Confident failure (confidence ≥ 70) in a Critical domain — a confirmed, exploitable issue (injection, exposed secrets/backups, malware)", "cap_grade": "F", "cap_score": 490},
+				{"note": "High-severity hardening gaps (e.g. a missing HSTS/CSP header) reduce the weighted score but do NOT cap the grade — capping every such site to one value would collapse the ranking and remove genuine variance between sites."},
 				{"note": "Findings below 70% confidence are advisory and never cap the grade (OWASP likelihood gate)."},
 			},
 

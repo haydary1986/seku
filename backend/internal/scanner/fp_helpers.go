@@ -56,6 +56,53 @@ func signaturesIn(body string, sigs []string) map[string]bool {
 	return found
 }
 
+// httpMethodProcessed decides whether a dangerous HTTP method was actually
+// handled by the server, versus the server simply serving its normal page in
+// response to any method (a soft response that is NOT a vulnerability — e.g. a
+// WordPress/Apache origin that returns 200 + the homepage for PUT/DELETE).
+func httpMethodProcessed(method string, status, bodyLen, getLen int, body string) bool {
+	// Explicit accepted/created responses indicate real processing.
+	switch status {
+	case 201, 204, 207:
+		return true
+	}
+	if method == "TRACE" {
+		// TRACE is only dangerous (Cross-Site Tracing) if it echoes the request.
+		return status == 200 && strings.Contains(strings.ToUpper(body), "TRACE /")
+	}
+	// A 2xx that returns essentially the same page as GET means the method was
+	// ignored; only flag when the body differs substantially (method changed state).
+	if status >= 200 && status < 300 && getLen > 0 {
+		return float64(absInt(bodyLen-getLen))/float64(getLen) > 0.30
+	}
+	return false
+}
+
+// soft404Baseline probes a random, certainly-nonexistent path. If the site
+// answers 200 with a body, it serves soft-404s (200 for everything) — so a 200
+// on a "sensitive" path proves nothing. Returns (baselineBodyLen, isSoft404).
+func soft404Baseline(client *http.Client, baseURL string) (int, bool) {
+	u := strings.TrimRight(baseURL, "/") + "/vscan-404-probe-a8f3x9q2z7t1/"
+	body, status, ok := fetchLowerBody(client, u, 64*1024)
+	if ok && status == 200 && len(body) > 0 {
+		return len(body), true
+	}
+	return 0, false
+}
+
+// similarSize reports whether two body lengths are within 15% of each other —
+// used to recognise a soft-404 response returned for a sensitive path.
+func similarSize(a, b int) bool {
+	if a == 0 && b == 0 {
+		return true
+	}
+	base := a
+	if b > base {
+		base = b
+	}
+	return float64(absInt(a-b))/float64(base) < 0.15
+}
+
 // absInt returns the absolute value of an int.
 func absInt(n int) int {
 	if n < 0 {

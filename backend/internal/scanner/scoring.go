@@ -108,11 +108,18 @@ var categorySeverity = map[string]domainSeverity{
 	"tech_stack":  sevNone,
 }
 
-// Grade caps (aligned to the grade bands: A+≥900 A≥800 B≥700 C≥600 D≥500 F<500).
-// A confident fail in a high/critical domain prevents an undeserved top grade.
+// Grade cap. A confident failure in a CRITICAL domain — a confirmed, exploitable
+// issue (injection, exposed secrets/backups, malware) — floors the grade at F, so
+// a genuinely compromised site cannot earn a passing grade regardless of how many
+// minor checks it passes (SSL Labs / Mozilla Observatory practice).
+//
+// There is deliberately NO cap for High-severity domains. Hardening gaps such as a
+// missing HSTS/CSP header are real and reduce the weighted score, but capping every
+// such site to a single value (C) collapses the whole distribution to a few discrete
+// scores and destroys the ranking. High-severity issues are therefore reflected
+// through the weighted average, which preserves genuine variance between sites.
 const (
 	capCriticalFail = 490 // any confident critical-domain failure → F
-	capHighFail     = 690 // any confident high-domain failure (no critical) → C
 	capConfidence   = 70  // OWASP likelihood gate: below this a finding is advisory only
 )
 
@@ -149,8 +156,8 @@ func ComputeScores(checks []models.CheckResult) ScoreResult {
 	secCat := map[string]*catAgg{}
 	qualCat := map[string]*catAgg{}
 
-	critFail, highFail := false, false
-	var critReason, highReason string
+	critFail := false
+	var critReason string
 
 	for _, c := range checks {
 		if !scoredStatus(c.Status) {
@@ -181,19 +188,13 @@ func ComputeScores(checks []models.CheckResult) ScoreResult {
 		a.sum += c.Score
 		a.count++
 
-		// Cap detection: a confident failure in a high/critical domain.
-		if c.Status == "fail" && confidenceOf(c) >= capConfidence {
-			switch sev {
-			case sevCritical:
-				critFail = true
-				if critReason == "" {
-					critReason = c.CheckName
-				}
-			case sevHigh:
-				highFail = true
-				if highReason == "" {
-					highReason = c.CheckName
-				}
+		// Cap detection: a confident failure in a CRITICAL domain (confirmed,
+		// exploitable) floors the grade. High-severity gaps are handled by the
+		// weighted average, not a cap (see the capCriticalFail comment).
+		if c.Status == "fail" && sev == sevCritical && confidenceOf(c) >= capConfidence {
+			critFail = true
+			if critReason == "" {
+				critReason = c.CheckName
 			}
 		}
 	}
@@ -203,13 +204,9 @@ func ComputeScores(checks []models.CheckResult) ScoreResult {
 	res.Quality = plainDomainScore(qualCat)
 
 	res.Security = res.RawSecurity
-	switch {
-	case critFail && res.Security > capCriticalFail:
+	if critFail && res.Security > capCriticalFail {
 		res.Security = capCriticalFail
 		res.CapReason = "critical: " + critReason
-	case highFail && res.Security > capHighFail:
-		res.Security = capHighFail
-		res.CapReason = "high: " + highReason
 	}
 
 	res.Security = math.Round(res.Security)
