@@ -5,7 +5,12 @@ import "testing"
 import "seku/internal/models"
 
 func chk(cat, name, status string, score float64, conf int) models.CheckResult {
-	return models.CheckResult{Category: cat, CheckName: name, Status: status, Score: score, Confidence: conf}
+	// Severity mirrors the real pipeline (derived from score) so cap logic that
+	// keys off the finding's own severity is exercised realistically.
+	return models.CheckResult{
+		Category: cat, CheckName: name, Status: status, Score: score,
+		Confidence: conf, Severity: severityFromScore(score),
+	}
 }
 
 // A site that passes every security domain earns a top grade.

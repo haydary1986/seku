@@ -119,9 +119,28 @@ var categorySeverity = map[string]domainSeverity{
 // scores and destroys the ranking. High-severity issues are therefore reflected
 // through the weighted average, which preserves genuine variance between sites.
 const (
-	capCriticalFail = 490 // any confident critical-domain failure → F
+	capCriticalFail = 490 // a confirmed, critical-severity exploit/exposure → F
 	capConfidence   = 70  // OWASP likelihood gate: below this a finding is advisory only
 )
+
+// capCategories are the domains where a CRITICAL-severity failing check means a
+// confirmed exploit or data exposure that warrants flooring the grade. The cap is
+// tied to the individual finding's severity (not the category), so a merely
+// high/medium finding in one of these domains (e.g. an accessible but harmless
+// wp-admin/install.php page) lowers the weighted score without flooring the grade.
+var capCategories = map[string]bool{
+	"sqli":            true,
+	"xss":             true,
+	"ssrf":            true,
+	"open_redirect":   true,
+	"malware":         true,
+	"secrets":         true,
+	"js_secrets":      true,
+	"backup_files":    true,
+	"cms_cve":         true,
+	"directory":       true, // exposed .env/.git/config with verified content
+	"info_disclosure": true, // a leaked secret value
+}
 
 // ScoreResult is the outcome of scoring a set of checks.
 type ScoreResult struct {
@@ -188,10 +207,12 @@ func ComputeScores(checks []models.CheckResult) ScoreResult {
 		a.sum += c.Score
 		a.count++
 
-		// Cap detection: a confident failure in a CRITICAL domain (confirmed,
-		// exploitable) floors the grade. High-severity gaps are handled by the
-		// weighted average, not a cap (see the capCriticalFail comment).
-		if c.Status == "fail" && sev == sevCritical && confidenceOf(c) >= capConfidence {
+		// Cap detection: a CONFIRMED critical-severity finding (the check's own
+		// severity, in an exploit/exposure domain) floors the grade. High/medium
+		// findings and hardening gaps are handled by the weighted average, not a
+		// cap — so a single low-impact finding cannot collapse the ranking.
+		if c.Status == "fail" && c.Severity == "critical" &&
+			capCategories[c.Category] && confidenceOf(c) >= capConfidence {
 			critFail = true
 			if critReason == "" {
 				critReason = c.CheckName

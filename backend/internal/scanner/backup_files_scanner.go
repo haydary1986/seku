@@ -182,6 +182,13 @@ func (s *BackupFilesScanner) Scan(url string) []models.CheckResult {
 			n, _ := resp.Body.Read(sample)
 			body := string(sample[:n])
 
+			// An empty (0-byte) 200 is not an exposure — e.g. a debug.log path that
+			// exists but is empty, or a placeholder. No data is disclosed.
+			if len(strings.TrimSpace(body)) == 0 {
+				results <- backupCheckResult{path: p, found: false}
+				return
+			}
+
 			// Filter false positives: HTML 404 pages that return 200
 			lower := strings.ToLower(body)
 			if strings.Contains(lower, "<!doctype html") && (strings.Contains(lower, "not found") || strings.Contains(lower, "404") || strings.Contains(lower, "error")) {
