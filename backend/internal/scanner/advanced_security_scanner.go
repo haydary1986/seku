@@ -12,9 +12,9 @@ import (
 
 // Sub-check weights for the Advanced Security Scanner.
 const (
-	weightCOEP        = 12.0
-	weightCOOP        = 12.0
-	weightCORP        = 12.0
+	weightCOEP         = 12.0
+	weightCOOP         = 12.0
+	weightCORP         = 12.0
 	weightOCSPStapling = 15.0
 )
 
@@ -35,7 +35,7 @@ func (s *AdvancedSecurityScanner) Scan(url string) []models.CheckResult {
 	// Single HTTP request for the three Cross-Origin headers (COEP, COOP, CORP)
 	// -----------------------------------------------------------------------
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
 		Transport: ScanTransport,
 	}
 
@@ -311,12 +311,15 @@ func (s *AdvancedSecurityScanner) checkOCSPStapling(url string) models.CheckResu
 			"message":     "OCSP Stapling is enabled",
 		})
 	} else {
-		result.Score = 350
+		// OCSP stapling is a performance/privacy optimization, not a security
+		// requirement — and OCSP is being phased out industry-wide (e.g. Let's
+		// Encrypt). Its absence should not be a fail.
+		result.Score = 800
 		result.Status = statusFromScore(result.Score)
 		result.Severity = severityFromScore(result.Score)
 		result.Details = toJSON(map[string]string{
 			"description": "OCSP Stapling improves TLS performance and privacy by attaching certificate revocation status",
-			"message":     "OCSP Stapling is not enabled",
+			"message":     "OCSP Stapling not enabled (optional optimization; OCSP is being deprecated industry-wide)",
 		})
 	}
 

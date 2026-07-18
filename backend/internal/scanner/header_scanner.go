@@ -21,13 +21,13 @@ func (s *HeaderScanner) Weight() float64  { return 20.0 }
 
 // Header weights that sum to the total scanner weight (20.0).
 const (
-	weightHSTS               = 5.0
-	weightCSP                = 5.0
-	weightXFrameOptions      = 3.0
-	weightXContentTypeOpts   = 3.0
-	weightXXSSProtection     = 2.0
-	weightReferrerPolicy     = 2.0
-	weightPermissionsPolicy  = 2.0
+	weightHSTS              = 5.0
+	weightCSP               = 5.0
+	weightXFrameOptions     = 3.0
+	weightXContentTypeOpts  = 3.0
+	weightXXSSProtection    = 2.0
+	weightReferrerPolicy    = 2.0
+	weightPermissionsPolicy = 2.0
 )
 
 func (s *HeaderScanner) Scan(url string) []models.CheckResult {
@@ -211,13 +211,28 @@ func (s *HeaderScanner) checkXFrameOptions(headers http.Header) models.CheckResu
 	}
 
 	if value == "" {
-		result.Status = "fail"
-		result.Score = 0
-		result.Severity = "high"
+		// A CSP frame-ancestors directive is the modern replacement for XFO and
+		// provides equivalent (stronger) clickjacking protection.
+		csp := strings.ToLower(headers.Get("Content-Security-Policy"))
+		if strings.Contains(csp, "frame-ancestors") {
+			result.Status = "pass"
+			result.Score = 1000
+			result.Severity = "info"
+			result.Details = toJSON(map[string]string{
+				"header":  headerName,
+				"message": "X-Frame-Options absent, but CSP frame-ancestors provides clickjacking protection",
+			})
+			return result
+		}
+		// No XFO and no frame-ancestors: a genuine but moderate gap, not a
+		// grade-capping critical.
+		result.Status = "warn"
+		result.Score = 500
+		result.Severity = "medium"
 		result.Details = toJSON(map[string]string{
 			"header":      headerName,
 			"description": "Prevents clickjacking attacks",
-			"message":     "X-Frame-Options header is missing",
+			"message":     "X-Frame-Options missing; add it or a CSP frame-ancestors directive",
 		})
 		return result
 	}
@@ -320,13 +335,16 @@ func (s *HeaderScanner) checkXXSSProtection(headers http.Header) models.CheckRes
 	}
 
 	if value == "" {
-		result.Status = "fail"
-		result.Score = 0
-		result.Severity = "medium"
+		// X-XSS-Protection is deprecated — modern browsers removed the XSS auditor
+		// and OWASP recommends NOT sending it (rely on CSP). Its absence is the
+		// recommended state, so this is a pass.
+		result.Status = "pass"
+		result.Score = 950
+		result.Severity = "info"
 		result.Details = toJSON(map[string]string{
 			"header":      headerName,
-			"description": "Legacy XSS protection (modern browsers use CSP instead)",
-			"message":     "X-XSS-Protection header is missing",
+			"description": "Deprecated header; modern browsers rely on CSP",
+			"message":     "X-XSS-Protection absent (recommended — the header is deprecated; CSP is the modern control)",
 		})
 		return result
 	}
@@ -379,13 +397,16 @@ func (s *HeaderScanner) checkReferrerPolicy(headers http.Header) models.CheckRes
 	}
 
 	if value == "" {
-		result.Status = "fail"
-		result.Score = 0
-		result.Severity = "medium"
+		// All modern browsers default to strict-origin-when-cross-origin when the
+		// header is absent — already a safe default. Absence is a mild hardening
+		// gap, not a vulnerability.
+		result.Status = "warn"
+		result.Score = 700
+		result.Severity = "low"
 		result.Details = toJSON(map[string]string{
 			"header":      headerName,
 			"description": "Controls how much referrer information is shared",
-			"message":     "Referrer-Policy header is missing",
+			"message":     "Referrer-Policy missing; browsers already default to strict-origin-when-cross-origin (setting it explicitly is recommended)",
 		})
 		return result
 	}
@@ -452,13 +473,15 @@ func (s *HeaderScanner) checkPermissionsPolicy(headers http.Header) models.Check
 	}
 
 	if value == "" {
-		result.Status = "fail"
-		result.Score = 0
-		result.Severity = "medium"
+		// Permissions-Policy is an optional advanced hardening header; its absence
+		// is not a vulnerability (consistent with COEP/COOP/CORP treatment).
+		result.Status = "warn"
+		result.Score = 700
+		result.Severity = "low"
 		result.Details = toJSON(map[string]string{
 			"header":      headerName,
 			"description": "Controls which browser features can be used",
-			"message":     "Permissions-Policy header is missing",
+			"message":     "Permissions-Policy missing (optional advanced hardening; recommended but not required)",
 		})
 		return result
 	}
@@ -535,4 +558,3 @@ func isPermissivePP(value string) bool {
 	}
 	return false
 }
-

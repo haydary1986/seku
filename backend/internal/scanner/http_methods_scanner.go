@@ -3,7 +3,6 @@ package scanner
 import (
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"seku/internal/models"
@@ -23,7 +22,7 @@ func (s *HTTPMethodsScanner) Scan(url string) []models.CheckResult {
 	var results []models.CheckResult
 
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
 		Transport: ScanTransport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
@@ -47,7 +46,12 @@ func (s *HTTPMethodsScanner) Scan(url string) []models.CheckResult {
 		}
 		resp.Body.Close()
 
-		if resp.StatusCode != 405 && resp.StatusCode != 501 && resp.StatusCode != 403 {
+		// A method is only "enabled" if the server actually PROCESSES it — i.e.
+		// returns a 2xx. A 3xx redirect (canonical/HTTPS), or a 4xx (400/404/405/
+		// 501/403) means the method is not handled. Treating any non-405/501/403
+		// as "enabled" produced false positives on CDN/redirect-everything sites
+		// that answer PUT/DELETE with 301/200.
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 			allowedDangerous = append(allowedDangerous, fmt.Sprintf("%s (HTTP %d)", method, resp.StatusCode))
 		}
 	}
@@ -108,46 +112,18 @@ func (s *HTTPMethodsScanner) Scan(url string) []models.CheckResult {
 			defer resp.Body.Close()
 			allow := resp.Header.Get("Allow")
 			if allow != "" {
-				hasDangerous := strings.Contains(allow, "TRACE") || strings.Contains(allow, "DELETE")
-				hasPut := strings.Contains(allow, "PUT") || strings.Contains(allow, "PATCH")
-
-				if hasDangerous && hasPut {
-					// Discloses multiple dangerous methods
-					optCheck.Status = "fail"
-					optCheck.Score = 225
-					optCheck.Severity = "high"
-					optCheck.Details = toJSON(map[string]string{
-						"message":         "OPTIONS response discloses many dangerous methods",
-						"allowed_methods": allow,
-					})
-				} else if hasDangerous {
-					// Discloses TRACE or DELETE
-					optCheck.Status = "warn"
-					optCheck.Score = 375
-					optCheck.Severity = "medium"
-					optCheck.Details = toJSON(map[string]string{
-						"message":         "OPTIONS response discloses dangerous methods including TRACE/DELETE",
-						"allowed_methods": allow,
-					})
-				} else if hasPut {
-					// Discloses PUT/PATCH only
-					optCheck.Status = "warn"
-					optCheck.Score = 450
-					optCheck.Severity = "medium"
-					optCheck.Details = toJSON(map[string]string{
-						"message":         "OPTIONS response discloses PUT/PATCH methods",
-						"allowed_methods": allow,
-					})
-				} else {
-					// OPTIONS responds with Allow header but only safe methods
-					optCheck.Status = "pass"
-					optCheck.Score = 925
-					optCheck.Severity = "info"
-					optCheck.Details = toJSON(map[string]string{
-						"message": "OPTIONS response lists only safe methods",
-						"allow":   allow,
-					})
-				}
+				// Advertising methods (including PUT/DELETE/PATCH) in the Allow
+				// header is standard, correct REST behaviour — not a vulnerability.
+				// Whether those methods are actually exploitable is verified by the
+				// "Dangerous HTTP Methods" check above, so OPTIONS disclosure is
+				// purely informational and never caps the grade.
+				optCheck.Status = "pass"
+				optCheck.Score = 1000
+				optCheck.Severity = "info"
+				optCheck.Details = toJSON(map[string]string{
+					"message": "OPTIONS advertises supported methods (informational; exploitability tested separately)",
+					"allow":   allow,
+				})
 			} else {
 				// OPTIONS accessible but no Allow header
 				optCheck.Status = "pass"

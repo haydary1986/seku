@@ -74,7 +74,7 @@ var (
 
 func (s *XSSScanner) Scan(rawURL string) []models.CheckResult {
 	client := &http.Client{
-		Timeout: xssRequestTimeout,
+		Timeout:   xssRequestTimeout,
 		Transport: ScanTransport,
 	}
 
@@ -169,6 +169,30 @@ func xssClassifyReflection(body string) string {
 	return "body"
 }
 
+// xssBreakoutMarker is the canary followed by the characters needed to break out
+// of HTML, attribute, and script-string contexts. If this EXACT sequence
+// survives unencoded in the response, the reflection is genuinely exploitable.
+// If the characters are entity-encoded (&quot; &lt;) or JS-escaped (\") the exact
+// substring will not appear, and if a WAF blocks the request the response is a
+// 4xx — either way the reflection is not exploitable. This turns "reflection
+// detected" (a common false positive) into "breakout confirmed".
+const xssBreakoutMarker = xssCanary + `"><`
+
+// verifyExploitable sends a breakout probe for one parameter and reports whether
+// the special characters are reflected UNESCAPED (a real, exploitable XSS).
+// Encoded reflections and WAF-blocked requests return false.
+func (s *XSSScanner) verifyExploitable(client *http.Client, actionURL, paramName string) bool {
+	probeURL := xssAppendQueryParam(actionURL, paramName, xssBreakoutMarker)
+	body, resp, err := s.fetchBody(client, probeURL)
+	if err != nil {
+		return false
+	}
+	if resp != nil && resp.StatusCode >= 400 {
+		return false // blocked by WAF / edge — payload never reaches a sink
+	}
+	return strings.Contains(body, xssBreakoutMarker)
+}
+
 // ---------------------------------------------------------------------------
 // 1. Reflected XSS Detection  (Weight: 3.0)
 // ---------------------------------------------------------------------------
@@ -193,13 +217,16 @@ func (s *XSSScanner) checkReflectedXSS(client *http.Client, targetURL, body stri
 	}
 
 	type reflResult struct {
-		Param   string `json:"param"`
-		URL     string `json:"url"`
-		Context string `json:"context"`
+		Param       string `json:"param"`
+		URL         string `json:"url"`
+		Context     string `json:"context"`
+		Exploitable bool   `json:"exploitable"`
 	}
 
 	var reflections []reflResult
 	paramsTested := 0
+	exploitableCount := 0
+	reflectedCount := 0
 
 	parsedBase, _ := url.Parse(targetURL)
 
@@ -207,12 +234,9 @@ func (s *XSSScanner) checkReflectedXSS(client *http.Client, targetURL, body stri
 		if paramsTested >= xssMaxParams {
 			break
 		}
-		actionRaw := fm[1]
-		formHTML := fm[0]
+		actionURL := xssResolveActionURL(parsedBase, fm[1])
 
-		actionURL := xssResolveActionURL(parsedBase, actionRaw)
-
-		inputs := xssInputPattern.FindAllStringSubmatch(formHTML, -1)
+		inputs := xssInputPattern.FindAllStringSubmatch(fm[0], -1)
 		for _, inp := range inputs {
 			if paramsTested >= xssMaxParams {
 				break
@@ -221,77 +245,60 @@ func (s *XSSScanner) checkReflectedXSS(client *http.Client, targetURL, body stri
 			paramsTested++
 
 			testURL := xssAppendQueryParam(actionURL, paramName, xssCanary)
-
 			respBody, _, fetchErr := s.fetchBody(client, testURL)
 			if fetchErr != nil {
 				continue
 			}
 
 			ctx := xssClassifyReflection(respBody)
+			exploitable := false
+			// A reflection is only a vulnerability if a breakout payload survives
+			// unescaped. Confirming this eliminates the common false positive where
+			// a value is reflected but HTML/JS-encoded or blocked by a WAF.
+			if ctx == "script" || ctx == "attribute" || ctx == "body" {
+				reflectedCount++
+				if s.verifyExploitable(client, actionURL, paramName) {
+					exploitable = true
+					exploitableCount++
+				}
+			}
 			reflections = append(reflections, reflResult{
-				Param:   paramName,
-				URL:     testURL,
-				Context: ctx,
+				Param:       paramName,
+				URL:         testURL,
+				Context:     ctx,
+				Exploitable: exploitable,
 			})
 		}
 	}
 
-	// Filter out safe reflections (WordPress search, encoded output, etc.)
-	var dangerousReflections []reflResult
-	for _, r := range reflections {
-		// "none" means canary not found — safe
-		// "encoded" means properly HTML-encoded — safe (this is correct behavior)
-		if r.Context == "script" || r.Context == "attribute" || r.Context == "body" {
-			dangerousReflections = append(dangerousReflections, r)
-		}
+	// Only a CONFIRMED breakout is scored as a vulnerability. Encoded or
+	// WAF-blocked reflections are safe (correct output handling).
+	var score float64
+	var message string
+	switch {
+	case exploitableCount >= 2:
+		score = 50
+		message = fmt.Sprintf("Confirmed exploitable reflected XSS in %d parameter(s)", exploitableCount)
+	case exploitableCount == 1:
+		score = 100
+		message = "Confirmed exploitable reflected XSS in 1 parameter"
+	case reflectedCount > 0:
+		score = 950
+		message = fmt.Sprintf("Input reflected in %d parameter(s) but properly encoded or blocked — not exploitable", reflectedCount)
+	default:
+		score = 1000
+		message = fmt.Sprintf("Tested %d parameter(s) across %d form(s); no exploitable reflection", paramsTested, len(formMatches))
 	}
 
-	// Score based on worst dangerous reflection found.
-	worstScore := 1000.0
-	if len(dangerousReflections) == 0 {
-		// All reflections are either encoded or not reflected — safe
-		worstScore = 1000
-		if len(reflections) > 0 {
-			// Some encoded reflections exist — minor concern but safe
-			worstScore = 900
-		}
-	}
-	for _, r := range dangerousReflections {
-		var sc float64
-		switch r.Context {
-		case "script":
-			sc = 100 // Critical: reflected inside script tag
-		case "attribute":
-			sc = 200 // High: reflected inside HTML attribute
-		case "body":
-			sc = 500 // Medium: reflected in body but not in dangerous context
-		default:
-			sc = 1000
-		}
-		if sc < worstScore {
-			worstScore = sc
-		}
-	}
-
-	// Multiple unescaped reflections are worse.
-	unescapedCount := 0
-	for _, r := range reflections {
-		if r.Context == "body" || r.Context == "script" || r.Context == "attribute" {
-			unescapedCount++
-		}
-	}
-	if unescapedCount >= 2 && worstScore > 50 {
-		worstScore = 50
-	}
-
-	check.Score = worstScore
-	check.Status = statusFromScore(check.Score)
-	check.Severity = severityFromScore(check.Score)
+	check.Score = score
+	check.Status = statusFromScore(score)
+	check.Severity = severityFromScore(score)
 	check.Details = toJSON(map[string]interface{}{
-		"message":       fmt.Sprintf("Tested %d parameter(s) across %d form(s)", paramsTested, len(formMatches)),
-		"reflections":   reflections,
-		"params_tested": paramsTested,
-		"forms_found":   len(formMatches),
+		"message":           message,
+		"reflections":       reflections,
+		"params_tested":     paramsTested,
+		"forms_found":       len(formMatches),
+		"exploitable_count": exploitableCount,
 	})
 	return check
 }
@@ -523,12 +530,14 @@ func (s *XSSScanner) checkURLParamReflection(client *http.Client, targetURL stri
 	testParamKeys := []string{"q", "search", "query", "s", "id"}
 
 	type reflEntry struct {
-		Param   string `json:"param"`
-		Context string `json:"context"`
+		Param       string `json:"param"`
+		Context     string `json:"context"`
+		Exploitable bool   `json:"exploitable"`
 	}
 
 	var reflections []reflEntry
-	anyReflected := false
+	reflectedCount := 0
+	exploitableCount := 0
 
 	for _, key := range testParamKeys {
 		testURL := xssAppendQueryParam(targetURL, key, xssCanary)
@@ -539,61 +548,44 @@ func (s *XSSScanner) checkURLParamReflection(client *http.Client, targetURL stri
 		}
 
 		ctx := xssClassifyReflection(respBody)
-		reflections = append(reflections, reflEntry{
-			Param:   key,
-			Context: ctx,
-		})
-		if ctx != "none" {
-			anyReflected = true
-		}
-	}
-
-	if !anyReflected {
-		check.Score = 1000
-		check.Status = statusFromScore(check.Score)
-		check.Severity = severityFromScore(check.Score)
-		check.Details = toJSON(map[string]interface{}{
-			"message":     "No URL parameters reflected in response",
-			"reflections": reflections,
-		})
-		return check
-	}
-
-	// Score based on worst context found.
-	worstScore := 1000.0
-	for _, r := range reflections {
-		var sc float64
-		switch r.Context {
-		case "script":
-			sc = 100
-		case "attribute":
-			sc = 300
-		case "body":
-			sc = 500
-		case "encoded":
-			sc = 900
-		case "none":
-			sc = 1000
-		}
-		if sc < worstScore {
-			worstScore = sc
-		}
-	}
-
-	// Count how many params were reflected.
-	reflectedCount := 0
-	for _, r := range reflections {
-		if r.Context != "none" {
+		exploitable := false
+		if ctx == "script" || ctx == "attribute" || ctx == "body" {
 			reflectedCount++
+			// Confirm with a breakout probe — reflection alone is not a vulnerability.
+			if s.verifyExploitable(client, targetURL, key) {
+				exploitable = true
+				exploitableCount++
+			}
 		}
+		reflections = append(reflections, reflEntry{
+			Param:       key,
+			Context:     ctx,
+			Exploitable: exploitable,
+		})
 	}
 
-	check.Score = worstScore
-	check.Status = statusFromScore(check.Score)
-	check.Severity = severityFromScore(check.Score)
+	// Only a CONFIRMED breakout is a vulnerability; encoded/blocked reflection is safe.
+	var score float64
+	var message string
+	switch {
+	case exploitableCount >= 1:
+		score = 100
+		message = fmt.Sprintf("Confirmed exploitable reflection in %d URL parameter(s)", exploitableCount)
+	case reflectedCount > 0:
+		score = 950
+		message = fmt.Sprintf("%d URL parameter(s) reflected but properly encoded or blocked — not exploitable", reflectedCount)
+	default:
+		score = 1000
+		message = "No exploitable URL parameter reflection detected"
+	}
+
+	check.Score = score
+	check.Status = statusFromScore(score)
+	check.Severity = severityFromScore(score)
 	check.Details = toJSON(map[string]interface{}{
-		"message":     fmt.Sprintf("URL parameter reflection detected in %d parameter(s)", reflectedCount),
-		"reflections": reflections,
+		"message":           message,
+		"reflections":       reflections,
+		"exploitable_count": exploitableCount,
 	})
 	return check
 }
