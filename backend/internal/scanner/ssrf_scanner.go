@@ -2,7 +2,6 @@ package scanner
 
 import (
 	"fmt"
-	"io"
 	"net/url"
 	"strings"
 	"time"
@@ -34,9 +33,12 @@ var ssrfPayloads = []struct {
 	{"aws_metadata", "http://169.254.169.254/latest/meta-data/"},
 }
 
-// ssrfSignatures are patterns in the response body that indicate a successful SSRF.
+// ssrfSignatures are patterns that specifically indicate a successful SSRF into
+// a cloud metadata endpoint. Generic tokens (<html>, <!doctype>, apache, nginx,
+// localhost, 127.0.0.1) were removed: they match ANY HTML page, a reflected
+// payload, or a WAF block page, producing false criticals whenever the app
+// simply ignored the parameter and returned a page of a different size.
 var ssrfSignatures = []string{
-	"meta-data",
 	"ami-id",
 	"instance-id",
 	"local-hostname",
@@ -44,13 +46,7 @@ var ssrfSignatures = []string{
 	"instance-type",
 	"placement/availability-zone",
 	"security-credentials",
-	"<title>index of /</title>",
-	"<!doctype html>",
-	"<html",
-	"apache",
-	"nginx",
-	"localhost",
-	"127.0.0.1",
+	"iam/security-credentials",
 }
 
 func (s *SSRFScanner) Scan(targetURL string) []models.CheckResult {
@@ -69,14 +65,10 @@ func (s *SSRFScanner) checkSSRF(targetURL string) models.CheckResult {
 	client := NewScanClient(10 * time.Second)
 	baseURL := ensureHTTPS(targetURL)
 
-	// First, get a baseline response to compare against
-	baselineResp, err := client.Get(baseURL)
-	baselineLen := 0
-	if err == nil {
-		baselineBody, _ := io.ReadAll(io.LimitReader(baselineResp.Body, 100*1024))
-		baselineResp.Body.Close()
-		baselineLen = len(baselineBody)
-	}
+	// Baseline response — any signature already present here is site content,
+	// not SSRF evidence.
+	baselineBody, _, _ := fetchLowerBody(client, baseURL, 100*1024)
+	baselineSigs := signaturesIn(baselineBody, ssrfSignatures)
 
 	type finding struct {
 		Parameter string `json:"parameter"`
@@ -92,44 +84,28 @@ func (s *SSRFScanner) checkSSRF(targetURL string) models.CheckResult {
 			testURL := fmt.Sprintf("%s?%s=%s", baseURL, param, url.QueryEscape(payload.value))
 			testedCount++
 
-			resp, err := client.Get(testURL)
-			if err != nil {
+			bodyLower, status, ok := fetchLowerBody(client, testURL, 100*1024)
+			if !ok {
+				continue
+			}
+			// A WAF/edge block is not a successful SSRF.
+			if isBlockedStatus(status) {
 				continue
 			}
 
-			body, err := io.ReadAll(io.LimitReader(resp.Body, 100*1024))
-			resp.Body.Close()
-			if err != nil {
-				continue
-			}
-
-			bodyLower := strings.ToLower(string(body))
-			bodyLen := len(body)
-
-			// Check for SSRF signatures in the response
+			// Every remaining signature is cloud-metadata-specific; flag it only
+			// when the payload introduced it (absent from baseline).
 			for _, sig := range ssrfSignatures {
+				if baselineSigs[sig] {
+					continue
+				}
 				if strings.Contains(bodyLower, sig) {
-					// Verify this signature is not in the normal response
-					// by checking if response size changed significantly
-					diff := bodyLen - baselineLen
-					if diff < 0 {
-						diff = -diff
-					}
-
-					// Only flag if the response is meaningfully different from baseline
-					// or contains AWS metadata-specific signatures
-					isAWSSignature := sig == "ami-id" || sig == "instance-id" ||
-						sig == "local-hostname" || sig == "security-credentials" ||
-						sig == "placement/availability-zone"
-
-					if isAWSSignature || (diff > 100 && bodyLen > 0) {
-						findings = append(findings, finding{
-							Parameter: param,
-							Payload:   payload.label,
-							Evidence:  fmt.Sprintf("Response contains '%s' (response size: %d bytes)", sig, bodyLen),
-						})
-						break
-					}
+					findings = append(findings, finding{
+						Parameter: param,
+						Payload:   payload.label,
+						Evidence:  fmt.Sprintf("Response contains cloud-metadata field '%s'", sig),
+					})
+					break
 				}
 			}
 		}

@@ -2,7 +2,6 @@ package scanner
 
 import (
 	"fmt"
-	"io"
 	"net/url"
 	"strings"
 	"time"
@@ -21,9 +20,9 @@ func (s *SQLiScanner) Weight() float64  { return 15.0 }
 // sqliPayloads — minimal, low-noise payloads that detect error-based SQLi
 // without triggering most WAF signature rules.
 var sqliPayloads = []string{
-	"'",           // single quote — triggers syntax error if unescaped
-	"1 AND 1=1",   // tautology — harmless if properly parameterized
-	"1'\"",        // mixed quotes — triggers error in bad parsers
+	"'",         // single quote — triggers syntax error if unescaped
+	"1 AND 1=1", // tautology — harmless if properly parameterized
+	"1'\"",      // mixed quotes — triggers error in bad parsers
 }
 
 // sqliErrorSignatures are database error strings that indicate SQL injection vulnerability.
@@ -93,25 +92,34 @@ func (s *SQLiScanner) checkSQLiVulnerability(targetURL string) models.CheckResul
 	testedCount := 0
 
 	for _, param := range commonParams {
+		// Benign baseline for this parameter. Any error signature already present
+		// here (site content, a soft-404, or a WAF block page) is NOT evidence of
+		// injection and must be excluded from the payload comparison.
+		baseBody, _, baseOK := fetchLowerBody(client, fmt.Sprintf("%s?%s=1", baseURL, param), 100*1024)
+		baselineSigs := map[string]bool{}
+		if baseOK {
+			baselineSigs = signaturesIn(baseBody, sqliErrorSignatures)
+		}
+
 		for _, payload := range sqliPayloads {
 			testURL := fmt.Sprintf("%s?%s=%s", baseURL, param, url.QueryEscape(payload))
 			testedCount++
 
-			resp, err := client.Get(testURL)
-			if err != nil {
+			body, status, ok := fetchLowerBody(client, testURL, 100*1024)
+			if !ok {
 				continue
 			}
-
-			body, err := io.ReadAll(io.LimitReader(resp.Body, 100*1024)) // 100KB limit
-			resp.Body.Close()
-			if err != nil {
+			// A WAF/edge block is not the application returning a DB error.
+			if isBlockedStatus(status) {
 				continue
 			}
-
-			bodyLower := strings.ToLower(string(body))
 
 			for _, sig := range sqliErrorSignatures {
-				if strings.Contains(bodyLower, sig) {
+				// Only count a signature that appears BECAUSE of the payload.
+				if baselineSigs[sig] {
+					continue
+				}
+				if strings.Contains(body, sig) {
 					vulnerableParams = append(vulnerableParams, map[string]string{
 						"parameter": param,
 						"payload":   payload,
@@ -124,6 +132,9 @@ func (s *SQLiScanner) checkSQLiVulnerability(targetURL string) models.CheckResul
 			if len(vulnerableParams) > 0 {
 				break // Move to next param once vulnerability found
 			}
+		}
+		if len(vulnerableParams) > 0 {
+			break
 		}
 	}
 
@@ -158,39 +169,49 @@ func (s *SQLiScanner) checkErrorBasedSQLi(targetURL string) models.CheckResult {
 
 	client := NewScanClientNoRedirect(10 * time.Second)
 
-	// Test with a simple quote to trigger error
-	testURL := ensureHTTPS(targetURL) + "?id=1'"
-	resp, err := client.Get(testURL)
-	if err != nil {
+	base := ensureHTTPS(targetURL)
+
+	// Baseline (benign) response — signatures already here are page content or a
+	// WAF block page, not disclosure caused by the payload.
+	baseBody, _, baseOK := fetchLowerBody(client, base+"?id=1", 100*1024)
+
+	// Payload response.
+	bodyLower, status, ok := fetchLowerBody(client, base+"?id=1'", 100*1024)
+	if !ok {
 		check.Status = "pass"
 		check.Score = MaxScore
 		check.Severity = "info"
 		check.Details = toJSON(map[string]string{"message": "Could not reach target for error disclosure test"})
 		return check
 	}
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 100*1024))
-	resp.Body.Close()
-	if err != nil {
+	if isBlockedStatus(status) {
 		check.Status = "pass"
 		check.Score = MaxScore
 		check.Severity = "info"
-		check.Details = toJSON(map[string]string{"message": "Could not read response body"})
+		check.Details = toJSON(map[string]string{"message": "Error-probe request was blocked by a WAF/edge (no disclosure)"})
 		return check
 	}
 
-	bodyLower := strings.ToLower(string(body))
-	var foundErrors []string
-
-	// Check for verbose database error messages
+	// Verbose DB/framework error signatures. Only specific patterns — generic
+	// words like "exception" (matches "exceptional"), "warning:", "notice:",
+	// "debug" produced false positives on ordinary pages, so they are excluded.
 	errorPatterns := []string{
-		"stack trace", "exception", "traceback",
-		"fatal error", "warning:", "notice:",
-		"debug", "server error in",
+		"stack trace", "traceback (most recent call last)",
+		"fatal error:", "call stack", "server error in '",
+		"whoops, looks like something went wrong",
 	}
-	allPatterns := append(sqliErrorSignatures, errorPatterns...)
+	allPatterns := append(append([]string{}, sqliErrorSignatures...), errorPatterns...)
 
+	baselineSigs := map[string]bool{}
+	if baseOK {
+		baselineSigs = signaturesIn(baseBody, allPatterns)
+	}
+
+	var foundErrors []string
 	for _, sig := range allPatterns {
+		if baselineSigs[sig] {
+			continue // present without the payload → not disclosure
+		}
 		if strings.Contains(bodyLower, sig) {
 			foundErrors = append(foundErrors, sig)
 		}

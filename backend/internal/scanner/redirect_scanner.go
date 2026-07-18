@@ -3,7 +3,6 @@ package scanner
 import (
 	"fmt"
 	"net/url"
-	"strings"
 	"time"
 
 	"seku/internal/models"
@@ -65,7 +64,11 @@ func (s *RedirectScanner) checkOpenRedirect(targetURL string) models.CheckResult
 		// Check for redirect status codes (301, 302, 303, 307, 308)
 		if resp.StatusCode >= 301 && resp.StatusCode <= 308 {
 			location := resp.Header.Get("Location")
-			if strings.Contains(strings.ToLower(location), "evil.example.com") {
+			// Only a real open redirect: the Location must actually TARGET the
+			// attacker host. Resolving against the base rejects the common false
+			// positive of a same-origin gate that merely echoes the URL, e.g.
+			// Location: https://victim.edu/login?next=https://evil.example.com
+			if redirectTargetsHost(baseURL, location, "evil.example.com") {
 				findings = append(findings, finding{
 					Parameter: param,
 					Location:  location,

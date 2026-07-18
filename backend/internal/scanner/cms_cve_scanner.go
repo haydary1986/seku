@@ -400,11 +400,33 @@ func (s *CMSCVEScanner) matchCVEs(cms, version string) []knownCVE {
 
 	var matches []knownCVE
 	for _, cve := range cves {
-		if compareVersions(version, cve.maxAffected) <= 0 {
+		if versionDefinitelyAffected(version, cve.maxAffected) {
 			matches = append(matches, cve)
 		}
 	}
 	return matches
+}
+
+// versionDefinitelyAffected reports whether `version` is provably <= maxAffected.
+// When the detected version is LESS specific than maxAffected (e.g. "6.5" vs
+// "6.5.1") and equal on the shared prefix, the patch level is unknown — the site
+// could already be on 6.5.9 (patched) — so it is NOT flagged. This prevents a
+// major.minor-only (or empty/hidden) version string from matching every patch
+// CVE in its series, a critical false positive.
+func versionDefinitelyAffected(version, maxAffected string) bool {
+	pv := splitVersion(version)
+	pm := splitVersion(maxAffected)
+	if len(pv) < len(pm) {
+		for i := 0; i < len(pv); i++ {
+			if pv[i] != pm[i] {
+				// Differs on a shared component → ordering is already decided.
+				return compareVersions(version, maxAffected) <= 0
+			}
+		}
+		// Equal on every known component but patch is unknown → cannot confirm.
+		return false
+	}
+	return compareVersions(version, maxAffected) <= 0
 }
 
 // compareVersions returns -1 if a<b, 0 if a==b, 1 if a>b. Semver-aware up to 4 parts.
