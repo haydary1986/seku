@@ -264,3 +264,21 @@ type EmailAlert struct {
 	IsActive        bool   `json:"is_active" gorm:"default:true"`
 	DigestFrequency string `json:"digest_frequency" gorm:"default:immediate"` // immediate, daily, weekly
 }
+
+// --- Single-target tools ---
+
+// NucleiRun is one async nuclei tool run with a live, detailed log.
+type NucleiRun struct {
+	gorm.Model
+	UserID      uint       `json:"user_id"`
+	Target      string     `json:"target"`
+	Severity    string     `json:"severity"`
+	Tags        string     `json:"tags"`
+	Status      string     `json:"status" gorm:"default:running"` // running, finished, failed
+	StartedAt   *time.Time `json:"started_at"`
+	FinishedAt  *time.Time `json:"finished_at"`
+	DurationSec int        `json:"duration_sec"`
+	Findings    int        `json:"findings"`
+	ResultsJSON string     `json:"results_json" gorm:"type:text"`
+	Log         string     `json:"log" gorm:"type:text"`
+}

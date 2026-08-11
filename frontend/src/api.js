@@ -162,6 +162,8 @@ export const getDataLeakResults = (domain) => api.get('/data-leak/results' + (do
 
 // Single-target tools (admin)
 export const runNucleiTool = (data) => api.post('/tools/nuclei', data)
+export const getNucleiRuns = () => api.get('/tools/nuclei/runs')
+export const getNucleiRun = (id) => api.get('/tools/nuclei/runs/' + id)
 
 // Administrative Directives (admin)
 export const getDirectives = () => api.get('/directives')

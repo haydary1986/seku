@@ -177,6 +177,8 @@ func SetupRoutes(app *fiber.App) {
 
 	// Single-target tools (admin only)
 	admin.Post("/tools/nuclei", RunNucleiTool)
+	admin.Get("/tools/nuclei/runs", ListNucleiRuns)
+	admin.Get("/tools/nuclei/runs/:id", GetNucleiRun)
 
 	// User Management
 	users := admin.Group("/users")

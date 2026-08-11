@@ -585,28 +585,6 @@ func StartScan(c *fiber.Ctx) error {
 	return c.Status(201).JSON(job)
 }
 
-// NucleiToolRequest is the body for the single-target nuclei tool.
-type NucleiToolRequest struct {
-	Target   string `json:"target"`
-	Severity string `json:"severity"`
-	Tags     string `json:"tags"`
-}
-
-// RunNucleiTool runs nuclei against a single ad-hoc target (URL or IP) and
-// returns the findings synchronously. Admin-only (see routes.go).
-func RunNucleiTool(c *fiber.Ctx) error {
-	var req NucleiToolRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
-	}
-	target := strings.TrimSpace(req.Target)
-	if target == "" || len(target) < 3 || strings.ContainsAny(target, " \t\r\n") {
-		return c.Status(400).JSON(fiber.Map{"error": "Provide a valid single URL or IP (no spaces)"})
-	}
-	results := scanner.RunNucleiAdHoc(target, req.Severity, req.Tags)
-	return c.JSON(fiber.Map{"target": target, "results": results})
-}
-
 func DeleteScanJob(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var job models.ScanJob
