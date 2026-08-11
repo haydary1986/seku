@@ -17,7 +17,9 @@ RUN CGO_ENABLED=1 GOOS=linux go build -o vscan-server ./cmd/main.go
 
 # Stage 2b: Fetch nuclei binary + templates (isolated — not part of Seku's go.mod).
 # Powers the optional "nuclei" scanner (enable at runtime with SEKU_ENABLE_NUCLEI=1).
-FROM golang:1.25-alpine AS nuclei-builder
+# Latest Go — the PD tools (nuclei v3.11+ needs Go >= 1.26) build here,
+# independent of the app's backend-builder which stays on go 1.25.
+FROM golang:alpine AS nuclei-builder
 RUN apk add --no-cache git ca-certificates curl
 ENV CGO_ENABLED=0 HOME=/root
 RUN go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.11.1
