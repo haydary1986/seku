@@ -26,7 +26,10 @@ RUN go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.11.1
 RUN go install github.com/projectdiscovery/katana/cmd/katana@latest
 RUN go install github.com/hahwul/dalfox/v2@latest
 RUN go install github.com/ffuf/ffuf/v2@latest
-RUN mkdir -p /root/nuclei-templates && (/go/bin/nuclei -update-templates -disable-update-check || true)
+# Clone nuclei-templates directly — `nuclei -update-templates` printed the banner
+# and exited without downloading, leaving an empty templates dir (0 matches).
+RUN git clone --depth 1 https://github.com/projectdiscovery/nuclei-templates.git /root/nuclei-templates \
+    && rm -rf /root/nuclei-templates/.git
 
 # Comprehensive wordlists (SecLists + OneListForAll) baked into the image.
 # The scanners default to these via ENV (see final stage) and fall back to the
@@ -60,7 +63,8 @@ COPY --from=nuclei-builder /wordlists /app/wordlists
 # Scanners default to the comprehensive baked wordlists (fall back to embedded if absent)
 ENV SEKU_FFUF_WORDLIST=/app/wordlists/content.txt \
     SEKU_LOGIN_PASS_FILE=/app/wordlists/passwords.txt \
-    SEKU_LOGIN_USERS_FILE=/app/wordlists/users.txt
+    SEKU_LOGIN_USERS_FILE=/app/wordlists/users.txt \
+    SEKU_NUCLEI_TEMPLATES_DIR=/root/nuclei-templates
 
 # Copy fonts for PDF Arabic support
 COPY backend/assets/fonts/ /app/assets/fonts/
