@@ -1,14 +1,23 @@
 package scanner
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"seku/internal/models"
 )
+
+func init() {
+	CheckCVSSMap["Slow-Request (Slowloris) Resilience"] = CVSSMapping{5.3, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L", "Medium"}
+	CheckOWASPMap["Slow-Request (Slowloris) Resilience"] = OWASPMapping{"A05:2021", "Security Misconfiguration", "CWE-400", "Uncontrolled Resource Consumption", "Medium"}
+	CheckConfidence["Slow-Request (Slowloris) Resilience"] = 75
+}
 
 type DDoSScanner struct{}
 
@@ -55,6 +64,9 @@ func (s *DDoSScanner) Scan(url string) []models.CheckResult {
 
 	// Check WAF (Web Application Firewall) indicators
 	results = append(results, s.checkWAF(resp, targetURL, client))
+
+	// Slow-request (Slowloris) resilience — single, non-destructive connection
+	results = append(results, s.checkSlowloris(targetURL))
 
 	return results
 }
@@ -351,4 +363,97 @@ func (s *DDoSScanner) checkWAF(resp *http.Response, baseURL string, client *http
 
 	check.Details = toJSON(details)
 	return check
+}
+
+// checkSlowloris tests slow-request (Slowloris) resilience with a SINGLE,
+// non-destructive connection. It opens one connection, sends an intentionally
+// incomplete request, and trickles partial headers (never the terminating blank
+// line) for a few seconds. If the server/edge closes the connection or responds
+// (e.g. 408), it enforces a request timeout — the correct Slowloris mitigation.
+// This is a config check, not an attack: one connection, ~18s max.
+func (s *DDoSScanner) checkSlowloris(targetURL string) models.CheckResult {
+	check := models.CheckResult{Category: s.Category(), CheckName: "Slow-Request (Slowloris) Resilience", Weight: 4.0}
+
+	host, port, isTLS := ddosHostPort(targetURL)
+	if host == "" {
+		check.Status, check.Score, check.Severity, check.Weight = "info", 1000, "info", 0
+		check.Details = toJSON(map[string]string{"message": "Could not parse the target for the slow-request probe."})
+		return check
+	}
+
+	dialer := &net.Dialer{Timeout: 10 * time.Second}
+	addr := net.JoinHostPort(host, port)
+	var conn net.Conn
+	var err error
+	if isTLS {
+		conn, err = tls.DialWithDialer(dialer, "tcp", addr, &tls.Config{InsecureSkipVerify: true, ServerName: host})
+	} else {
+		conn, err = dialer.Dial("tcp", addr)
+	}
+	if err != nil {
+		check.Status, check.Score, check.Severity, check.Weight = "info", 1000, "info", 0
+		check.Details = toJSON(map[string]string{"message": "Could not open a connection for the slow-request probe: " + err.Error()})
+		return check
+	}
+	defer conn.Close()
+
+	fmt.Fprintf(conn, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: %s\r\n", host, RandomUA())
+
+	const maxTrickle = 9
+	const interval = 2 * time.Second
+	closed := false
+	elapsed := 0
+	for i := 0; i < maxTrickle; i++ {
+		time.Sleep(interval)
+		elapsed += 2
+		if _, werr := fmt.Fprintf(conn, "X-Pad-%d: keepalive\r\n", i); werr != nil {
+			closed = true
+			break
+		}
+		_ = conn.SetReadDeadline(time.Now().Add(150 * time.Millisecond))
+		buf := make([]byte, 64)
+		if _, rerr := conn.Read(buf); rerr != nil {
+			if ne, ok := rerr.(net.Error); ok && ne.Timeout() {
+				continue // still open — keep trickling
+			}
+			closed = true // EOF/reset — the server dropped the slow request
+			break
+		}
+		closed = true // server responded (e.g. 408) — it enforces a timeout
+		break
+	}
+
+	if closed {
+		check.Status, check.Score, check.Severity = "pass", 1000, "info"
+		check.Details = toJSON(map[string]interface{}{
+			"message": fmt.Sprintf("The server/edge dropped a slow, partial request after ~%ds — it enforces a request timeout, mitigating Slowloris-style connection exhaustion.", elapsed),
+			"probe":   "single non-destructive connection",
+		})
+	} else {
+		check.Status, check.Score, check.Severity = "warn", 600, "low"
+		check.Details = toJSON(map[string]interface{}{
+			"message": fmt.Sprintf("A slow, partial request stayed open ~%ds with no timeout. Confirm slow-request protection (nginx client_header_timeout / Apache mod_reqtimeout, connection limits, or a CDN/WAF) to resist Slowloris.", elapsed),
+			"probe":   "single non-destructive connection",
+			"cwe":     "CWE-400",
+		})
+	}
+	return check
+}
+
+func ddosHostPort(rawURL string) (host, port string, isTLS bool) {
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Hostname() == "" {
+		return "", "", false
+	}
+	host = u.Hostname()
+	isTLS = u.Scheme == "https"
+	port = u.Port()
+	if port == "" {
+		if isTLS {
+			port = "443"
+		} else {
+			port = "80"
+		}
+	}
+	return host, port, isTLS
 }
