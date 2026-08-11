@@ -3,7 +3,8 @@ import { ref, computed } from 'vue'
 import { runNucleiTool } from '../api'
 
 const target = ref('')
-const tags = ref('')
+const tags = ref([])
+const allTags = ['cve', 'default-login', 'exposure', 'misconfig', 'tech', 'ssl', 'xss', 'sqli', 'lfi', 'rce', 'takeover', 'wordpress', 'panel', 'config', 'backup', 'token']
 const allSeverities = ['critical', 'high', 'medium', 'low', 'info']
 const severities = ref(['critical', 'high', 'medium'])
 const loading = ref(false)
@@ -40,6 +41,12 @@ function toggleSeverity(s) {
   else severities.value.push(s)
 }
 
+function toggleTag(t) {
+  const i = tags.value.indexOf(t)
+  if (i >= 0) tags.value.splice(i, 1)
+  else tags.value.push(t)
+}
+
 async function run() {
   const t = target.value.trim()
   if (!t) return
@@ -51,7 +58,7 @@ async function run() {
     const { data } = await runNucleiTool({
       target: t,
       severity: severities.value.join(','),
-      tags: tags.value.trim(),
+      tags: tags.value.join(','),
     })
     results.value = data.results || []
     scannedTarget.value = data.target || t
@@ -119,13 +126,24 @@ async function run() {
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Tags (optional, comma-separated)</label>
-          <input
-            v-model="tags"
-            type="text"
-            placeholder="cve,default-login,exposure,misconfig"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
-          />
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tags (optional)</label>
+          <div class="flex flex-wrap gap-1.5">
+            <button
+              v-for="tg in allTags"
+              :key="tg"
+              type="button"
+              @click="toggleTag(tg)"
+              :class="[
+                'px-2.5 py-1 rounded-full text-xs border transition',
+                tags.includes(tg)
+                  ? 'bg-indigo-100 text-indigo-700 border-indigo-200 font-semibold'
+                  : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-indigo-300',
+              ]"
+            >
+              {{ tg }}
+            </button>
+          </div>
+          <p class="text-[11px] text-gray-400 mt-1">No tags selected = run all templates (slower but thorough).</p>
         </div>
       </div>
       <p class="text-xs text-gray-400 mt-3">Note: a full run can take a couple of minutes depending on the target.</p>
