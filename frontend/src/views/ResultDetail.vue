@@ -173,6 +173,12 @@ function getUpgradeSeverityColor(severity) {
 }
 
 const categoryLabels = {
+  login: 'Login Security',
+  crawl: 'Crawl & Attack Surface',
+  oob: 'Out-of-Band (SSRF)',
+  nuclei: 'Nuclei Templates',
+  xss_advanced: 'Advanced XSS (Dalfox)',
+  content_discovery: 'Content Discovery',
   ssl: 'SSL/TLS',
   headers: 'Security Headers',
   cookies: 'Cookies',

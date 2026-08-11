@@ -113,6 +113,12 @@ var PlanScanners = map[string][]string{
 		"wp_deep",
 	},
 	"pro": { // 28 categories - advanced security
+		"login",
+		"nuclei",
+		"crawl",
+		"oob",
+		"xss_advanced",
+		"content_discovery",
 		"ssl",
 		"headers",
 		"cookies",
@@ -147,6 +153,12 @@ var PlanScanners = map[string][]string{
 		"wp_deep",
 	},
 	"business": { // 32 categories - full scan
+		"login",
+		"nuclei",
+		"crawl",
+		"oob",
+		"xss_advanced",
+		"content_discovery",
 		"ssl",
 		"headers",
 		"cookies",
@@ -185,6 +197,12 @@ var PlanScanners = map[string][]string{
 		"wp_deep",
 	},
 	"enterprise": { // 32 categories - full scan
+		"login",
+		"nuclei",
+		"crawl",
+		"oob",
+		"xss_advanced",
+		"content_discovery",
 		"ssl",
 		"headers",
 		"cookies",
@@ -228,6 +246,7 @@ var PlanScanners = map[string][]string{
 type Engine struct {
 	scanners []Scanner
 	plan     string
+	config   *ScanConfig
 }
 
 // ScanPolicy defines preset scanning configurations
@@ -254,8 +273,8 @@ var ScanPolicies = map[string]ScanPolicy{
 	},
 	"deep": {
 		Name:        "Deep Scan",
-		Description: "Full security assessment — 36 categories including SQLi, SSRF, WAF, port scanning, CMS/WP plugin CVEs, ~3 minutes per site",
-		Categories:  []string{"ssl", "headers", "cookies", "server_info", "directory", "performance", "ddos", "cors", "http_methods", "dns", "mixed_content", "info_disclosure", "hosting", "content", "advanced_security", "malware", "threat_intel", "seo", "third_party", "js_libraries", "wordpress", "xss", "secrets", "subdomains", "tech_stack", "sqli", "ports", "open_redirect", "ssrf", "email_security", "waf", "zone_transfer", "backup_files", "cms_cve", "js_secrets", "wp_deep"},
+		Description: "Full security assessment — 40 categories incl. login brute-force, nuclei CVE templates, crawl / attack-surface, and OOB SSRF (some advanced checks require ops enablement). ~3-5 minutes per site",
+		Categories:  []string{"ssl", "headers", "cookies", "server_info", "directory", "performance", "ddos", "cors", "http_methods", "dns", "mixed_content", "info_disclosure", "hosting", "content", "advanced_security", "malware", "threat_intel", "seo", "third_party", "js_libraries", "wordpress", "xss", "secrets", "subdomains", "tech_stack", "sqli", "ports", "open_redirect", "ssrf", "email_security", "waf", "zone_transfer", "backup_files", "cms_cve", "js_secrets", "wp_deep", "login", "nuclei", "crawl", "oob", "xss_advanced", "content_discovery"},
 		Timeout:     180,
 	},
 }
@@ -300,6 +319,12 @@ func allScanners() []Scanner {
 		NewCMSCVEScanner(),
 		NewJSSecretsScanner(),
 		NewWPDeepScanner(),
+		NewLoginScanner(),
+		NewNucleiScanner(),
+		NewCrawlScanner(),
+		NewOOBScanner(),
+		NewDalfoxScanner(),
+		NewFFUFScanner(),
 	}
 }
 
@@ -515,7 +540,7 @@ const scannerTimeout = 60 * time.Second
 // visibility but excluded from the score — and lets the scan proceed. The
 // worker goroutine uses a buffered channel so it can still finish and exit once
 // the slow call eventually unblocks (no permanent leak).
-func runScannerBounded(s Scanner, url string) []models.CheckResult {
+func runScannerBounded(s Scanner, url string, cfg *ScanConfig) []models.CheckResult {
 	ch := make(chan []models.CheckResult, 1)
 	go func() {
 		defer func() {
@@ -531,7 +556,11 @@ func runScannerBounded(s Scanner, url string) []models.CheckResult {
 				}}
 			}
 		}()
-		ch <- s.Scan(url)
+		if cs, ok := s.(ConfigurableScanner); ok {
+			ch <- cs.ScanWithConfig(url, cfg)
+		} else {
+			ch <- s.Scan(url)
+		}
 	}()
 
 	select {
@@ -574,7 +603,7 @@ func (e *Engine) scanTarget(result *models.ScanResult) {
 			Message:       fmt.Sprintf("[%d/%d] %s", idx+1, totalScanners, s.Name()),
 		})
 
-		checks := runScannerBounded(s, result.ScanTarget.URL)
+		checks := runScannerBounded(s, result.ScanTarget.URL, e.config)
 		for i := range checks {
 			checks[i].ScanResultID = result.ID
 		}

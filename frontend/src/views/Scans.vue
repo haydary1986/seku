@@ -25,6 +25,13 @@ const scanForm = ref({
   target_ids: [],
   selectAll: true,
   policy: 'standard',
+  enable_login: false,
+  enable_nuclei: false,
+  enable_crawl: false,
+  enable_oob: false,
+  enable_dalfox: false,
+  enable_ffuf: false,
+  authorized: false,
 })
 
 async function loadData() {
@@ -56,10 +63,17 @@ async function runScan() {
       name: scanForm.value.name,
       target_ids: scanForm.value.selectAll ? [] : scanForm.value.target_ids,
       policy: scanForm.value.policy,
+      enable_login: scanForm.value.enable_login,
+      enable_nuclei: scanForm.value.enable_nuclei,
+      enable_crawl: scanForm.value.enable_crawl,
+      enable_oob: scanForm.value.enable_oob,
+      enable_dalfox: scanForm.value.enable_dalfox,
+      enable_ffuf: scanForm.value.enable_ffuf,
+      authorized: scanForm.value.authorized,
     }
     await startScan(payload)
     showStartForm.value = false
-    scanForm.value = { name: '', target_ids: [], selectAll: true, policy: 'standard' }
+    scanForm.value = { name: '', target_ids: [], selectAll: true, policy: 'standard', enable_login: false, enable_nuclei: false, enable_crawl: false, enable_oob: false, enable_dalfox: false, enable_ffuf: false, authorized: false }
     await loadData()
   } catch (e) {
     if (e.response?.status === 403 && e.response?.data?.unverified_domains) {
@@ -340,8 +354,8 @@ onMounted(() => {
                 </svg>
                 <span class="font-semibold text-gray-900">Deep</span>
               </div>
-              <p class="text-xs text-gray-500 mb-1">All categories, ~2min per site</p>
-              <p class="text-xs text-gray-400">Full assessment incl. XSS, malware, secrets</p>
+              <p class="text-xs text-gray-500 mb-1">40 categories, ~2-5min per site</p>
+              <p class="text-xs text-gray-400">Full assessment incl. login brute-force, nuclei CVEs, crawl &amp; OOB SSRF</p>
               <div v-if="scanForm.policy === 'deep'" class="absolute top-2 right-2">
                 <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
               </div>
@@ -349,9 +363,45 @@ onMounted(() => {
           </div>
         </div>
 
+        <!-- Advanced active checks (deep only) -->
+        <div v-if="scanForm.policy === 'deep'" class="mb-6 rounded-xl border-2 border-red-100 bg-red-50/40 p-4">
+          <p class="text-sm font-semibold text-gray-900 mb-1">Advanced active checks</p>
+          <p class="text-xs text-gray-500 mb-3">These send active probes to the target. Only enable them on systems you are authorized to test.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" v-model="scanForm.enable_nuclei" class="rounded border-gray-300 text-indigo-600" />
+              Nuclei templates (CVEs, exposures, default logins)
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" v-model="scanForm.enable_crawl" class="rounded border-gray-300 text-indigo-600" />
+              Crawl &amp; attack-surface map
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" v-model="scanForm.enable_login" class="rounded border-gray-300 text-indigo-600" />
+              Login brute-force / lockout test
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" v-model="scanForm.enable_oob" class="rounded border-gray-300 text-indigo-600" />
+              Out-of-band SSRF (interactsh)
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" v-model="scanForm.enable_dalfox" class="rounded border-gray-300 text-indigo-600" />
+              Advanced XSS (dalfox)
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" v-model="scanForm.enable_ffuf" class="rounded border-gray-300 text-indigo-600" />
+              Content discovery (ffuf)
+            </label>
+          </div>
+          <label v-if="scanForm.enable_login || scanForm.enable_oob" class="mt-3 flex items-start gap-2 text-xs text-gray-700">
+            <input type="checkbox" v-model="scanForm.authorized" class="mt-0.5 rounded border-gray-300 text-red-600" />
+            <span>I confirm I am authorized to actively test the selected target(s). Required for the login brute-force test.</span>
+          </label>
+        </div>
+
         <button
           type="submit"
-          :disabled="scanning || targets.length === 0"
+          :disabled="scanning || targets.length === 0 || (scanForm.enable_login && !scanForm.authorized)"
           class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <div v-if="scanning" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>

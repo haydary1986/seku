@@ -175,6 +175,9 @@ func SetupRoutes(app *fiber.App) {
 	// Admin-only routes
 	admin := protected.Group("", AdminRequired())
 
+	// Single-target tools (admin only)
+	admin.Post("/tools/nuclei", RunNucleiTool)
+
 	// User Management
 	users := admin.Group("/users")
 	users.Get("/", GetUsers)

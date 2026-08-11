@@ -15,14 +15,50 @@ RUN go mod download
 COPY backend/ .
 RUN CGO_ENABLED=1 GOOS=linux go build -o vscan-server ./cmd/main.go
 
+# Stage 2b: Fetch nuclei binary + templates (isolated — not part of Seku's go.mod).
+# Powers the optional "nuclei" scanner (enable at runtime with SEKU_ENABLE_NUCLEI=1).
+FROM golang:1.25-alpine AS nuclei-builder
+RUN apk add --no-cache git ca-certificates curl
+ENV CGO_ENABLED=0 HOME=/root
+RUN go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.11.1
+RUN go install github.com/projectdiscovery/katana/cmd/katana@latest
+RUN go install github.com/hahwul/dalfox/v2@latest
+RUN go install github.com/ffuf/ffuf/v2@latest
+RUN mkdir -p /root/nuclei-templates && (/go/bin/nuclei -update-templates -disable-update-check || true)
+
+# Comprehensive wordlists (SecLists + OneListForAll) baked into the image.
+# The scanners default to these via ENV (see final stage) and fall back to the
+# small embedded lists if a download failed.
+ARG SL=https://raw.githubusercontent.com/danielmiessler/SecLists/master
+ARG OLFA=https://raw.githubusercontent.com/six2dez/OneListForAll/main
+RUN mkdir -p /wordlists && \
+    (curl -fsSL -o /wordlists/content.txt       "$SL/Discovery/Web-Content/common.txt" || true) && \
+    (curl -fsSL -o /wordlists/content-large.txt "$OLFA/onelistforallmicro.txt" || true) && \
+    (curl -fsSL -o /wordlists/passwords.txt     "$SL/Passwords/Common-Credentials/10k-most-common.txt" || true) && \
+    (curl -fsSL -o /wordlists/users.txt         "$SL/Usernames/top-usernames-shortlist.txt" || true) && \
+    (curl -fsSL "$SL/Usernames/cirt-default-usernames.txt" >> /wordlists/users.txt 2>/dev/null || true)
+
 # Stage 3: Final runtime image
 FROM alpine:3.19
 RUN apk add --no-cache ca-certificates sqlite-libs nginx
+ENV HOME=/root
 
 WORKDIR /app
 
 # Copy Go binary
 COPY --from=backend-builder /app/backend/vscan-server .
+
+# nuclei binary + templates (optional engine; the scanner degrades gracefully if absent)
+COPY --from=nuclei-builder /go/bin/nuclei /usr/local/bin/nuclei
+COPY --from=nuclei-builder /go/bin/katana /usr/local/bin/katana
+COPY --from=nuclei-builder /go/bin/dalfox /usr/local/bin/dalfox
+COPY --from=nuclei-builder /go/bin/ffuf /usr/local/bin/ffuf
+COPY --from=nuclei-builder /root/nuclei-templates /root/nuclei-templates
+COPY --from=nuclei-builder /wordlists /app/wordlists
+# Scanners default to the comprehensive baked wordlists (fall back to embedded if absent)
+ENV SEKU_FFUF_WORDLIST=/app/wordlists/content.txt \
+    SEKU_LOGIN_PASS_FILE=/app/wordlists/passwords.txt \
+    SEKU_LOGIN_USERS_FILE=/app/wordlists/users.txt
 
 # Copy fonts for PDF Arabic support
 COPY backend/assets/fonts/ /app/assets/fonts/
