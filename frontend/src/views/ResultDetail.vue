@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getScanResult, analyzeResult, getAIAnalysis, downloadReport, exportSARIF, exportCSV, getUpgradeSuggestions, getScoreHistory, getComplianceReport, getRemediationGuide, createGitHubIssue, createJiraIssue, getFixPriority, getTimelineComparison } from '../api'
+import { getScanResult, analyzeResult, getAIAnalysis, downloadReport, exportSARIF, exportCSV, getUpgradeSuggestions, getScoreHistory, getComplianceReport, getRemediationGuide, createGitHubIssue, createJiraIssue, getFixPriority, getTimelineComparison, updateCheckTriage } from '../api'
 import { categoryInfo, getCheckExplanation } from '../data/securityKnowledge'
 import PasswordInput from '../components/PasswordInput.vue'
 import { Radar, Line } from 'vue-chartjs'
@@ -382,6 +382,26 @@ async function loadExistingAnalysis() {
 }
 
 // --- Severity Filter (Feature 2) ---
+async function saveTriage(check, status) {
+  const prev = check.triage_status
+  check.triage_status = status
+  try {
+    await updateCheckTriage(check.ID, { status, note: check.triage_note || '' })
+  } catch {
+    check.triage_status = prev
+  }
+}
+function triageClass(s) {
+  return (
+    {
+      confirmed: 'border-red-200 bg-red-50 text-red-700',
+      false_positive: 'border-gray-200 bg-gray-100 text-gray-500',
+      fixed: 'border-green-200 bg-green-50 text-green-700',
+      accepted: 'border-yellow-200 bg-yellow-50 text-yellow-700',
+    }[s] || 'border-gray-200 bg-white text-gray-600'
+  )
+}
+
 const severityFilter = ref('all')
 
 // Flatten all checks from all categories for counting
@@ -1002,6 +1022,22 @@ onMounted(async () => {
                     </span>
                     <span :class="['font-bold', getScoreColor(check.score)]">{{ Math.round(check.score) }}/1000</span>
                   </div>
+                </div>
+
+                <!-- Triage -->
+                <div class="flex items-center gap-2 mb-2 text-xs">
+                  <span class="text-gray-400">Triage:</span>
+                  <select
+                    :value="check.triage_status || 'open'"
+                    @change="saveTriage(check, $event.target.value)"
+                    :class="['rounded border px-1.5 py-0.5 outline-none cursor-pointer', triageClass(check.triage_status)]"
+                  >
+                    <option value="open">Open</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="false_positive">False positive</option>
+                    <option value="fixed">Fixed</option>
+                    <option value="accepted">Accepted risk</option>
+                  </select>
                 </div>
 
                 <!-- Explanation Box -->

@@ -157,6 +157,9 @@ type CheckResult struct {
 	CVSSScore    float64 `json:"cvss_score"`
 	CVSSVector   string  `json:"cvss_vector"`
 	CVSSRating   string  `json:"cvss_rating"`
+	// Triage: "" (open) | confirmed | false_positive | fixed | accepted
+	TriageStatus string `json:"triage_status"`
+	TriageNote   string `json:"triage_note"`
 }
 
 // --- Upgrade Requests ---

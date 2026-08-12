@@ -98,6 +98,7 @@ func SetupRoutes(app *fiber.App) {
 
 	// Scan Results
 	results := protected.Group("/results")
+	results.Put("/checks/:id/triage", UpdateCheckTriage)
 	results.Get("/:id", GetScanResult)
 	results.Get("/:id/pdf", GeneratePDFReport)
 	results.Get("/:id/sarif", ExportSARIF)
