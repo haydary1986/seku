@@ -1,20 +1,17 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { getDownloadStats, agentDownloadUrl } from '../api'
 
 const stats = ref({ total: 0, by_platform: {} })
+const macArch = ref('macos-arm64') // 'macos-arm64' | 'macos-intel'
 
-const platforms = [
-  { key: 'windows', name: 'Windows', sub: '64-bit · .exe', emoji: '🪟' },
-  { key: 'macos-arm64', name: 'macOS', sub: 'Apple Silicon (M1/M2/M3)', emoji: '🍎' },
-  { key: 'macos-intel', name: 'macOS', sub: 'Intel', emoji: '🍎' },
-  { key: 'linux', name: 'Linux', sub: '64-bit', emoji: '🐧' },
-]
+const macCount = computed(
+  () => (stats.value.by_platform?.['macos-arm64'] || 0) + (stats.value.by_platform?.['macos-intel'] || 0)
+)
 
 function fmt(n) {
   return (n || 0).toLocaleString()
 }
-
 async function load() {
   try {
     const { data } = await getDownloadStats()
@@ -26,7 +23,6 @@ async function load() {
 function onDownload() {
   setTimeout(load, 1500)
 }
-
 onMounted(load)
 </script>
 
@@ -56,24 +52,57 @@ onMounted(load)
 
     <div class="max-w-5xl mx-auto px-4 md:px-6 py-10">
       <!-- Platform cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div
-          v-for="p in platforms"
-          :key="p.key"
-          class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex flex-col items-center text-center hover:shadow-md hover:border-indigo-200 transition"
-        >
-          <div class="text-4xl mb-3">{{ p.emoji }}</div>
-          <p class="font-semibold text-gray-900">{{ p.name }}</p>
-          <p class="text-xs text-gray-500 mb-1">{{ p.sub }}</p>
-          <p class="text-[11px] text-gray-400 mb-4">{{ fmt(stats.by_platform?.[p.key]) }} تحميل</p>
-          <a
-            :href="agentDownloadUrl(p.key)"
-            @click="onDownload"
-            class="mt-auto w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Windows -->
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col items-center text-center hover:shadow-md hover:border-indigo-200 transition">
+          <svg viewBox="0 0 24 24" class="w-11 h-11 mb-3" fill="#0078D4">
+            <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-13.051-1.351" />
+          </svg>
+          <p class="font-semibold text-gray-900">Windows</p>
+          <p class="text-xs text-gray-500 mb-1">64-bit · .exe</p>
+          <p class="text-[11px] text-gray-400 mb-4">{{ fmt(stats.by_platform?.windows) }} تحميل</p>
+          <a :href="agentDownloadUrl('windows')" @click="onDownload" class="mt-auto w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            تحميل
+          </a>
+        </div>
+
+        <!-- macOS (single card, arch selector) -->
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col items-center text-center hover:shadow-md hover:border-indigo-200 transition">
+          <svg viewBox="0 0 24 24" class="w-11 h-11 mb-3 text-gray-900" fill="currentColor">
+            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.09M12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25" />
+          </svg>
+          <p class="font-semibold text-gray-900">macOS</p>
+          <p class="text-[11px] text-gray-400 mb-2">{{ fmt(macCount) }} تحميل</p>
+          <!-- two options -->
+          <div class="flex w-full rounded-lg border border-gray-200 overflow-hidden text-xs mb-3">
+            <button @click="macArch = 'macos-arm64'" :class="macArch === 'macos-arm64' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'" class="px-2 py-1.5 flex-1 transition">Apple Silicon</button>
+            <button @click="macArch = 'macos-intel'" :class="macArch === 'macos-intel' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'" class="px-2 py-1.5 flex-1 border-r border-gray-200 transition">Intel</button>
+          </div>
+          <a :href="agentDownloadUrl(macArch)" @click="onDownload" class="mt-auto w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            تحميل {{ macArch === 'macos-arm64' ? '(Apple Silicon)' : '(Intel)' }}
+          </a>
+          <p class="text-[10px] text-gray-400 mt-2">حجبه ماك؟ بالتيرمنال: <code>xattr -c seku-agent-*</code></p>
+        </div>
+
+        <!-- Linux -->
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col items-center text-center hover:shadow-md hover:border-indigo-200 transition">
+          <svg viewBox="0 0 64 64" class="w-11 h-11 mb-3">
+            <path fill="#1f2937" d="M32 6c-8 0-13 6-13 15 0 5-3 7-5 12-1.5 3.5-2 7 1 9 1.5 1 3 .5 4 1.5 1 1 1 3 2.5 4 2 1.5 5 2 10.5 2s8.5-.5 10.5-2c1.5-1 1.5-3 2.5-4 1-1 2.5-.5 4-1.5 3-2 2.5-5.5 1-9-2-5-5-7-5-12 0-9-5-15-13-15z" />
+            <ellipse cx="32" cy="40" rx="10" ry="14" fill="#f3f4f6" />
+            <ellipse cx="27" cy="18" rx="3.4" ry="4.4" fill="#fff" />
+            <ellipse cx="37" cy="18" rx="3.4" ry="4.4" fill="#fff" />
+            <circle cx="27.6" cy="19" r="1.6" fill="#111" />
+            <circle cx="36.4" cy="19" r="1.6" fill="#111" />
+            <path fill="#f59e0b" d="M28.5 21h7L32 26z" />
+            <path fill="#f59e0b" d="M24 57c-2.5 1-5 1-5.5-.5-.4-1.2 1.5-2.8 4-3.5zM40 57c2.5 1 5 1 5.5-.5.4-1.2-1.5-2.8-4-3.5z" />
+          </svg>
+          <p class="font-semibold text-gray-900">Linux</p>
+          <p class="text-xs text-gray-500 mb-1">64-bit</p>
+          <p class="text-[11px] text-gray-400 mb-4">{{ fmt(stats.by_platform?.linux) }} تحميل</p>
+          <a :href="agentDownloadUrl('linux')" @click="onDownload" class="mt-auto w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
             تحميل
           </a>
         </div>
