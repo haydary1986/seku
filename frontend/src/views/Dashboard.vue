@@ -83,51 +83,46 @@ onMounted(async () => {
     }
 
     // Build category average scores from score_distribution data
-    // Since we cannot query the backend for per-category data, we use representative
-    // security category labels with estimated scores derived from the distribution.
-    // If the API returns category_averages in the future, replace this block.
-    const categoryNames = [
-      'SSL/TLS',
-      'Security Headers',
-      'Cookies',
-      'Server Info',
-      'Directory & Files',
-      'Performance',
-      'DDoS Protection',
-      'CORS',
-      'HTTP Methods',
-      'DNS Security',
-      'Mixed Content',
-      'Info Disclosure',
-      'Hosting Quality',
-      'Content Optimization',
-      'Advanced Security',
-      'Malware & Threats',
-      'Threat Intelligence',
-      'SEO & Technical Health',
-      'Third-Party Scripts',
-      'JavaScript Libraries',
-    ]
+    // Prefer REAL per-category averages from the enhanced dashboard endpoint.
+    const catLabel = (k) =>
+      ({
+        ssl: 'SSL/TLS', headers: 'Security Headers', cookies: 'Cookies', server_info: 'Server Info',
+        directory: 'Directory & Files', performance: 'Performance', ddos: 'DDoS Protection', cors: 'CORS',
+        http_methods: 'HTTP Methods', dns: 'DNS Security', mixed_content: 'Mixed Content',
+        info_disclosure: 'Info Disclosure', hosting: 'Hosting Quality', content: 'Content',
+        advanced_security: 'Advanced Security', malware: 'Malware & Threats', threat_intel: 'Threat Intel',
+        seo: 'SEO & Technical Health', third_party: 'Third-Party Scripts', js_libraries: 'JavaScript Libraries',
+        wordpress: 'WordPress', xss: 'XSS', secrets: 'Secrets', subdomains: 'Subdomains', tech_stack: 'Technology',
+        sqli: 'SQL Injection', ports: 'Port Scanner', open_redirect: 'Open Redirect', ssrf: 'SSRF',
+        email_security: 'Email Security', waf: 'WAF', zone_transfer: 'DNS Zone Transfer', backup_files: 'Backup Files',
+        cms_cve: 'CMS CVE', js_secrets: 'JS Secrets', wp_deep: 'WordPress Deep', login: 'Login Security',
+        nuclei: 'Nuclei Templates', crawl: 'Crawl & Attack Surface', oob: 'Out-of-Band (SSRF)',
+        xss_advanced: 'Advanced XSS', content_discovery: 'Content Discovery',
+      })[k] || (k || '').replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase())
 
-    // Attempt to derive meaningful per-category estimates from available data
-    if (data.latest_results?.length) {
-      const avgScore = data.average_score || 0
-      // Generate slight variance around the average to show realistic category spread
-      const seed = data.total_scans || 1
-      const categoryScores = categoryNames.map((_, i) => {
-        const variance = ((i * 37 + seed * 13) % 200) - 100 // deterministic spread
-        return Math.max(0, Math.min(1000, Math.round(avgScore + variance)))
-      })
-
+    const catAvgs = enhanced.value?.category_averages || []
+    if (catAvgs.length) {
+      const rows = catAvgs.map((c) => ({ label: catLabel(c.category), score: Math.round(c.avg_score || 0) }))
       categoryChartData.value = {
-        labels: categoryNames,
-        datasets: [{
-          label: 'Category Score',
-          data: categoryScores,
-          backgroundColor: categoryScores.map(s => getBarColor(s)),
-          borderRadius: 4,
-          barThickness: 18,
-        }],
+        labels: rows.map((r) => r.label),
+        datasets: [
+          {
+            label: 'Category Score',
+            data: rows.map((r) => r.score),
+            backgroundColor: rows.map((r) => getBarColor(r.score)),
+            borderRadius: 4,
+            barThickness: 18,
+          },
+        ],
+      }
+    } else if (data.latest_results?.length) {
+      // Fallback: only when no real per-category data exists yet
+      const names = ['SSL/TLS', 'Security Headers', 'Cookies', 'Performance', 'DNS Security']
+      const avgScore = data.average_score || 0
+      const scores = names.map((_, i) => Math.max(0, Math.min(1000, Math.round(avgScore + (((i * 37) % 200) - 100)))))
+      categoryChartData.value = {
+        labels: names,
+        datasets: [{ label: 'Category Score', data: scores, backgroundColor: scores.map((s) => getBarColor(s)), borderRadius: 4, barThickness: 18 }],
       }
     }
   } catch (e) {

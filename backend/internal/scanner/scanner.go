@@ -533,7 +533,11 @@ scanDone:
 // API stalls the whole scan indefinitely — the per-request HTTP timeouts inside
 // scanners do not cover DNS lookups or external API calls. This guard keeps a
 // batch scan of many sites from freezing on one bad target.
-const scannerTimeout = 60 * time.Second
+// Per-scanner wall-clock deadline. Heavy/active scanners (nuclei, dalfox, ffuf,
+// crawl, oob, login) have their own internal timeouts; this is the safety net
+// above them, so it must exceed the largest internal budget. Configurable via
+// SEKU_SCANNER_TIMEOUT (seconds). Passive scanners return in <5s regardless.
+var scannerTimeout = time.Duration(envInt("SEKU_SCANNER_TIMEOUT", 240)) * time.Second
 
 // runScannerBounded runs a scanner with a hard wall-clock deadline. On timeout
 // (or panic) it returns a single weight-0 "error" check — recorded for
