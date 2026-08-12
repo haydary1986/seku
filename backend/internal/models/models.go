@@ -315,3 +315,10 @@ type AgentJob struct {
 	ResultsJSON    string     `json:"results_json" gorm:"type:text"`
 	Error          string     `json:"error"`
 }
+
+// DownloadStat counts agent-binary downloads per platform.
+type DownloadStat struct {
+	gorm.Model
+	Platform string `json:"platform" gorm:"uniqueIndex"`
+	Count    int64  `json:"count"`
+}

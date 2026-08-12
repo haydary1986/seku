@@ -168,6 +168,10 @@ export const getNucleiRun = (id) => api.get('/tools/nuclei/runs/' + id)
 // Finding triage
 export const updateCheckTriage = (id, data) => api.put('/results/checks/' + id + '/triage', data)
 
+// Agent downloads (public)
+export const getDownloadStats = () => api.get('/downloads/stats')
+export const agentDownloadUrl = (platform) => '/api/downloads/agent/' + platform
+
 // Administrative Directives (admin)
 export const getDirectives = () => api.get('/directives')
 

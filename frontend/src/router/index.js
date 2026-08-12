@@ -27,12 +27,14 @@ import Directives from '../views/Directives.vue'
 import DataLeak from '../views/DataLeak.vue'
 import SEOSettings from '../views/SEOSettings.vue'
 import NucleiTool from '../views/NucleiTool.vue'
+import Downloads from '../views/Downloads.vue'
 
 const routes = [
   // Public pages
   { path: '/', name: 'Landing', component: Landing, meta: { public: true, landing: true } },
   { path: '/login', name: 'Login', component: Login, meta: { public: true } },
   { path: '/register', name: 'Register', component: Register, meta: { public: true } },
+  { path: '/downloads', name: 'Downloads', component: Downloads, meta: { public: true } },
   { path: '/methodology', name: 'Methodology', component: Methodology, meta: { public: true } },
   { path: '/methodology-ar', name: 'MethodologyAr', component: MethodologyAr, meta: { public: true } },
   { path: '/pricing', name: 'Pricing', component: Pricing, meta: { public: true } },

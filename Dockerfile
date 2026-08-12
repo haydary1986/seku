@@ -14,6 +14,12 @@ COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ .
 RUN CGO_ENABLED=1 GOOS=linux go build -o vscan-server ./cmd/main.go
+# Cross-compile the local scan agent (CGO-free) for the download page
+RUN mkdir -p /agents \
+ && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o /agents/seku-agent-windows-amd64.exe ./cmd/agent \
+ && CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -ldflags="-s -w" -o /agents/seku-agent-macos-arm64 ./cmd/agent \
+ && CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags="-s -w" -o /agents/seku-agent-macos-intel ./cmd/agent \
+ && CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags="-s -w" -o /agents/seku-agent-linux-amd64 ./cmd/agent
 
 # Stage 2b: Fetch nuclei binary + templates (isolated — not part of Seku's go.mod).
 # Powers the optional "nuclei" scanner (enable at runtime with SEKU_ENABLE_NUCLEI=1).
@@ -52,6 +58,9 @@ WORKDIR /app
 
 # Copy Go binary
 COPY --from=backend-builder /app/backend/vscan-server .
+
+# Baked agent binaries served by the download page
+COPY --from=backend-builder /agents /app/agents
 
 # nuclei binary + templates (optional engine; the scanner degrades gracefully if absent)
 COPY --from=nuclei-builder /go/bin/nuclei /usr/local/bin/nuclei

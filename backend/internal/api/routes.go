@@ -49,6 +49,10 @@ func SetupRoutes(app *fiber.App) {
 	agentGroup.Get("/jobs", AgentPollJob)
 	agentGroup.Post("/jobs/:id/result", AgentPostResult)
 
+	// Public: agent binary downloads + counter
+	api.Get("/downloads/stats", GetDownloadStats)
+	api.Get("/downloads/agent/:platform", DownloadAgent)
+
 	// Public routes (no auth required)
 	api.Post("/auth/login", Login)
 	api.Post("/auth/register", Register)
