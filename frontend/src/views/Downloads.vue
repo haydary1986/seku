@@ -83,7 +83,7 @@ onMounted(load)
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
             تحميل {{ macArch === 'macos-arm64' ? '(Apple Silicon)' : '(Intel)' }}
           </a>
-          <p class="text-[10px] text-gray-400 mt-2">حجبه ماك؟ بالتيرمنال: <code>xattr -c seku-agent-*</code></p>
+          <p class="text-[10px] text-gray-400 mt-2">ظهرت رسالة «Apple could not verify»؟ الحل بالأسفل ↓</p>
         </div>
 
         <!-- Linux -->
@@ -108,8 +108,23 @@ onMounted(load)
         </div>
       </div>
 
+      <!-- macOS Gatekeeper notice -->
+      <div class="mt-6 bg-white rounded-2xl border border-amber-200 shadow-sm p-5">
+        <p class="font-semibold text-gray-900">🍎 ظهرت رسالة «Apple could not verify…» على ماك؟</p>
+        <p class="text-sm text-gray-500 mt-1">
+          هذا طبيعي — الملف غير موقّع من Apple (ليس فايروساً). لتشغيله: افتح <strong>Terminal</strong>، ثم نفّذ الأوامر بالترتيب (لنسخة Apple Silicon):
+        </p>
+        <pre class="mt-2 text-xs bg-slate-900 text-slate-100 rounded-lg p-3 overflow-x-auto" dir="ltr"><code>cd ~/Downloads
+xattr -c seku-agent-macos-arm64      # يشيل حجب Gatekeeper
+chmod +x seku-agent-macos-arm64      # يخليه قابل للتشغيل
+./seku-agent-macos-arm64 -server https://sec.erticaz.com -token &lt;TOKEN&gt;</code></pre>
+        <p class="text-[11px] text-gray-400 mt-2">
+          نزّلت نسخة Intel؟ بدّل الاسم إلى <code>seku-agent-macos-intel</code>. — أو بدون تيرمنال: <strong>الإعدادات → الخصوصية والأمان → «فتح على أي حال / Open Anyway»</strong>.
+        </p>
+      </div>
+
       <!-- Quick start -->
-      <div class="mt-10 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+      <div class="mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">التشغيل بثلاث خطوات</h2>
         <ol class="space-y-4">
           <li class="flex gap-3">
