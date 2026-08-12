@@ -43,6 +43,12 @@ func SetupRoutes(app *fiber.App) {
 	// API routes
 	api := app.Group("/api")
 
+	// Local scan agents authenticate with their own token (not a user JWT)
+	agentGroup := api.Group("/agent", AgentAuthRequired())
+	agentGroup.Post("/heartbeat", AgentHeartbeat)
+	agentGroup.Get("/jobs", AgentPollJob)
+	agentGroup.Post("/jobs/:id/result", AgentPostResult)
+
 	// Public routes (no auth required)
 	api.Post("/auth/login", Login)
 	api.Post("/auth/register", Register)
@@ -180,6 +186,14 @@ func SetupRoutes(app *fiber.App) {
 	admin.Post("/tools/nuclei", RunNucleiTool)
 	admin.Get("/tools/nuclei/runs", ListNucleiRuns)
 	admin.Get("/tools/nuclei/runs/:id", GetNucleiRun)
+
+	// Local scan agents (admin)
+	admin.Post("/agents", CreateAgent)
+	admin.Get("/agents", ListAgents)
+	admin.Get("/agents/jobs", ListAgentJobs)
+	admin.Get("/agents/jobs/:id", GetAgentJob)
+	admin.Post("/agents/:id/scan", EnqueueAgentScan)
+	admin.Delete("/agents/:id", DeleteAgent)
 
 	// User Management
 	users := admin.Group("/users")

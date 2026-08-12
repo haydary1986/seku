@@ -45,6 +45,8 @@ func InitDatabase() {
 		&models.EmailConfig{},
 		&models.EmailAlert{},
 		&models.NucleiRun{},
+		&models.Agent{},
+		&models.AgentJob{},
 	)
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)

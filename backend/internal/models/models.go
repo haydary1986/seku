@@ -285,3 +285,33 @@ type NucleiRun struct {
 	ResultsJSON string     `json:"results_json" gorm:"type:text"`
 	Log         string     `json:"log" gorm:"type:text"`
 }
+
+// --- Local scan agents (internal-network scanning) ---
+
+// Agent is a local scanner installed inside a network. It polls the server for
+// jobs and runs scans locally (reaching internal IPs), reporting results back.
+type Agent struct {
+	gorm.Model
+	OrganizationID uint       `json:"organization_id"`
+	Name           string     `json:"name"`
+	Token          string     `json:"-" gorm:"index"` // secret enrollment/auth token
+	OS             string     `json:"os"`
+	Version        string     `json:"version"`
+	LastSeen       *time.Time `json:"last_seen"`
+}
+
+// AgentJob is a scan assigned to a specific agent, executed locally by it.
+type AgentJob struct {
+	gorm.Model
+	AgentID        uint       `json:"agent_id"`
+	OrganizationID uint       `json:"organization_id"`
+	Target         string     `json:"target"`
+	Policy         string     `json:"policy" gorm:"default:standard"`
+	Status         string     `json:"status" gorm:"default:pending"` // pending, running, done, failed
+	StartedAt      *time.Time `json:"started_at"`
+	FinishedAt     *time.Time `json:"finished_at"`
+	DurationSec    int        `json:"duration_sec"`
+	Findings       int        `json:"findings"`
+	ResultsJSON    string     `json:"results_json" gorm:"type:text"`
+	Error          string     `json:"error"`
+}
