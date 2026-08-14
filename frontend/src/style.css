@@ -3,7 +3,28 @@
 /* Enable dark mode via class strategy */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ── Design system (ui-ux-pro-max): Swiss/Minimalism · emerald accent · Fira type ──
+   Applied globally by overriding Tailwind v4 theme tokens, so every existing
+   `indigo-*` / `font-*` utility across all 26 pages picks up the new identity. */
+@theme {
+  --font-sans: "Fira Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Fira Code", ui-monospace, SFMono-Regular, monospace;
+
+  /* Remap the app-wide accent ("indigo") to a professional emerald.
+     600/700 are kept dark enough for 4.5:1 white-text contrast on buttons. */
+  --color-indigo-50: #ecfdf5;
+  --color-indigo-100: #d1fae5;
+  --color-indigo-200: #a7f3d0;
+  --color-indigo-300: #6ee7b7;
+  --color-indigo-400: #34d399;
+  --color-indigo-500: #10b981;
+  --color-indigo-600: #047857;
+  --color-indigo-700: #065f46;
+  --color-indigo-800: #064e3b;
+  --color-indigo-900: #052e21;
+}
+
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: "Fira Sans", system-ui, -apple-system, sans-serif;
 }

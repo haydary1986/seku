@@ -29,7 +29,7 @@ onMounted(load)
 <template>
   <div class="min-h-full bg-gray-50">
     <!-- Branded hero -->
-    <div class="bg-gradient-to-br from-indigo-700 via-indigo-600 to-purple-700 text-white">
+    <div class="bg-gradient-to-br from-indigo-700 via-indigo-600 to-indigo-900 text-white">
       <div class="max-w-5xl mx-auto px-4 md:px-6 py-12 text-center">
         <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/15 backdrop-blur mb-4">
           <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24">
