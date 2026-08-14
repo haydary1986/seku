@@ -21,7 +21,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !['/', '/login', '/register', '/methodology', '/methodology-ar'].includes(window.location.pathname)) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      window.location.href = '/'
+      // Session expired / invalid token → send straight to login (not marketing home).
+      window.location.href = '/login'
     }
     return Promise.reject(error)
   }
