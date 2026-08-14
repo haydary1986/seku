@@ -168,6 +168,9 @@ export const getNucleiRun = (id) => api.get('/tools/nuclei/runs/' + id)
 // Finding triage
 export const updateCheckTriage = (id, data) => api.put('/results/checks/' + id + '/triage', data)
 
+// Cross-site correlations (shared IP / nameserver / mail / email)
+export const getCorrelations = (refresh) => api.get('/correlations' + (refresh ? '?refresh=1' : ''))
+
 // Agent downloads (public)
 export const getDownloadStats = () => api.get('/downloads/stats')
 export const agentDownloadUrl = (platform) => '/api/downloads/agent/' + platform

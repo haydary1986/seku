@@ -126,6 +126,7 @@ func SetupRoutes(app *fiber.App) {
 
 	// Dashboard & Leaderboard
 	protected.Get("/dashboard", GetDashboardStats)
+	protected.Get("/correlations", GetCorrelations)
 	protected.Get("/dashboard/enhanced", GetDashboardEnhanced)
 	protected.Get("/leaderboard", GetLeaderboard)
 	protected.Get("/leaderboard/csv", ExportLeaderboardCSV)

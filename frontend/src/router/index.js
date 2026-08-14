@@ -28,6 +28,7 @@ import DataLeak from '../views/DataLeak.vue'
 import SEOSettings from '../views/SEOSettings.vue'
 import NucleiTool from '../views/NucleiTool.vue'
 import Downloads from '../views/Downloads.vue'
+import Correlations from '../views/Correlations.vue'
 
 const routes = [
   // Public pages
@@ -41,6 +42,7 @@ const routes = [
 
   // Protected pages (require login)
   { path: '/dashboard', name: 'Dashboard', component: Dashboard },
+  { path: '/correlations', name: 'Correlations', component: Correlations },
   { path: '/targets', name: 'Targets', component: Targets },
   { path: '/scans', name: 'Scans', component: Scans },
   { path: '/scans/:id', name: 'ScanDetail', component: ScanDetail },
