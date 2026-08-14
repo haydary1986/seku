@@ -171,6 +171,14 @@ export const updateCheckTriage = (id, data) => api.put('/results/checks/' + id +
 // Cross-site correlations (shared IP / nameserver / mail / email)
 export const getCorrelations = (refresh) => api.get('/correlations' + (refresh ? '?refresh=1' : ''))
 
+// Local scan agents (admin)
+export const getAgents = () => api.get('/agents')
+export const createAgent = (data) => api.post('/agents', data)
+export const deleteAgent = (id) => api.delete('/agents/' + id)
+export const enqueueAgentScan = (id, data) => api.post('/agents/' + id + '/scan', data)
+export const getAgentJobs = () => api.get('/agents/jobs')
+export const getAgentJob = (id) => api.get('/agents/jobs/' + id)
+
 // Agent downloads (public)
 export const getDownloadStats = () => api.get('/downloads/stats')
 export const agentDownloadUrl = (platform) => '/api/downloads/agent/' + platform
