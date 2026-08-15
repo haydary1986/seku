@@ -101,8 +101,9 @@ var categorySeverity = map[string]domainSeverity{
 	"third_party":  sevLow,
 	"js_libraries": sevLow,
 
-	// None — quality / performance (separate score, never in security)
-	"performance": sevNone,
+	// None — quality / informational (separate score, never in security)
+	"passive_urls": sevNone, // historical URL discovery is advisory, not a vuln
+	"performance":  sevNone,
 	"seo":         sevNone,
 	"content":     sevNone,
 	"hosting":     sevNone,

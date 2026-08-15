@@ -32,6 +32,9 @@ RUN go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.11.1
 RUN go install github.com/projectdiscovery/katana/cmd/katana@latest
 RUN go install github.com/hahwul/dalfox/v2@latest
 RUN go install github.com/ffuf/ffuf/v2@latest
+# Passive URL discovery (historical endpoints from Wayback/CommonCrawl/OTX/URLScan)
+RUN go install github.com/lc/gau/v2/cmd/gau@latest
+RUN go install github.com/tomnomnom/waybackurls@latest
 # Clone nuclei-templates directly — `nuclei -update-templates` printed the banner
 # and exited without downloading, leaving an empty templates dir (0 matches).
 RUN git clone --depth 1 https://github.com/projectdiscovery/nuclei-templates.git /root/nuclei-templates \
@@ -67,6 +70,8 @@ COPY --from=nuclei-builder /go/bin/nuclei /usr/local/bin/nuclei
 COPY --from=nuclei-builder /go/bin/katana /usr/local/bin/katana
 COPY --from=nuclei-builder /go/bin/dalfox /usr/local/bin/dalfox
 COPY --from=nuclei-builder /go/bin/ffuf /usr/local/bin/ffuf
+COPY --from=nuclei-builder /go/bin/gau /usr/local/bin/gau
+COPY --from=nuclei-builder /go/bin/waybackurls /usr/local/bin/waybackurls
 COPY --from=nuclei-builder /root/nuclei-templates /root/nuclei-templates
 COPY --from=nuclei-builder /wordlists /app/wordlists
 # Scanners default to the comprehensive baked wordlists (fall back to embedded if absent)
