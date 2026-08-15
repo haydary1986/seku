@@ -272,6 +272,9 @@ func SetupRoutes(app *fiber.App) {
 	// Purge all scan data (admin)
 	admin.Post("/purge-scans", PurgeAllScans)
 
+	// Recompute all stored scores with the current scoring formula (admin)
+	admin.Post("/recompute-scores", RecomputeAllScores)
+
 	// Administrative Directives (admin)
 	admin.Get("/directives", GenerateDirectives)
 }

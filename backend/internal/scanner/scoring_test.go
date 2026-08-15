@@ -66,14 +66,15 @@ func TestComputeScores_HighFailDoesNotHardCap(t *testing.T) {
 		chk("xss", "Reflected XSS Detection", "pass", 1000, 80),
 		chk("sqli", "SQL Injection Test", "pass", 1000, 70),
 		chk("ssl", "TLS Version", "pass", 1000, 100),
-		// one confident high failure (a missing header):
-		chk("headers", "HSTS", "fail", 0, 100),
+		// one confident HIGH failure (a missing header): score 250 → "high"
+		// (score 0 would be "critical" per severityFromScore).
+		chk("headers", "HSTS", "fail", 250, 100),
 	}
 	r := ComputeScores(checks)
 	if r.CapReason != "" {
 		t.Errorf("a high-severity fail must not cap; got cap %q", r.CapReason)
 	}
-	// It should reduce the score below a clean site but not floor it to a fixed cap.
+	// A single high fail deducts a bounded penalty (not a hard cap) → stays high.
 	if r.Security < 700 {
 		t.Errorf("one high fail among strong checks should stay well above C, got %.0f", r.Security)
 	}

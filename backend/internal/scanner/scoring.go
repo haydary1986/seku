@@ -3,6 +3,7 @@ package scanner
 import (
 	"math"
 	"sort"
+	"strings"
 
 	"seku/internal/models"
 )
@@ -169,12 +170,44 @@ type catAgg struct {
 	count int
 }
 
+// --- Penalty-based security scoring (Mozilla Observatory style) ---
+// The security score starts at 1000 and DEDUCTS for each failing/warning finding,
+// scaled by the finding's own severity, its confidence, and whether it is a full
+// fail or a partial warn. Passing checks neither add nor inflate. This makes real
+// hardening gaps (missing CSP/HSTS, weak DMARC, exposed panels) actually lower the
+// grade and spreads sites across A–F — instead of the old weighted average where a
+// site that merely lacked active exploits (SQLi/XSS/malware all "pass" = 1000) was
+// pulled to an A+ regardless of its real posture.
+const (
+	warnFactor      = 0.5 // a partial "warn" deducts half of a full "fail"
+	maxCatDeduction = 320 // one noisy category can't dominate the whole score
+	minConfFactor   = 0.5 // even lower-confidence findings still count somewhat
+)
+
+// severityPenalty is the full-fail deduction for a finding of the given severity
+// (Balanced calibration). Info/none deduct nothing.
+func severityPenalty(sev string) float64 {
+	switch strings.ToLower(strings.TrimSpace(sev)) {
+	case "critical":
+		return 320
+	case "high":
+		return 130
+	case "medium":
+		return 55
+	case "low":
+		return 16
+	default:
+		return 0
+	}
+}
+
 // ComputeScores applies the scientific methodology to a set of checks. It is a
 // pure function (no I/O) so it is fully unit-testable.
 func ComputeScores(checks []models.CheckResult) ScoreResult {
-	secCat := map[string]*catAgg{}
 	qualCat := map[string]*catAgg{}
+	catDeduction := map[string]float64{} // security deductions accumulated per category
 
+	securityScored := false
 	critFail := false
 	var critReason string
 
@@ -199,18 +232,30 @@ func ComputeScores(checks []models.CheckResult) ScoreResult {
 			continue
 		}
 
-		a := secCat[c.Category]
-		if a == nil {
-			a = &catAgg{}
-			secCat[c.Category] = a
+		securityScored = true
+
+		// Deduct for failing/warning findings, scaled by the finding's severity,
+		// confidence, and fail-vs-warn. Passing checks deduct nothing.
+		if c.Status == "fail" || c.Status == "warn" {
+			base := severityPenalty(c.Severity)
+			if base > 0 {
+				factor := 1.0
+				if c.Status == "warn" {
+					factor = warnFactor
+				}
+				conf := float64(confidenceOf(c)) / 100.0
+				if conf < minConfFactor {
+					conf = minConfFactor
+				} else if conf > 1.0 {
+					conf = 1.0
+				}
+				catDeduction[c.Category] += base * factor * conf
+			}
 		}
-		a.sum += c.Score
-		a.count++
 
 		// Cap detection: a CONFIRMED critical-severity finding (the check's own
-		// severity, in an exploit/exposure domain) floors the grade. High/medium
-		// findings and hardening gaps are handled by the weighted average, not a
-		// cap — so a single low-impact finding cannot collapse the ranking.
+		// severity, in an exploit/exposure domain) floors the grade to F, so a
+		// genuinely compromised site can't pass no matter how much else is clean.
 		if c.Status == "fail" && c.Severity == "critical" &&
 			capCategories[c.Category] && confidenceOf(c) >= capConfidence {
 			critFail = true
@@ -220,8 +265,23 @@ func ComputeScores(checks []models.CheckResult) ScoreResult {
 		}
 	}
 
+	var totalDeduction float64
+	for _, d := range catDeduction {
+		if d > maxCatDeduction {
+			d = maxCatDeduction
+		}
+		totalDeduction += d
+	}
+
 	res := ScoreResult{}
-	res.RawSecurity = weightedDomainScore(secCat)
+	if !securityScored {
+		res.RawSecurity = 1000 // nothing security-relevant ran → nothing to penalise
+	} else {
+		res.RawSecurity = 1000 - totalDeduction
+		if res.RawSecurity < 0 {
+			res.RawSecurity = 0
+		}
+	}
 	res.Quality = plainDomainScore(qualCat)
 
 	res.Security = res.RawSecurity
@@ -243,28 +303,6 @@ func confidenceOf(c models.CheckResult) int {
 		return c.Confidence
 	}
 	return GetConfidence(c.CheckName)
-}
-
-// weightedDomainScore aggregates security category means by intrinsic severity
-// weight: Σ(categoryMean × severityWeight) / Σ(severityWeight). Returns 1000 when
-// no security categories were scored (nothing to penalise).
-func weightedDomainScore(cats map[string]*catAgg) float64 {
-	var num, den float64
-	for cat, a := range cats {
-		if a.count == 0 {
-			continue
-		}
-		w := categorySeverity[cat].weight()
-		if w == 0 {
-			continue
-		}
-		num += (a.sum / float64(a.count)) * w
-		den += w
-	}
-	if den == 0 {
-		return 1000
-	}
-	return num / den
 }
 
 // plainDomainScore averages quality category means with equal weight. Returns

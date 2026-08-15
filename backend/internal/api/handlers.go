@@ -704,6 +704,37 @@ func DeleteScanJob(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Scan job permanently deleted"})
 }
 
+// RecomputeAllScores re-runs the scoring engine over every stored scan result's
+// checks and updates the persisted score/grade — used after a scoring-formula
+// change so the leaderboard reflects the new model WITHOUT re-scanning.
+// POST /recompute-scores  (admin)
+func RecomputeAllScores(c *fiber.Ctx) error {
+	var results []models.ScanResult
+	config.DB.Find(&results)
+
+	updated := 0
+	dist := map[string]int{}
+	for i := range results {
+		var checks []models.CheckResult
+		config.DB.Where("scan_result_id = ?", results[i].ID).Find(&checks)
+		if len(checks) == 0 {
+			continue
+		}
+		sr := scanner.ComputeScores(checks)
+		grade := scanner.SecurityGrade(sr.Security)
+		config.DB.Model(&models.ScanResult{}).Where("id = ?", results[i].ID).Updates(map[string]interface{}{
+			"overall_score":    sr.Security,
+			"quality_score":    sr.Quality,
+			"raw_score":        sr.RawSecurity,
+			"security_grade":   grade,
+			"grade_cap_reason": sr.CapReason,
+		})
+		dist[grade]++
+		updated++
+	}
+	return c.JSON(fiber.Map{"message": "recomputed", "results_updated": updated, "grade_distribution": dist})
+}
+
 // --- Dashboard Stats ---
 
 func GetDashboardStats(c *fiber.Ctx) error {
