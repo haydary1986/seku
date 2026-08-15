@@ -280,7 +280,7 @@ var ScanPolicies = map[string]ScanPolicy{
 	"deep": {
 		Name:        "Deep Scan",
 		Description: "Full security assessment — 40 categories incl. login brute-force, nuclei CVE templates, crawl / attack-surface, and OOB SSRF (some advanced checks require ops enablement). ~3-5 minutes per site",
-		Categories:  []string{"ssl", "headers", "cookies", "server_info", "directory", "performance", "ddos", "cors", "http_methods", "dns", "mixed_content", "info_disclosure", "hosting", "content", "advanced_security", "malware", "threat_intel", "seo", "third_party", "js_libraries", "wordpress", "xss", "secrets", "subdomains", "tech_stack", "sqli", "ports", "open_redirect", "ssrf", "email_security", "waf", "zone_transfer", "backup_files", "cms_cve", "js_secrets", "wp_deep", "login", "nuclei", "crawl", "oob", "xss_advanced", "content_discovery"},
+		Categories:  []string{"ssl", "headers", "cookies", "server_info", "directory", "performance", "ddos", "cors", "http_methods", "dns", "mixed_content", "info_disclosure", "hosting", "content", "advanced_security", "malware", "threat_intel", "seo", "third_party", "js_libraries", "wordpress", "xss", "secrets", "subdomains", "tech_stack", "sqli", "ports", "open_redirect", "ssrf", "email_security", "waf", "zone_transfer", "backup_files", "cms_cve", "js_secrets", "wp_deep", "login", "nuclei", "crawl", "oob", "xss_advanced", "content_discovery", "graphql", "jwt_security"},
 		Timeout:     180,
 	},
 }
@@ -331,6 +331,8 @@ func allScanners() []Scanner {
 		NewOOBScanner(),
 		NewDalfoxScanner(),
 		NewFFUFScanner(),
+		NewGraphQLScanner(),
+		NewJWTScanner(),
 	}
 }
 
