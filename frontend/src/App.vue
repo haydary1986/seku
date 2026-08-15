@@ -5,6 +5,7 @@ import { useI18n } from './i18n'
 import { useTheme } from './stores/theme'
 import { refreshAuth } from './api'
 import Toast from './components/Toast.vue'
+import PublicHeader from './components/PublicHeader.vue'
 
 const { t, lang, dir, toggleLang } = useI18n()
 const { theme, toggleTheme } = useTheme()
@@ -42,6 +43,12 @@ const user = computed(() => {
 })
 const isAdmin = computed(() => user.value?.role === 'admin')
 const isLoggedIn = computed(() => !!localStorage.getItem('token'))
+
+// Public marketing pages get the shared PublicHeader menu — except Landing
+// (has its own hero nav) and the standalone auth/report pages.
+const showPublicHeader = computed(() =>
+  route.meta?.public && !['Landing', 'Login', 'Register', 'PublicReport'].includes(route.name),
+)
 
 // Icon paths (reused across nav items)
 const ic = {
@@ -175,8 +182,11 @@ function logout() {
   <!-- Global toast notifications (app-wide) -->
   <Toast />
 
-  <!-- Public pages - no sidebar (landing, login, methodology) -->
-  <router-view v-if="route.meta?.public" />
+  <!-- Public pages - no sidebar. Marketing pages get a shared PublicHeader menu. -->
+  <div v-if="route.meta?.public" class="min-h-screen bg-white">
+    <PublicHeader v-if="showPublicHeader" />
+    <router-view />
+  </div>
 
   <!-- Main layout with sidebar (authenticated pages) -->
   <div v-else class="min-h-screen bg-gray-50 dark:bg-slate-800" :dir="dir">
