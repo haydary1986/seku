@@ -55,7 +55,15 @@
     "compare": "Compare",
     "webhooks": "Webhooks",
     "logout": "Sign Out",
-    "docs": "Documentation"
+    "docs": "Documentation",
+    "discovery": "Discovery",
+    "correlations": "Correlations",
+    "dataLeak": "Data Leak",
+    "directives": "Directives",
+    "nuclei": "Nuclei Scan",
+    "agents": "Agents",
+    "downloads": "Agent Download",
+    "seo": "SEO"
   },
   "landing": {
     "badge": "Website Security Scanning Platform",
