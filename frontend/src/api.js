@@ -61,6 +61,8 @@ export const exportCSV = (id) => api.get(`/results/${id}/csv`, { responseType: '
 export const getScoreHistory = (id) => api.get(`/targets/${id}/history`)
 export const getTimelineComparison = (id) => api.get(`/targets/${id}/timeline`)
 export const getFixPriority = (id) => api.get(`/results/${id}/fix-priority`)
+export const shareResult = (id) => api.post(`/results/${id}/share`)
+export const unshareResult = (id) => api.delete(`/results/${id}/share`)
 
 // Dashboard & Leaderboard
 export const getDashboardStats = () => api.get('/dashboard')

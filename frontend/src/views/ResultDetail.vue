@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getScanResult, analyzeResult, getAIAnalysis, downloadReport, exportSARIF, exportCSV, getUpgradeSuggestions, getScoreHistory, getComplianceReport, getRemediationGuide, createGitHubIssue, createJiraIssue, getFixPriority, getTimelineComparison, updateCheckTriage } from '../api'
+import { getScanResult, analyzeResult, getAIAnalysis, downloadReport, exportSARIF, exportCSV, getUpgradeSuggestions, getScoreHistory, getComplianceReport, getRemediationGuide, createGitHubIssue, createJiraIssue, getFixPriority, getTimelineComparison, updateCheckTriage, shareResult } from '../api'
 import { categoryInfo, getCheckExplanation } from '../data/securityKnowledge'
 import PasswordInput from '../components/PasswordInput.vue'
 import { Radar, Line } from 'vue-chartjs'
@@ -145,6 +145,28 @@ async function downloadCSV() {
     csvLoading.value = false
   }
 }
+
+// --- Public shareable report + badge ---
+const shareLoading = ref(false)
+const shareInfo = ref(null) // { share_url, badge_url }
+const shareOrigin = window.location.origin
+async function shareThisReport() {
+  shareLoading.value = true
+  try {
+    const { data } = await shareResult(route.params.id)
+    shareInfo.value = data
+  } catch (e) {
+    alert(e.response?.data?.error || 'تعذّر إنشاء رابط المشاركة')
+  } finally {
+    shareLoading.value = false
+  }
+}
+function copyText(t) { if (navigator?.clipboard) navigator.clipboard.writeText(t) }
+const badgeSnippet = computed(() =>
+  shareInfo.value
+    ? `<a href="${shareOrigin}${shareInfo.value.share_url}"><img src="${shareOrigin}${shareInfo.value.badge_url}" alt="Scanned by Seku"></a>`
+    : ''
+)
 
 function getUpgradeCommand(suggestion) {
   const lib = suggestion.library.toLowerCase()
@@ -686,6 +708,33 @@ onMounted(async () => {
               class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm">
               {{ showAI ? 'Hide AI Report' : 'Show AI Report' }}
             </button>
+            <button @click="shareThisReport" :disabled="shareLoading"
+              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2 text-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+              </svg>
+              {{ shareLoading ? '...' : 'مشاركة عامة' }}
+            </button>
+          </div>
+
+          <!-- Share panel -->
+          <div v-if="shareInfo" class="mt-4 pt-4 border-t border-gray-100 space-y-3">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">رابط عام للتقرير (ملخّص بلا تفاصيل حسّاسة)</label>
+              <div class="flex items-center gap-2">
+                <input :value="shareOrigin + shareInfo.share_url" readonly dir="ltr"
+                  class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono bg-gray-50" />
+                <button @click="copyText(shareOrigin + shareInfo.share_url)" class="px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded">نسخ</button>
+                <a :href="shareInfo.share_url" target="_blank" class="px-3 py-2 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700">فتح</a>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">شارة «Scanned by Seku» للتضمين في موقعك</label>
+              <div class="flex items-center gap-3">
+                <img :src="shareInfo.badge_url" alt="Scanned by Seku" class="h-5" />
+                <button @click="copyText(badgeSnippet)" class="px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded">نسخ كود التضمين</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

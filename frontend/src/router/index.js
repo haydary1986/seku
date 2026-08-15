@@ -32,6 +32,7 @@ import Correlations from '../views/Correlations.vue'
 import Agents from '../views/Agents.vue'
 import Orders from '../views/Orders.vue'
 import AdminOrders from '../views/AdminOrders.vue'
+import PublicReport from '../views/PublicReport.vue'
 
 const routes = [
   // Public pages
@@ -42,6 +43,7 @@ const routes = [
   { path: '/methodology', name: 'Methodology', component: Methodology, meta: { public: true } },
   { path: '/methodology-ar', name: 'MethodologyAr', component: MethodologyAr, meta: { public: true } },
   { path: '/pricing', name: 'Pricing', component: Pricing, meta: { public: true } },
+  { path: '/r/:token', name: 'PublicReport', component: PublicReport, meta: { public: true } },
 
   // Protected pages (require login)
   { path: '/dashboard', name: 'Dashboard', component: Dashboard },

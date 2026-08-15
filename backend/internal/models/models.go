@@ -148,6 +148,7 @@ type ScanResult struct {
 	Status         string        `json:"status" gorm:"default:pending"`
 	StartedAt      *time.Time    `json:"started_at"`
 	EndedAt        *time.Time    `json:"ended_at"`
+	ShareToken     string        `json:"share_token" gorm:"index"` // public shareable-report token (opt-in)
 	Checks         []CheckResult `json:"checks" gorm:"foreignKey:ScanResultID"`
 	AIAnalysis     *AIAnalysis   `json:"ai_analysis,omitempty" gorm:"foreignKey:ScanResultID"`
 }

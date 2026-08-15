@@ -77,6 +77,8 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/criteria", GetScanCriteria) // public page: scan criteria & scoring
 	api.Get("/plans", GetPlans)           // public: plan details with scan categories
 	api.Get("/pricing", GetPublicPricing) // public: deep-scan price (no account details)
+	api.Get("/public/report/:token", GetPublicReport) // public: shared scan summary
+	api.Get("/public/badge/:token", GetPublicBadge)   // public: embeddable SVG badge
 	api.Get("/docs", GetAPIDocs)          // public: API documentation
 	api.Get("/seo/public", GetPublicSEO)  // public: SEO config (GA ID, verification tags)
 
@@ -136,6 +138,8 @@ func SetupRoutes(app *fiber.App) {
 	// Scan Results
 	results := protected.Group("/results")
 	results.Put("/checks/:id/triage", UpdateCheckTriage)
+	results.Post("/:id/share", ShareResult)
+	results.Delete("/:id/share", UnshareResult)
 	results.Get("/:id", GetScanResult)
 	results.Get("/:id/pdf", GeneratePDFReport)
 	results.Get("/:id/sarif", ExportSARIF)
