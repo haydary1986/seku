@@ -4,9 +4,11 @@ import { useRouter } from 'vue-router'
 import { getLeaderboard, exportLeaderboardCSV, deleteTarget } from '../api'
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js'
+import { useI18n } from '../i18n'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
+const { t } = useI18n()
 const router = useRouter()
 const data = ref(null)
 const loading = ref(true)
@@ -267,8 +269,8 @@ onMounted(() => loadLeaderboard())
     <!-- Header -->
     <div class="mb-8 flex items-start justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Leaderboard</h1>
-        <p class="text-gray-500 mt-1">All websites ranked by security score (highest to lowest)</p>
+        <h1 class="text-3xl font-bold text-gray-900">{{ t('vLeaderboard.title') }}</h1>
+        <p class="text-gray-500 mt-1">{{ t('vLeaderboard.subtitle') }}</p>
       </div>
       <button
         v-if="data?.rankings?.length"
@@ -279,7 +281,7 @@ onMounted(() => loadLeaderboard())
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
         </svg>
-        {{ csvExporting ? 'Exporting...' : 'Export CSV' }}
+        {{ csvExporting ? t('vLeaderboard.exporting') : t('vLeaderboard.exportCsv') }}
       </button>
     </div>
 
@@ -295,7 +297,7 @@ onMounted(() => loadLeaderboard())
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <!-- Category Filter -->
           <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1">Sort / Rank by Category</label>
+            <label class="block text-xs font-medium text-gray-500 mb-1">{{ t('vLeaderboard.sortByCategory') }}</label>
             <select
               v-model="selectedCategory"
               class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
@@ -308,7 +310,7 @@ onMounted(() => loadLeaderboard())
 
           <!-- Institution Filter -->
           <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1">Institution Type</label>
+            <label class="block text-xs font-medium text-gray-500 mb-1">{{ t('vLeaderboard.institutionType') }}</label>
             <select
               v-model="selectedInstitution"
               class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
@@ -321,7 +323,7 @@ onMounted(() => loadLeaderboard())
 
           <!-- Search Box -->
           <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
+            <label class="block text-xs font-medium text-gray-500 mb-1">{{ t('vLeaderboard.search') }}</label>
             <div class="relative">
               <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -329,7 +331,7 @@ onMounted(() => loadLeaderboard())
               <input
                 v-model="searchQuery"
                 type="text"
-                placeholder="Search by name or URL..."
+                :placeholder="t('vLeaderboard.searchPlaceholder')"
                 class="w-full rounded-lg border border-gray-300 bg-white pl-3 pr-10 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
               />
             </div>
@@ -340,23 +342,23 @@ onMounted(() => loadLeaderboard())
       <!-- ============ Stats Row ============ -->
       <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
-          <p class="text-xs text-gray-500">Total Sites</p>
+          <p class="text-xs text-gray-500">{{ t('vLeaderboard.totalSites') }}</p>
           <p class="text-2xl font-bold text-gray-900">{{ data.total_sites }}</p>
         </div>
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
-          <p class="text-xs text-gray-500">Showing</p>
+          <p class="text-xs text-gray-500">{{ t('vLeaderboard.showing') }}</p>
           <p class="text-2xl font-bold text-indigo-600">{{ stats.count }}</p>
         </div>
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
-          <p class="text-xs text-gray-500">Min Score</p>
+          <p class="text-xs text-gray-500">{{ t('vLeaderboard.minScore') }}</p>
           <p :class="['text-2xl font-bold', getScoreColor(stats.min)]">{{ stats.min }}<span class="text-sm text-gray-400 font-normal">/1000</span></p>
         </div>
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
-          <p class="text-xs text-gray-500">Max Score</p>
+          <p class="text-xs text-gray-500">{{ t('vLeaderboard.maxScore') }}</p>
           <p :class="['text-2xl font-bold', getScoreColor(stats.max)]">{{ stats.max }}<span class="text-sm text-gray-400 font-normal">/1000</span></p>
         </div>
         <div class="col-span-2 md:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
-          <p class="text-xs text-gray-500">Average Score</p>
+          <p class="text-xs text-gray-500">{{ t('vLeaderboard.avgScore') }}</p>
           <p :class="['text-2xl font-bold', getScoreColor(stats.avg)]">{{ stats.avg }}<span class="text-sm text-gray-400 font-normal">/1000</span></p>
         </div>
       </div>
@@ -364,12 +366,12 @@ onMounted(() => loadLeaderboard())
       <!-- ============ Chart ============ -->
       <div v-if="chartData.labels.length" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-1">
-          Score Comparison
+          {{ t('vLeaderboard.scoreComparison') }}
           <span v-if="selectedCategory !== 'overall'" class="text-sm font-normal text-indigo-600">
             &mdash; {{ categoryLabelMap[selectedCategory] }}
           </span>
         </h3>
-        <p class="text-xs text-gray-400 mb-4">Sorted by {{ categoryLabelMap[selectedCategory] || 'Overall Score' }} (descending)</p>
+        <p class="text-xs text-gray-400 mb-4">{{ t('vLeaderboard.sortedBy') }} {{ categoryLabelMap[selectedCategory] || t('vLeaderboard.overallScore') }} {{ t('vLeaderboard.descending') }}</p>
         <Bar :data="chartData" :options="chartOptions" />
       </div>
 
@@ -379,16 +381,16 @@ onMounted(() => loadLeaderboard())
           <table class="w-full text-sm">
             <thead class="bg-gray-50">
               <tr>
-                <th class="py-3 px-4 text-right text-gray-600 font-medium">Rank</th>
-                <th class="py-3 px-4 text-right text-gray-600 font-medium">Website</th>
-                <th class="py-3 px-4 text-center text-gray-600 font-medium">Grade</th>
+                <th class="py-3 px-4 text-right text-gray-600 font-medium">{{ t('vLeaderboard.rank') }}</th>
+                <th class="py-3 px-4 text-right text-gray-600 font-medium">{{ t('vLeaderboard.website') }}</th>
+                <th class="py-3 px-4 text-center text-gray-600 font-medium">{{ t('vLeaderboard.grade') }}</th>
                 <th class="py-3 px-4 text-center text-gray-600 font-medium">
-                  {{ selectedCategory === 'overall' ? 'Overall Score' : categoryLabelMap[selectedCategory] }}
+                  {{ selectedCategory === 'overall' ? t('vLeaderboard.overallScore') : categoryLabelMap[selectedCategory] }}
                 </th>
                 <th v-if="selectedCategory !== 'overall'" class="py-3 px-4 text-center text-gray-600 font-medium">
-                  Overall
+                  {{ t('vLeaderboard.overall') }}
                 </th>
-                <th class="py-3 px-4 text-center text-gray-600 font-medium">Details</th>
+                <th class="py-3 px-4 text-center text-gray-600 font-medium">{{ t('vLeaderboard.details') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -446,13 +448,13 @@ onMounted(() => loadLeaderboard())
                       @click="router.push(`/results/${site.scan_result_id}`)"
                       class="px-3 py-1 text-sm text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-colors"
                     >
-                      View Report
+                      {{ t('vLeaderboard.viewReport') }}
                     </button>
                     <button
                       @click="removeTarget(site)"
                       :disabled="deletingId === site.scan_target_id"
                       class="px-2 py-1 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 inline-flex items-center justify-center"
-                      title="حذف الموقع من القائمة"
+                      :title="t('vLeaderboard.deleteTitle')"
                     >
                       <svg v-if="deletingId !== site.scan_target_id" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -471,15 +473,15 @@ onMounted(() => loadLeaderboard())
           <svg class="mx-auto w-12 h-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
           </svg>
-          <p class="text-lg" v-if="data.rankings?.length">No results match your filters</p>
-          <p class="text-lg" v-else>No scan results yet</p>
-          <p class="text-sm mt-1" v-if="!data.rankings?.length">Run a scan first to see the leaderboard</p>
+          <p class="text-lg" v-if="data.rankings?.length">{{ t('vLeaderboard.noResults') }}</p>
+          <p class="text-lg" v-else>{{ t('vLeaderboard.noScans') }}</p>
+          <p class="text-sm mt-1" v-if="!data.rankings?.length">{{ t('vLeaderboard.runScanFirst') }}</p>
           <button
             v-if="data.rankings?.length && (searchQuery || selectedInstitution !== 'all')"
             @click="searchQuery = ''; selectedInstitution = 'all'"
             class="mt-3 px-4 py-2 text-sm text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-colors"
           >
-            Clear Filters
+            {{ t('vLeaderboard.clearFilters') }}
           </button>
         </div>
       </div>

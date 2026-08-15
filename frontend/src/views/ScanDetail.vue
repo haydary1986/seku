@@ -2,6 +2,7 @@
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getScanJob } from '../api'
+import { useI18n } from '../i18n'
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js'
 
@@ -9,6 +10,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const job = ref(null)
 const loading = ref(true)
 const wsConnection = ref(null)
@@ -125,7 +127,7 @@ onMounted(async () => {
       <svg class="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
       </svg>
-      Back to Scans
+      {{ t('vScanDetail.backToScans') }}
     </button>
 
     <div v-if="loading" class="flex justify-center py-20">
@@ -134,7 +136,7 @@ onMounted(async () => {
 
     <div v-else-if="job">
       <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">{{ job.name || 'Scan Details' }}</h1>
+        <h1 class="text-3xl font-bold text-gray-900">{{ job.name || t('vScanDetail.scanDetailsTitle') }}</h1>
         <div class="flex items-center gap-3 mt-2">
           <span :class="[
             'px-3 py-1 rounded-full text-sm font-medium',
@@ -145,13 +147,13 @@ onMounted(async () => {
           ]">
             {{ job.status }}
           </span>
-          <span class="text-sm text-gray-500">{{ job.results?.length || 0 }} websites scanned</span>
+          <span class="text-sm text-gray-500">{{ job.results?.length || 0 }} {{ t('vScanDetail.websitesScanned') }}</span>
         </div>
       </div>
 
       <!-- Comparison Chart -->
       <div v-if="chartData.labels.length" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Score Comparison</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('vScanDetail.scoreComparison') }}</h3>
         <Bar :data="chartData" :options="chartOptions" />
       </div>
 
@@ -161,17 +163,17 @@ onMounted(async () => {
           <thead class="bg-gray-50">
             <tr>
               <th class="text-right py-3 px-4 text-gray-600 font-medium">#</th>
-              <th class="text-right py-3 px-4 text-gray-600 font-medium">Website</th>
-              <th class="text-center py-3 px-4 text-gray-600 font-medium">Score</th>
-              <th class="text-center py-3 px-4 text-gray-600 font-medium">Status</th>
-              <th class="text-center py-3 px-4 text-gray-600 font-medium">Details</th>
+              <th class="text-right py-3 px-4 text-gray-600 font-medium">{{ t('vScanDetail.colWebsite') }}</th>
+              <th class="text-center py-3 px-4 text-gray-600 font-medium">{{ t('vScanDetail.colScore') }}</th>
+              <th class="text-center py-3 px-4 text-gray-600 font-medium">{{ t('vScanDetail.colStatus') }}</th>
+              <th class="text-center py-3 px-4 text-gray-600 font-medium">{{ t('vScanDetail.colDetails') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(result, i) in job.results" :key="result.ID" class="border-t border-gray-100 hover:bg-gray-50">
               <td class="py-4 px-4 text-gray-400">{{ i + 1 }}</td>
               <td class="py-4 px-4">
-                <div class="font-medium text-gray-900">{{ result.scan_target?.name || 'N/A' }}</div>
+                <div class="font-medium text-gray-900">{{ result.scan_target?.name || t('vScanDetail.na') }}</div>
                 <div class="text-xs text-gray-400">{{ result.scan_target?.url }}</div>
               </td>
               <td class="py-4 px-4 text-center">
@@ -206,7 +208,7 @@ onMounted(async () => {
                   @click="router.push(`/results/${result.ID}`)"
                   class="px-3 py-1 text-sm text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50"
                 >
-                  View Report
+                  {{ t('vScanDetail.viewReport') }}
                 </button>
               </td>
             </tr>

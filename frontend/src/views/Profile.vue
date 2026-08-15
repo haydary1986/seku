@@ -3,7 +3,9 @@ import { ref, onMounted } from 'vue'
 import { getProfile, getMyOrganization, changePassword, getMyAlerts, updateMyAlerts } from '../api'
 import api from '../api'
 import PasswordInput from '../components/PasswordInput.vue'
+import { useI18n } from '../i18n'
 
+const { t } = useI18n()
 const user = ref(null)
 const org = ref(null)
 const loading = ref(true)
@@ -146,8 +148,8 @@ onMounted(loadProfile)
 <template>
   <div>
     <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900">Profile Settings</h1>
-      <p class="text-gray-500 mt-1">Manage your account and organization settings</p>
+      <h1 class="text-3xl font-bold text-gray-900">{{ t('vProfile.title') }}</h1>
+      <p class="text-gray-500 mt-1">{{ t('vProfile.subtitle') }}</p>
     </div>
 
     <div v-if="loading" class="flex justify-center py-20">
@@ -165,15 +167,15 @@ onMounted(loadProfile)
           <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
           </svg>
-          Organization
+          {{ t('vProfile.organization') }}
         </h3>
         <div class="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span class="text-gray-500">Name:</span>
+            <span class="text-gray-500">{{ t('vProfile.name') }}</span>
             <span class="font-medium text-gray-900 mr-2">{{ org.name }}</span>
           </div>
           <div>
-            <span class="text-gray-500">Plan:</span>
+            <span class="text-gray-500">{{ t('vProfile.plan') }}</span>
             <span :class="['mr-2 px-2 py-0.5 rounded-full text-xs font-medium',
               org.plan === 'enterprise' ? 'bg-purple-100 text-purple-700' :
               org.plan === 'pro' ? 'bg-indigo-100 text-indigo-700' :
@@ -183,11 +185,11 @@ onMounted(loadProfile)
             </span>
           </div>
           <div>
-            <span class="text-gray-500">Max Targets:</span>
+            <span class="text-gray-500">{{ t('vProfile.maxTargets') }}</span>
             <span class="font-medium text-gray-900 mr-2">{{ org.max_targets }}</span>
           </div>
           <div>
-            <span class="text-gray-500">Max Scans/Month:</span>
+            <span class="text-gray-500">{{ t('vProfile.maxScans') }}</span>
             <span class="font-medium text-gray-900 mr-2">{{ org.max_scans }}</span>
           </div>
         </div>
@@ -199,27 +201,27 @@ onMounted(loadProfile)
           <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
           </svg>
-          Account Information
+          {{ t('vProfile.accountInfo') }}
         </h3>
         <form @submit.prevent="saveProfile" class="space-y-4">
           <div>
-            <label class="block text-sm text-gray-600 mb-1">Username</label>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('vProfile.username') }}</label>
             <input v-model="profileForm.username" type="text" required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1">Full Name</label>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('vProfile.fullName') }}</label>
             <input v-model="profileForm.full_name" type="text"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1">Email</label>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('vProfile.email') }}</label>
             <input v-model="profileForm.email" type="email"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
           </div>
           <button type="submit" :disabled="saving"
             class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
-            {{ saving ? 'Saving...' : 'Save Changes' }}
+            {{ saving ? t('vProfile.saving') : t('vProfile.saveChanges') }}
           </button>
         </form>
       </div>
@@ -230,15 +232,15 @@ onMounted(loadProfile)
           <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
           </svg>
-          Email Alerts
+          {{ t('vProfile.emailAlerts') }}
         </h3>
 
         <form @submit.prevent="saveAlerts" class="space-y-4">
           <!-- Toggle active -->
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-gray-700">Enable Email Alerts</p>
-              <p class="text-xs text-gray-400">Receive email notifications for scan events</p>
+              <p class="text-sm font-medium text-gray-700">{{ t('vProfile.enableAlerts') }}</p>
+              <p class="text-xs text-gray-400">{{ t('vProfile.enableAlertsDesc') }}</p>
             </div>
             <button type="button" @click="alertForm.is_active = !alertForm.is_active"
               :class="[alertForm.is_active ? 'bg-indigo-600' : 'bg-gray-300', 'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out']">
@@ -249,38 +251,38 @@ onMounted(loadProfile)
           <div v-if="alertForm.is_active" class="space-y-4">
             <!-- Email -->
             <div>
-              <label class="block text-sm text-gray-600 mb-1">Notification Email</label>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('vProfile.notificationEmail') }}</label>
               <input v-model="alertForm.email" type="email" required
-                placeholder="your@email.com"
+                :placeholder="t('vProfile.emailPlaceholder')"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
             </div>
 
             <!-- Event checkboxes -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Notify me when</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('vProfile.notifyWhen') }}</label>
               <div class="space-y-2">
                 <label class="flex items-center gap-3 cursor-pointer">
                   <input type="checkbox" v-model="alertForm.events.scan_completed"
                     class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
                   <div>
-                    <span class="text-sm text-gray-700">Scan Completed</span>
-                    <p class="text-xs text-gray-400">When a scan job finishes and results are ready</p>
+                    <span class="text-sm text-gray-700">{{ t('vProfile.scanCompleted') }}</span>
+                    <p class="text-xs text-gray-400">{{ t('vProfile.scanCompletedDesc') }}</p>
                   </div>
                 </label>
                 <label class="flex items-center gap-3 cursor-pointer">
                   <input type="checkbox" v-model="alertForm.events.score_drop"
                     class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
                   <div>
-                    <span class="text-sm text-gray-700">Score Drop</span>
-                    <p class="text-xs text-gray-400">When a website's security score decreases</p>
+                    <span class="text-sm text-gray-700">{{ t('vProfile.scoreDrop') }}</span>
+                    <p class="text-xs text-gray-400">{{ t('vProfile.scoreDropDesc') }}</p>
                   </div>
                 </label>
                 <label class="flex items-center gap-3 cursor-pointer">
                   <input type="checkbox" v-model="alertForm.events.critical_found"
                     class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
                   <div>
-                    <span class="text-sm text-gray-700">Critical Vulnerability Found</span>
-                    <p class="text-xs text-gray-400">When a critical severity issue is detected</p>
+                    <span class="text-sm text-gray-700">{{ t('vProfile.criticalFound') }}</span>
+                    <p class="text-xs text-gray-400">{{ t('vProfile.criticalFoundDesc') }}</p>
                   </div>
                 </label>
               </div>
@@ -288,19 +290,19 @@ onMounted(loadProfile)
 
             <!-- Frequency -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Frequency</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('vProfile.deliveryFrequency') }}</label>
               <div class="grid grid-cols-3 gap-2">
                 <button type="button" @click="alertForm.digest_frequency = 'immediate'"
                   :class="[alertForm.digest_frequency === 'immediate' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50', 'px-3 py-2 text-sm rounded-lg border text-center transition-colors']">
-                  Immediate
+                  {{ t('vProfile.immediate') }}
                 </button>
                 <button type="button" @click="alertForm.digest_frequency = 'daily'"
                   :class="[alertForm.digest_frequency === 'daily' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50', 'px-3 py-2 text-sm rounded-lg border text-center transition-colors']">
-                  Daily Digest
+                  {{ t('vProfile.dailyDigest') }}
                 </button>
                 <button type="button" @click="alertForm.digest_frequency = 'weekly'"
                   :class="[alertForm.digest_frequency === 'weekly' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50', 'px-3 py-2 text-sm rounded-lg border text-center transition-colors']">
-                  Weekly Digest
+                  {{ t('vProfile.weeklyDigest') }}
                 </button>
               </div>
             </div>
@@ -312,7 +314,7 @@ onMounted(loadProfile)
 
           <button type="submit" :disabled="alertSaving"
             class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
-            {{ alertSaving ? 'Saving...' : 'Save Alert Preferences' }}
+            {{ alertSaving ? t('vProfile.saving') : t('vProfile.saveAlerts') }}
           </button>
         </form>
       </div>
@@ -324,36 +326,36 @@ onMounted(loadProfile)
             <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
             </svg>
-            Password
+            {{ t('vProfile.password') }}
           </h3>
           <button @click="showPasswordForm = !showPasswordForm"
             class="text-sm text-indigo-600 hover:text-indigo-800">
-            {{ showPasswordForm ? 'Cancel' : 'Change Password' }}
+            {{ showPasswordForm ? t('vProfile.cancel') : t('vProfile.changePassword') }}
           </button>
         </div>
 
         <form v-if="showPasswordForm" @submit.prevent="updatePassword" class="space-y-4">
           <div>
-            <label class="block text-sm text-gray-600 mb-1">Current Password</label>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('vProfile.currentPassword') }}</label>
             <PasswordInput v-model="passwordForm.old_password" :required="true"
               input-class="w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1">New Password</label>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('vProfile.newPassword') }}</label>
             <PasswordInput v-model="passwordForm.new_password" :required="true"
               input-class="w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1">Confirm New Password</label>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('vProfile.confirmPassword') }}</label>
             <PasswordInput v-model="passwordForm.confirm_password" :required="true"
               input-class="w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
           </div>
           <button type="submit" :disabled="saving"
             class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
-            {{ saving ? 'Changing...' : 'Change Password' }}
+            {{ saving ? t('vProfile.changing') : t('vProfile.changePassword') }}
           </button>
         </form>
-        <p v-else class="text-sm text-gray-500">Click "Change Password" to update your password</p>
+        <p v-else class="text-sm text-gray-500">{{ t('vProfile.passwordHint') }}</p>
       </div>
     </div>
   </div>

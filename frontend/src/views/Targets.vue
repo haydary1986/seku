@@ -1,7 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { getTargets, createTarget, createBulkTargets, deleteTarget, cleanupDeadTargets, cleanupDuplicateTargets, initiateVerification, getVerificationStatus, checkVerification, getTags, createTag, deleteTag, tagTarget, untagTarget, getTargetTags } from '../api'
+import { useI18n } from '../i18n'
 
+const { t } = useI18n()
 const targets = ref([])
 const loading = ref(true)
 const showAddForm = ref(false)
@@ -332,8 +334,8 @@ onMounted(async () => {
   <div>
     <div class="flex items-center justify-between mb-8">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Targets</h1>
-        <p class="text-gray-500 mt-1">Manage websites to scan ({{ totalTargets }} total)</p>
+        <h1 class="text-3xl font-bold text-gray-900">{{ t('vTargets.title') }}</h1>
+        <p class="text-gray-500 mt-1">{{ t('vTargets.subtitle') }} ({{ totalTargets }} {{ t('vTargets.total') }})</p>
       </div>
       <div class="flex gap-2 flex-wrap">
         <button @click="scanDeadTargets" :disabled="cleanupLoading"
@@ -342,34 +344,34 @@ onMounted(async () => {
           <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
           </svg>
-          Cleanup Dead
+          {{ t('vTargets.cleanupDead') }}
         </button>
         <button @click="scanDuplicates" :disabled="duplicatesLoading"
           class="px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors text-sm flex items-center gap-1.5"
-          title="البحث عن المواقع المكررة">
+          :title="t('vTargets.dupTitle')">
           <div v-if="duplicatesLoading" class="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
           <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/>
           </svg>
-          Remove Duplicates
+          {{ t('vTargets.removeDuplicates') }}
         </button>
         <button
           @click="showManageTags = !showManageTags; showAddForm = false; showBulkForm = false"
           class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
         >
-          Manage Tags
+          {{ t('vTargets.manageTags') }}
         </button>
         <button
           @click="showBulkForm = !showBulkForm; showAddForm = false; showManageTags = false"
           class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
         >
-          Bulk Add
+          {{ t('vTargets.bulkAdd') }}
         </button>
         <button
           @click="showAddForm = !showAddForm; showBulkForm = false; showManageTags = false"
           class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
         >
-          Add Target
+          {{ t('vTargets.addTarget') }}
         </button>
       </div>
     </div>
@@ -377,7 +379,7 @@ onMounted(async () => {
     <!-- Search Bar -->
     <div class="mb-4">
       <div class="relative">
-        <input v-model="searchQuery" @input="debouncedSearch" type="text" placeholder="Search targets by URL, name, or institution..."
+        <input v-model="searchQuery" @input="debouncedSearch" type="text" :placeholder="t('vTargets.searchPlaceholder')"
           class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
         <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -392,7 +394,7 @@ onMounted(async () => {
           <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
           </svg>
-          <h3 class="font-semibold text-gray-900">Cleanup Results</h3>
+          <h3 class="font-semibold text-gray-900">{{ t('vTargets.cleanupResults') }}</h3>
         </div>
         <button @click="cleanupResult = null" class="text-gray-400 hover:text-gray-600">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -402,15 +404,15 @@ onMounted(async () => {
       <div class="grid grid-cols-3 gap-3 mb-3">
         <div class="bg-gray-50 rounded-lg p-3 text-center">
           <p class="text-xl font-bold text-gray-700">{{ cleanupResult.total_checked }}</p>
-          <p class="text-xs text-gray-500">Checked</p>
+          <p class="text-xs text-gray-500">{{ t('vTargets.checked') }}</p>
         </div>
         <div class="bg-green-50 rounded-lg p-3 text-center">
           <p class="text-xl font-bold text-green-600">{{ cleanupResult.alive_count }}</p>
-          <p class="text-xs text-green-600">Alive</p>
+          <p class="text-xs text-green-600">{{ t('vTargets.alive') }}</p>
         </div>
         <div class="bg-red-50 rounded-lg p-3 text-center">
           <p class="text-xl font-bold text-red-600">{{ cleanupResult.dead_count }}</p>
-          <p class="text-xs text-red-600">Dead</p>
+          <p class="text-xs text-red-600">{{ t('vTargets.dead') }}</p>
         </div>
       </div>
 
@@ -425,12 +427,12 @@ onMounted(async () => {
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
           </svg>
-          Delete {{ cleanupResult.dead_count }} Dead Targets
+          {{ t('vTargets.delete') }} {{ cleanupResult.dead_count }} {{ t('vTargets.deadTargets') }}
         </button>
       </div>
 
       <div v-else-if="cleanupResult.dead_count === 0" class="text-center py-2">
-        <p class="text-green-600 font-medium">All targets are alive!</p>
+        <p class="text-green-600 font-medium">{{ t('vTargets.allAlive') }}</p>
       </div>
 
       <div v-else-if="!cleanupResult.dry_run" class="text-center py-2">
@@ -445,7 +447,7 @@ onMounted(async () => {
           <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/>
           </svg>
-          <h3 class="font-semibold text-gray-900">Duplicate Targets</h3>
+          <h3 class="font-semibold text-gray-900">{{ t('vTargets.duplicateTargets') }}</h3>
         </div>
         <button @click="duplicatesResult = null" class="text-gray-400 hover:text-gray-600">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -455,15 +457,15 @@ onMounted(async () => {
       <div class="grid grid-cols-3 gap-3 mb-3">
         <div class="bg-gray-50 rounded-lg p-3 text-center">
           <p class="text-xl font-bold text-gray-700">{{ duplicatesResult.total_checked }}</p>
-          <p class="text-xs text-gray-500">Checked</p>
+          <p class="text-xs text-gray-500">{{ t('vTargets.checked') }}</p>
         </div>
         <div class="bg-green-50 rounded-lg p-3 text-center">
           <p class="text-xl font-bold text-green-600">{{ duplicatesResult.unique_count }}</p>
-          <p class="text-xs text-green-600">Unique</p>
+          <p class="text-xs text-green-600">{{ t('vTargets.unique') }}</p>
         </div>
         <div class="bg-amber-50 rounded-lg p-3 text-center">
           <p class="text-xl font-bold text-amber-600">{{ duplicatesResult.duplicate_count }}</p>
-          <p class="text-xs text-amber-600">Duplicates</p>
+          <p class="text-xs text-amber-600">{{ t('vTargets.duplicates') }}</p>
         </div>
       </div>
 
@@ -472,19 +474,19 @@ onMounted(async () => {
           <span class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span>
           <span class="text-gray-700 truncate">{{ d.name || d.url }}</span>
           <span class="text-xs text-gray-400 truncate" dir="ltr">{{ d.url }}</span>
-          <span class="text-xs text-gray-400 ml-auto">→ keep #{{ d.kept_id }}</span>
+          <span class="text-xs text-gray-400 ml-auto">→ {{ t('vTargets.keep') }} #{{ d.kept_id }}</span>
         </div>
         <button @click="confirmDeleteDuplicates"
           class="w-full mt-3 px-4 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium flex items-center justify-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
           </svg>
-          Delete {{ duplicatesResult.duplicate_count }} Duplicate Targets
+          {{ t('vTargets.delete') }} {{ duplicatesResult.duplicate_count }} {{ t('vTargets.duplicateTargetsSuffix') }}
         </button>
       </div>
 
       <div v-else-if="duplicatesResult.duplicate_count === 0" class="text-center py-2">
-        <p class="text-green-600 font-medium">No duplicates found!</p>
+        <p class="text-green-600 font-medium">{{ t('vTargets.noDuplicates') }}</p>
       </div>
 
       <div v-else-if="!duplicatesResult.dry_run" class="text-center py-2">
@@ -494,10 +496,10 @@ onMounted(async () => {
 
     <!-- Add Single Target Form -->
     <div v-if="showAddForm" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">Add New Target</h3>
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('vTargets.addNewTarget') }}</h3>
       <form @submit.prevent="addTarget" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label class="block text-sm text-gray-600 mb-1">URL *</label>
+          <label class="block text-sm text-gray-600 mb-1">{{ t('vTargets.url') }} *</label>
           <input
             v-model="newTarget.url"
             type="text"
@@ -507,26 +509,26 @@ onMounted(async () => {
           />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">Name</label>
+          <label class="block text-sm text-gray-600 mb-1">{{ t('vTargets.name') }}</label>
           <input
             v-model="newTarget.name"
             type="text"
-            placeholder="University of Baghdad"
+            :placeholder="t('vTargets.namePlaceholder')"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">Institution</label>
+          <label class="block text-sm text-gray-600 mb-1">{{ t('vTargets.institution') }}</label>
           <input
             v-model="newTarget.institution"
             type="text"
-            placeholder="University"
+            :placeholder="t('vTargets.institutionPlaceholder')"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>
         <div class="md:col-span-3">
           <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-            Add Target
+            {{ t('vTargets.addTarget') }}
           </button>
         </div>
       </form>
@@ -534,8 +536,8 @@ onMounted(async () => {
 
     <!-- Bulk Add Form -->
     <div v-if="showBulkForm" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-2">Bulk Add Targets</h3>
-      <p class="text-sm text-gray-500 mb-4">Enter one target per line: URL, Name, Institution (comma separated)</p>
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ t('vTargets.bulkAddTargets') }}</h3>
+      <p class="text-sm text-gray-500 mb-4">{{ t('vTargets.bulkHint') }}</p>
       <textarea
         v-model="bulkText"
         rows="8"
@@ -545,23 +547,23 @@ uobasrah.edu.iq, University of Basrah, University"
         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm"
       ></textarea>
       <button @click="addBulkTargets" class="mt-3 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-        Add All Targets
+        {{ t('vTargets.addAllTargets') }}
       </button>
     </div>
 
     <!-- Manage Tags Panel -->
     <div v-if="showManageTags" class="bg-white rounded-xl shadow-sm border border-purple-200 p-6 mb-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">Manage Tags</h3>
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('vTargets.manageTags') }}</h3>
       <div class="flex gap-3 mb-4">
         <input
           v-model="newTagName"
           type="text"
-          placeholder="Tag name..."
+          :placeholder="t('vTargets.tagNamePlaceholder')"
           class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
           @keyup.enter="addNewTag"
         />
         <div class="flex items-center gap-2">
-          <label class="text-xs text-gray-500">Color:</label>
+          <label class="text-xs text-gray-500">{{ t('vTargets.colorLabel') }}</label>
           <div class="flex gap-1">
             <button
               v-for="color in tagColors"
@@ -574,7 +576,7 @@ uobasrah.edu.iq, University of Basrah, University"
           </div>
         </div>
         <button @click="addNewTag" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">
-          Create Tag
+          {{ t('vTargets.createTag') }}
         </button>
       </div>
       <div v-if="allTags.length" class="flex flex-wrap gap-2">
@@ -585,25 +587,25 @@ uobasrah.edu.iq, University of Basrah, University"
           :style="{ backgroundColor: tag.color || '#6366f1' }"
         >
           {{ tag.name }}
-          <button @click="removeTag(tag.ID)" class="hover:bg-white/20 rounded-full p-0.5" title="Delete tag">
+          <button @click="removeTag(tag.ID)" class="hover:bg-white/20 rounded-full p-0.5" :title="t('vTargets.deleteTagTitle')">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
         </span>
       </div>
-      <p v-else class="text-sm text-gray-400">No tags created yet. Create one above.</p>
+      <p v-else class="text-sm text-gray-400">{{ t('vTargets.noTags') }}</p>
     </div>
 
     <!-- Tag Filter -->
     <div v-if="allTags.length" class="flex items-center gap-3 mb-4">
-      <span class="text-sm text-gray-500">Filter by tag:</span>
+      <span class="text-sm text-gray-500">{{ t('vTargets.filterByTag') }}</span>
       <button
         @click="tagFilterId = 'all'"
         :class="tagFilterId === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
         class="px-3 py-1 rounded-full text-xs transition-colors"
       >
-        All
+        {{ t('vTargets.all') }}
       </button>
       <button
         v-for="tag in allTags"
@@ -636,12 +638,12 @@ uobasrah.edu.iq, University of Basrah, University"
         <thead class="bg-gray-50">
           <tr>
             <th class="text-right py-3 px-4 text-gray-600 font-medium">#</th>
-            <th class="text-right py-3 px-4 text-gray-600 font-medium">URL</th>
-            <th class="text-right py-3 px-4 text-gray-600 font-medium">Name</th>
-            <th class="text-right py-3 px-4 text-gray-600 font-medium">Institution</th>
-            <th class="text-left py-3 px-4 text-gray-600 font-medium">Tags</th>
-            <th v-if="!isAdmin" class="text-center py-3 px-4 text-gray-600 font-medium">Verification</th>
-            <th class="text-center py-3 px-4 text-gray-600 font-medium">Actions</th>
+            <th class="text-right py-3 px-4 text-gray-600 font-medium">{{ t('vTargets.url') }}</th>
+            <th class="text-right py-3 px-4 text-gray-600 font-medium">{{ t('vTargets.name') }}</th>
+            <th class="text-right py-3 px-4 text-gray-600 font-medium">{{ t('vTargets.institution') }}</th>
+            <th class="text-left py-3 px-4 text-gray-600 font-medium">{{ t('vTargets.tags') }}</th>
+            <th v-if="!isAdmin" class="text-center py-3 px-4 text-gray-600 font-medium">{{ t('vTargets.verification') }}</th>
+            <th class="text-center py-3 px-4 text-gray-600 font-medium">{{ t('vTargets.actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -663,7 +665,7 @@ uobasrah.edu.iq, University of Basrah, University"
                   :style="{ backgroundColor: tag.color || '#6366f1' }"
                 >
                   {{ tag.name }}
-                  <button @click.stop="removeTagFromTarget(target.ID, tag.ID)" class="hover:bg-white/20 rounded-full" title="Remove tag">
+                  <button @click.stop="removeTagFromTarget(target.ID, tag.ID)" class="hover:bg-white/20 rounded-full" :title="t('vTargets.removeTagTitle')">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -673,9 +675,9 @@ uobasrah.edu.iq, University of Basrah, University"
                   <button
                     @click.stop="tagDropdownTarget = tagDropdownTarget === target.ID ? null : target.ID"
                     class="px-1.5 py-0.5 text-xs text-gray-400 border border-dashed border-gray-300 rounded hover:border-gray-400 hover:text-gray-600 transition-colors"
-                    title="Add tag"
+                    :title="t('vTargets.addTagTitle')"
                   >
-                    + Tag
+                    {{ t('vTargets.addTagShort') }}
                   </button>
                   <div
                     v-if="tagDropdownTarget === target.ID && getAvailableTagsForTarget(target.ID).length"
@@ -695,7 +697,7 @@ uobasrah.edu.iq, University of Basrah, University"
                     v-if="tagDropdownTarget === target.ID && !getAvailableTagsForTarget(target.ID).length"
                     class="absolute z-10 mt-1 left-0 bg-white rounded-lg shadow-lg border border-gray-200 py-2 px-3 min-w-[140px]"
                   >
-                    <p class="text-xs text-gray-400">No more tags available</p>
+                    <p class="text-xs text-gray-400">{{ t('vTargets.noMoreTags') }}</p>
                   </div>
                 </div>
               </div>
@@ -706,7 +708,7 @@ uobasrah.edu.iq, University of Basrah, University"
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                 </svg>
-                Verified
+                {{ t('vTargets.verified') }}
               </span>
               <!-- Not initiated -->
               <button
@@ -714,7 +716,7 @@ uobasrah.edu.iq, University of Basrah, University"
                 @click="startVerification(target.ID)"
                 class="text-xs px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full hover:bg-yellow-200 transition-colors"
               >
-                Verify Domain
+                {{ t('vTargets.verifyDomain') }}
               </button>
               <!-- Initiated but not verified -->
               <div v-else class="text-xs">
@@ -722,19 +724,19 @@ uobasrah.edu.iq, University of Basrah, University"
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                   </svg>
-                  Pending
+                  {{ t('vTargets.pending') }}
                 </span>
                 <button
                   @click="verifyingTarget = verifyingTarget === target.ID ? null : target.ID"
                   class="block mt-1 text-indigo-600 hover:text-indigo-800 underline"
                 >
-                  {{ verifyingTarget === target.ID ? 'Hide Instructions' : 'Show Instructions' }}
+                  {{ verifyingTarget === target.ID ? t('vTargets.hideInstructions') : t('vTargets.showInstructions') }}
                 </button>
               </div>
             </td>
             <td class="py-3 px-4 text-center">
               <button @click="removeTarget(target.ID)" class="text-red-500 hover:text-red-700 text-sm">
-                Delete
+                {{ t('vTargets.delete') }}
               </button>
             </td>
           </tr>
@@ -743,64 +745,64 @@ uobasrah.edu.iq, University of Basrah, University"
           <tr v-if="!isAdmin" v-for="target in filteredTargets" :key="'verify-' + target.ID" v-show="verifyingTarget === target.ID && isInitiated(target.ID) && !isVerified(target.ID)">
             <td colspan="7" class="px-4 py-4 bg-blue-50 border-t border-blue-100">
               <div class="max-w-2xl">
-                <h4 class="font-semibold text-gray-900 mb-1">إثبات ملكية النطاق: {{ getDomain(target.ID) }}</h4>
-                <p class="text-sm text-gray-600 mb-3">اختر طريقة واحدة — أي طريقة تكفي للتحقق.</p>
+                <h4 class="font-semibold text-gray-900 mb-1">{{ t('vTargets.proveOwnership') }}: {{ getDomain(target.ID) }}</h4>
+                <p class="text-sm text-gray-600 mb-3">{{ t('vTargets.chooseMethod') }}</p>
 
                 <!-- Method tabs -->
                 <div class="inline-flex rounded-lg border border-blue-200 bg-white p-1 mb-4">
                   <button @click="verifyMethod = 'txt'"
                     :class="verifyMethod === 'txt' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
                     class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors">
-                    سجل DNS TXT
+                    {{ t('vTargets.txtTab') }}
                   </button>
                   <button @click="verifyMethod = 'file'"
                     :class="verifyMethod === 'file' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
                     class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors">
-                    رفع ملف
+                    {{ t('vTargets.fileTab') }}
                   </button>
                 </div>
 
                 <!-- Method 1: DNS TXT -->
                 <div v-if="verifyMethod === 'txt'">
                   <div class="bg-white rounded-lg border border-blue-200 p-4 mb-4">
-                    <p class="text-sm text-gray-600 mb-2">أضف سجل TXT التالي على النطاق الجذر (@):</p>
+                    <p class="text-sm text-gray-600 mb-2">{{ t('vTargets.txtInstruction') }}</p>
                     <div class="flex items-center gap-2">
                       <code class="bg-gray-100 text-gray-800 px-3 py-2 rounded text-sm font-mono flex-1 break-all">{{ getTxtRecord(target.ID) }}</code>
-                      <button @click="copyText(getTxtRecord(target.ID))" class="px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors">نسخ</button>
+                      <button @click="copyText(getTxtRecord(target.ID))" class="px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors">{{ t('vTargets.copy') }}</button>
                     </div>
                   </div>
                   <ol class="list-decimal list-inside space-y-1 mr-4 text-sm text-gray-600 mb-4">
-                    <li>سجّل الدخول إلى مزوّد DNS الخاص بـ {{ getDomain(target.ID) }}</li>
-                    <li>أضف سجل TXT جديد على النطاق الجذر (@)</li>
-                    <li>اجعل القيمة: <code class="bg-gray-100 px-1 rounded text-xs">{{ getTxtRecord(target.ID) }}</code></li>
-                    <li>انتظر انتشار DNS (قد يصل إلى 24 ساعة)</li>
-                    <li>اضغط "تحقّق الآن"</li>
+                    <li>{{ t('vTargets.txtStep1') }} {{ getDomain(target.ID) }}</li>
+                    <li>{{ t('vTargets.txtStep2') }}</li>
+                    <li>{{ t('vTargets.txtStep3') }} <code class="bg-gray-100 px-1 rounded text-xs">{{ getTxtRecord(target.ID) }}</code></li>
+                    <li>{{ t('vTargets.txtStep4') }}</li>
+                    <li>{{ t('vTargets.txtStep5') }}</li>
                   </ol>
                 </div>
 
                 <!-- Method 2: file upload -->
                 <div v-else>
                   <div class="bg-white rounded-lg border border-blue-200 p-4 mb-3">
-                    <p class="text-sm text-gray-600 mb-2">١) أنشئ ملفاً باسم <code class="bg-gray-100 px-1 rounded text-xs">seku-verify.txt</code> محتواه:</p>
+                    <p class="text-sm text-gray-600 mb-2">{{ t('vTargets.fileStep1a') }} <code class="bg-gray-100 px-1 rounded text-xs">seku-verify.txt</code> {{ t('vTargets.fileStep1b') }}</p>
                     <div class="flex items-center gap-2 mb-3">
                       <code class="bg-gray-100 text-gray-800 px-3 py-2 rounded text-sm font-mono flex-1 break-all">{{ getFileContent(target.ID) }}</code>
-                      <button @click="copyText(getFileContent(target.ID))" class="px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors">نسخ</button>
+                      <button @click="copyText(getFileContent(target.ID))" class="px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors">{{ t('vTargets.copy') }}</button>
                     </div>
-                    <p class="text-sm text-gray-600 mb-2">٢) ارفعه على موقعك في المسار:</p>
+                    <p class="text-sm text-gray-600 mb-2">{{ t('vTargets.fileStep2') }}</p>
                     <div class="flex items-center gap-2">
                       <code class="bg-gray-100 text-gray-800 px-3 py-2 rounded text-sm font-mono flex-1 break-all">{{ getFilePath(target.ID) }}</code>
-                      <button @click="copyText(getFilePath(target.ID))" class="px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors">نسخ</button>
+                      <button @click="copyText(getFilePath(target.ID))" class="px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors">{{ t('vTargets.copy') }}</button>
                     </div>
                   </div>
                   <p class="text-sm text-gray-600 mb-4">
-                    ٣) تأكّد أنه يفتح على:
+                    {{ t('vTargets.fileStep3a') }}
                     <a :href="getFileUrl(target.ID)" target="_blank" class="text-indigo-600 hover:underline break-all">{{ getFileUrl(target.ID) }}</a>
-                    ثم اضغط "تحقّق الآن".
+                    {{ t('vTargets.fileStep3b') }}
                   </p>
                 </div>
 
                 <button @click="verifyDomain(target.ID)" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm">
-                  تحقّق الآن
+                  {{ t('vTargets.verifyNow') }}
                 </button>
               </div>
             </td>
@@ -811,19 +813,19 @@ uobasrah.edu.iq, University of Basrah, University"
         <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
         </svg>
-        <p class="text-lg">No targets added yet</p>
-        <p class="text-sm mt-1">Add websites to start scanning</p>
+        <p class="text-lg">{{ t('vTargets.noTargets') }}</p>
+        <p class="text-sm mt-1">{{ t('vTargets.noTargetsHint') }}</p>
       </div>
     </div>
 
     <!-- Pagination -->
     <div v-if="totalPages > 1" class="flex items-center justify-between mt-4">
-      <p class="text-sm text-gray-500">Page {{ currentPage }} of {{ totalPages }} ({{ totalTargets }} targets)</p>
+      <p class="text-sm text-gray-500">{{ t('vTargets.page') }} {{ currentPage }} {{ t('vTargets.of') }} {{ totalPages }} ({{ totalTargets }} {{ t('vTargets.targetsWord') }})</p>
       <div class="flex gap-2">
         <button @click="currentPage--; loadTargets()" :disabled="currentPage <= 1"
-          class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Previous</button>
+          class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">{{ t('vTargets.previous') }}</button>
         <button @click="currentPage++; loadTargets()" :disabled="currentPage >= totalPages"
-          class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
+          class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">{{ t('vTargets.next') }}</button>
       </div>
     </div>
   </div>

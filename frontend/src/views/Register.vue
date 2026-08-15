@@ -3,8 +3,10 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { register } from '../api'
 import PasswordInput from '../components/PasswordInput.vue'
+import { useI18n } from '../i18n'
 
 const router = useRouter()
+const { t } = useI18n()
 const form = ref({
   username: '',
   password: '',
@@ -55,16 +57,16 @@ async function handleRegister() {
           </svg>
         </div>
         <h1 class="text-3xl font-bold text-white">Seku</h1>
-        <p class="text-indigo-300 mt-2">إنشاء حساب جديد</p>
+        <p class="text-indigo-300 mt-2">{{ t('vRegister.subtitle') }}</p>
       </div>
 
       <!-- Register Form -->
       <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-2xl">
-        <h2 class="text-xl font-semibold text-white mb-6 text-center">تسجيل حساب جديد</h2>
+        <h2 class="text-xl font-semibold text-white mb-6 text-center">{{ t('vRegister.title') }}</h2>
 
         <!-- Free plan notice -->
         <div class="bg-indigo-500/20 border border-indigo-500/50 text-indigo-200 px-4 py-3 rounded-lg mb-5 text-sm text-center">
-          ستبدأ بالخطة المجانية — فحوص خفيفة مجانية، والفحص العميق بالدفع لكل نطاق
+          {{ t('vRegister.freePlanNotice') }}
         </div>
 
         <div v-if="error" class="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg mb-4 text-sm text-center">
@@ -75,20 +77,20 @@ async function handleRegister() {
           <!-- Row: Username + Password -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm text-indigo-200 mb-1">اسم المستخدم *</label>
+              <label class="block text-sm text-indigo-200 mb-1">{{ t('vRegister.usernameLabel') }}</label>
               <input
                 v-model="form.username"
                 type="text"
-                placeholder="اسم المستخدم"
+                :placeholder="t('vRegister.usernamePlaceholder')"
                 class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm text-indigo-200 mb-1">كلمة المرور *</label>
+              <label class="block text-sm text-indigo-200 mb-1">{{ t('vRegister.passwordLabel') }}</label>
               <PasswordInput
                 v-model="form.password"
-                placeholder="6 أحرف على الأقل"
+                :placeholder="t('vRegister.passwordPlaceholder')"
                 :required="true"
                 input-class="w-full px-4 py-3 pl-12 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 icon-class="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300 hover:text-white transition-colors p-1"
@@ -99,16 +101,16 @@ async function handleRegister() {
           <!-- Row: Full Name + Email -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm text-indigo-200 mb-1">الاسم الكامل</label>
+              <label class="block text-sm text-indigo-200 mb-1">{{ t('vRegister.fullNameLabel') }}</label>
               <input
                 v-model="form.full_name"
                 type="text"
-                placeholder="الاسم الكامل"
+                :placeholder="t('vRegister.fullNameLabel')"
                 class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label class="block text-sm text-indigo-200 mb-1">البريد الإلكتروني *</label>
+              <label class="block text-sm text-indigo-200 mb-1">{{ t('vRegister.emailLabel') }}</label>
               <input
                 v-model="form.email"
                 type="email"
@@ -121,7 +123,7 @@ async function handleRegister() {
 
           <!-- Phone -->
           <div>
-            <label class="block text-sm text-indigo-200 mb-1">رقم الهاتف</label>
+            <label class="block text-sm text-indigo-200 mb-1">{{ t('vRegister.phoneLabel') }}</label>
             <input
               v-model="form.phone"
               type="tel"
@@ -133,17 +135,17 @@ async function handleRegister() {
           <!-- Row: Org Name + Org Type -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm text-indigo-200 mb-1">اسم المؤسسة *</label>
+              <label class="block text-sm text-indigo-200 mb-1">{{ t('vRegister.orgNameLabel') }}</label>
               <input
                 v-model="form.org_name"
                 type="text"
-                placeholder="اسم الجامعة أو المؤسسة"
+                :placeholder="t('vRegister.orgNamePlaceholder')"
                 class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm text-indigo-200 mb-1">نوع المؤسسة</label>
+              <label class="block text-sm text-indigo-200 mb-1">{{ t('vRegister.orgTypeLabel') }}</label>
               <select
                 v-model="form.org_type"
                 class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -155,11 +157,11 @@ async function handleRegister() {
 
           <!-- Country -->
           <div>
-            <label class="block text-sm text-indigo-200 mb-1">البلد</label>
+            <label class="block text-sm text-indigo-200 mb-1">{{ t('vRegister.countryLabel') }}</label>
             <input
               v-model="form.country"
               type="text"
-              placeholder="البلد"
+              :placeholder="t('vRegister.countryLabel')"
               class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
           </div>
@@ -169,19 +171,19 @@ async function handleRegister() {
             :disabled="loading"
             class="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium disabled:opacity-50 mt-2"
           >
-            {{ loading ? 'جارٍ التسجيل...' : 'إنشاء حساب' }}
+            {{ loading ? t('vRegister.submitting') : t('vRegister.submit') }}
           </button>
         </form>
 
         <!-- Link to login -->
         <div class="mt-6 text-center">
           <router-link to="/login" class="text-indigo-300 hover:text-indigo-100 text-sm transition-colors">
-            لديك حساب؟ تسجيل الدخول
+            {{ t('vRegister.haveAccount') }}
           </router-link>
         </div>
       </div>
 
-      <p class="text-center text-indigo-400 text-xs mt-6">Seku — Web Security Scanner</p>
+      <p class="text-center text-indigo-400 text-xs mt-6">{{ t('vRegister.footer') }}</p>
     </div>
   </div>
 </template>

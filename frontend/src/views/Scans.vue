@@ -2,8 +2,10 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { getScanJobs, getTargets, startScan, cancelScan, deleteScanJob } from '../api'
+import { useI18n } from '../i18n'
 
 const router = useRouter()
+const { t } = useI18n()
 const isAdmin = computed(() => {
   try { return JSON.parse(localStorage.getItem('user') || '{}').role === 'admin' } catch { return false }
 })
@@ -215,18 +217,18 @@ onMounted(() => {
   <div>
     <div class="flex items-center justify-between mb-8">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Scans</h1>
-        <p class="text-gray-500 mt-1">Manage and run security scans</p>
+        <h1 class="text-3xl font-bold text-gray-900">{{ t('vScans.pageTitle') }}</h1>
+        <p class="text-gray-500 mt-1">{{ t('vScans.pageSubtitle') }}</p>
       </div>
       <div class="flex items-center gap-3">
         <!-- Status Filter -->
         <select v-model="statusFilter" @change="scanPage = 1; loadData()" class="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white">
-          <option value="">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="running">Running</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-          <option value="failed">Failed</option>
+          <option value="">{{ t('vScans.filterAll') }}</option>
+          <option value="pending">{{ t('vScans.statusPending') }}</option>
+          <option value="running">{{ t('vScans.statusRunning') }}</option>
+          <option value="completed">{{ t('vScans.statusCompleted') }}</option>
+          <option value="cancelled">{{ t('vScans.statusCancelled') }}</option>
+          <option value="failed">{{ t('vScans.statusFailed') }}</option>
         </select>
       </div>
       <button
@@ -238,7 +240,7 @@ onMounted(() => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
-        Start New Scan
+        {{ t('vScans.startNewScan') }}
       </button>
     </div>
 
@@ -250,10 +252,10 @@ onMounted(() => {
       <div>
         <p>{{ scanError }}</p>
         <router-link v-if="paymentRequired" to="/orders" class="text-indigo-600 hover:underline text-sm mt-1 inline-block font-medium">
-          اطلب فحصاً عميقاً وادفع &larr;
+          {{ t('vScans.requestDeepScanPay') }} &larr;
         </router-link>
         <router-link v-else-if="scanError.includes('التحقق')" to="/targets" class="text-indigo-600 hover:underline text-sm mt-1 inline-block">
-          الذهاب إلى صفحة المواقع
+          {{ t('vScans.goToTargets') }}
         </router-link>
       </div>
       <button @click="scanError = ''" class="mr-auto text-red-400 hover:text-red-600">
@@ -266,26 +268,26 @@ onMounted(() => {
       <svg class="w-12 h-12 mx-auto text-yellow-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.999L13.732 4.001c-.77-1.333-2.694-1.333-3.464 0L3.34 16.001c-.77 1.332.192 2.999 1.732 2.999z"/>
       </svg>
-      <h3 class="text-lg font-semibold text-gray-900 mb-2">No websites added yet</h3>
-      <p class="text-gray-600 mb-4">You need to add websites and verify domain ownership before you can start scanning.</p>
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ t('vScans.noWebsitesTitle') }}</h3>
+      <p class="text-gray-600 mb-4">{{ t('vScans.noWebsitesDesc') }}</p>
       <router-link to="/targets" class="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
-        Add Your Websites
+        {{ t('vScans.addWebsites') }}
       </router-link>
     </div>
 
     <!-- Start Scan Form -->
     <div v-if="showStartForm" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">Configure Scan</h3>
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('vScans.configureScan') }}</h3>
       <form @submit.prevent="runScan">
         <div class="mb-4">
-          <label class="block text-sm text-gray-600 mb-1">Scan Name (optional)</label>
+          <label class="block text-sm text-gray-600 mb-1">{{ t('vScans.scanNameLabel') }}</label>
           <input
             v-model="scanForm.name"
             type="text"
-            placeholder="e.g., March 2026 Assessment"
+            :placeholder="t('vScans.scanNamePlaceholder')"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>
@@ -293,7 +295,7 @@ onMounted(() => {
         <div class="mb-4">
           <label class="flex items-center gap-2 mb-3">
             <input v-model="scanForm.selectAll" type="checkbox" class="rounded text-indigo-600" />
-            <span class="text-sm text-gray-700">Scan all targets ({{ totalTargetCount }} websites)</span>
+            <span class="text-sm text-gray-700">{{ t('vScans.scanAllTargets') }} ({{ totalTargetCount }} {{ t('vScans.websites') }})</span>
           </label>
 
           <div v-if="!scanForm.selectAll" class="border border-gray-200 rounded-lg p-3 max-h-60 overflow-y-auto">
@@ -307,7 +309,7 @@ onMounted(() => {
 
         <!-- Scan Policy Selector -->
         <div class="mb-6">
-          <label class="block text-sm font-medium text-gray-700 mb-3">Scan Policy</label>
+          <label class="block text-sm font-medium text-gray-700 mb-3">{{ t('vScans.scanPolicy') }}</label>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <!-- Light -->
             <label
@@ -323,10 +325,10 @@ onMounted(() => {
                 <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                 </svg>
-                <span class="font-semibold text-gray-900">Light</span>
+                <span class="font-semibold text-gray-900">{{ t('vScans.policyLight') }}</span>
               </div>
-              <p class="text-xs text-gray-500 mb-1">8 categories, ~30s per site</p>
-              <p class="text-xs text-gray-400">Quick security check for basic issues</p>
+              <p class="text-xs text-gray-500 mb-1">{{ t('vScans.policyLightMeta') }}</p>
+              <p class="text-xs text-gray-400">{{ t('vScans.policyLightDesc') }}</p>
               <div v-if="scanForm.policy === 'light'" class="absolute top-2 right-2">
                 <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
               </div>
@@ -346,11 +348,11 @@ onMounted(() => {
                 <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
-                <span class="font-semibold text-gray-900">Standard</span>
-                <span class="text-xs bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-medium">Recommended</span>
+                <span class="font-semibold text-gray-900">{{ t('vScans.policyStandard') }}</span>
+                <span class="text-xs bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-medium">{{ t('vScans.recommended') }}</span>
               </div>
-              <p class="text-xs text-gray-500 mb-1">16 categories, ~60s per site</p>
-              <p class="text-xs text-gray-400">Comprehensive security audit</p>
+              <p class="text-xs text-gray-500 mb-1">{{ t('vScans.policyStandardMeta') }}</p>
+              <p class="text-xs text-gray-400">{{ t('vScans.policyStandardDesc') }}</p>
               <div v-if="scanForm.policy === 'standard'" class="absolute top-2 right-2">
                 <svg class="w-5 h-5 text-indigo-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
               </div>
@@ -370,12 +372,12 @@ onMounted(() => {
                 <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                 </svg>
-                <span class="font-semibold text-gray-900">Deep</span>
+                <span class="font-semibold text-gray-900">{{ t('vScans.policyDeep') }}</span>
               </div>
-              <p class="text-xs text-gray-500 mb-1">40 categories, ~2-5min per site</p>
-              <p class="text-xs text-gray-400">Full assessment incl. login brute-force, nuclei CVEs, crawl &amp; OOB SSRF</p>
+              <p class="text-xs text-gray-500 mb-1">{{ t('vScans.policyDeepMeta') }}</p>
+              <p class="text-xs text-gray-400">{{ t('vScans.policyDeepDesc') }}</p>
               <span v-if="!isAdmin" class="mt-2 inline-flex items-center gap-1 self-start text-[11px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                مدفوع — حوالة داخلية
+                {{ t('vScans.deepPaidBadge') }}
               </span>
               <div v-if="scanForm.policy === 'deep'" class="absolute top-2 right-2">
                 <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
@@ -386,57 +388,57 @@ onMounted(() => {
 
         <!-- Advanced active checks (deep only) -->
         <div v-if="scanForm.policy === 'deep'" class="mb-6 rounded-xl border-2 border-red-100 bg-red-50/40 p-4">
-          <p class="text-sm font-semibold text-gray-900 mb-1">Advanced active checks</p>
-          <p class="text-xs text-gray-500 mb-3">These send active probes to the target. Only enable them on systems you are authorized to test.</p>
+          <p class="text-sm font-semibold text-gray-900 mb-1">{{ t('vScans.advancedChecks') }}</p>
+          <p class="text-xs text-gray-500 mb-3">{{ t('vScans.advancedChecksDesc') }}</p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <label class="flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" v-model="scanForm.enable_nuclei" class="rounded border-gray-300 text-indigo-600" />
-              Nuclei templates (CVEs, exposures, default logins)
+              {{ t('vScans.checkNuclei') }}
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" v-model="scanForm.enable_crawl" class="rounded border-gray-300 text-indigo-600" />
-              Crawl &amp; attack-surface map
+              {{ t('vScans.checkCrawl') }}
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" v-model="scanForm.enable_login" class="rounded border-gray-300 text-indigo-600" />
-              Login brute-force / lockout test
+              {{ t('vScans.checkLogin') }}
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" v-model="scanForm.enable_oob" class="rounded border-gray-300 text-indigo-600" />
-              Out-of-band SSRF (interactsh)
+              {{ t('vScans.checkOob') }}
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" v-model="scanForm.enable_dalfox" class="rounded border-gray-300 text-indigo-600" />
-              Advanced XSS (dalfox)
+              {{ t('vScans.checkDalfox') }}
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" v-model="scanForm.enable_ffuf" class="rounded border-gray-300 text-indigo-600" />
-              Content discovery (ffuf)
+              {{ t('vScans.checkFfuf') }}
             </label>
           </div>
           <label v-if="scanForm.enable_login || scanForm.enable_oob" class="mt-3 flex items-start gap-2 text-xs text-gray-700">
             <input type="checkbox" v-model="scanForm.authorized" class="mt-0.5 rounded border-gray-300 text-red-600" />
-            <span>I confirm I am authorized to actively test the selected target(s). Required for the login brute-force test.</span>
+            <span>{{ t('vScans.authConfirm') }}</span>
           </label>
 
           <!-- Authenticated scanning (session injection + IDOR/BOLA) -->
           <div class="mt-4 pt-4 border-t border-red-100">
-            <p class="text-sm font-semibold text-gray-900 mb-1">فحص مُصادَق (اختياري)</p>
-            <p class="text-xs text-gray-500 mb-3">الصق جلسة تسجيل دخول ليصل الفحص إلى الصفحات خلف الدخول. أضف جلسة مستخدم ثانٍ لتفعيل فحص IDOR/BOLA (وصول مستخدم لبيانات مستخدم آخر).</p>
+            <p class="text-sm font-semibold text-gray-900 mb-1">{{ t('vScans.authScanTitle') }}</p>
+            <p class="text-xs text-gray-500 mb-3">{{ t('vScans.authScanDesc') }}</p>
             <div class="space-y-2">
               <div>
-                <label class="block text-xs text-gray-500 mb-1">كوكي الجلسة (المستخدم أ) — قيمة رأس Cookie الكاملة</label>
-                <input v-model="scanForm.auth_cookie" type="text" dir="ltr" placeholder="sid=abc123; other=value"
+                <label class="block text-xs text-gray-500 mb-1">{{ t('vScans.authCookieALabel') }}</label>
+                <input v-model="scanForm.auth_cookie" type="text" dir="ltr" :placeholder="t('vScans.authCookieAPh')"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono" />
               </div>
               <div>
-                <label class="block text-xs text-gray-500 mb-1">رأس إضافي (اختياري) — مثل التوكن</label>
-                <input v-model="scanForm.auth_header" type="text" dir="ltr" placeholder="Authorization: Bearer eyJ..."
+                <label class="block text-xs text-gray-500 mb-1">{{ t('vScans.authHeaderLabel') }}</label>
+                <input v-model="scanForm.auth_header" type="text" dir="ltr" :placeholder="t('vScans.authHeaderPh')"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono" />
               </div>
               <div>
-                <label class="block text-xs text-gray-500 mb-1">كوكي مستخدم ثانٍ (المستخدم ب) — لفحص IDOR/BOLA</label>
-                <input v-model="scanForm.auth_cookie_b" type="text" dir="ltr" placeholder="sid=xyz789 (حساب مختلف على نفس النظام)"
+                <label class="block text-xs text-gray-500 mb-1">{{ t('vScans.authCookieBLabel') }}</label>
+                <input v-model="scanForm.auth_cookie_b" type="text" dir="ltr" :placeholder="t('vScans.authCookieBPh')"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono" />
               </div>
             </div>
@@ -449,7 +451,7 @@ onMounted(() => {
           class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <div v-if="scanning" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-          {{ scanning ? 'Starting...' : 'Start Scan' }}
+          {{ scanning ? t('vScans.starting') : t('vScans.startScan') }}
         </button>
       </form>
     </div>
@@ -475,11 +477,11 @@ onMounted(() => {
         <div class="p-6">
           <div class="flex items-start justify-between gap-4">
             <div class="flex-1">
-              <h3 class="text-lg font-semibold text-gray-900">{{ job.name || 'Unnamed Scan' }}</h3>
-              <p class="text-sm text-gray-500 mt-1">Created: {{ formatDate(job.CreatedAt) }}</p>
+              <h3 class="text-lg font-semibold text-gray-900">{{ job.name || t('vScans.unnamedScan') }}</h3>
+              <p class="text-sm text-gray-500 mt-1">{{ t('vScans.created') }} {{ formatDate(job.CreatedAt) }}</p>
               <div class="flex items-center gap-4 mt-1 text-sm text-gray-500">
-                <span v-if="job.started_at">Started: {{ formatDate(job.started_at) }}</span>
-                <span v-if="job.ended_at">Ended: {{ formatDate(job.ended_at) }}</span>
+                <span v-if="job.started_at">{{ t('vScans.started') }} {{ formatDate(job.started_at) }}</span>
+                <span v-if="job.ended_at">{{ t('vScans.ended') }} {{ formatDate(job.ended_at) }}</span>
               </div>
             </div>
             <div class="flex items-center gap-3 flex-shrink-0">
@@ -490,25 +492,25 @@ onMounted(() => {
                 job.status === 'failed' ? 'bg-red-100 text-red-700' :
                 'bg-gray-100 text-gray-700'
               ]">
-                {{ job.status === 'running' ? 'Scanning...' : job.status }}
+                {{ job.status === 'running' ? t('vScans.scanningStatus') : job.status }}
               </span>
               <button
                 @click="router.push(`/scans/${job.ID}`)"
                 class="px-3 py-1 text-sm text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50"
               >
-                View Details
+                {{ t('vScans.viewDetails') }}
               </button>
               <button v-if="job.status === 'running'"
                 @click="cancelJob(job.ID)"
                 class="px-3 py-1 text-sm text-orange-600 border border-orange-300 rounded-lg hover:bg-orange-50"
               >
-                Cancel
+                {{ t('vScans.cancel') }}
               </button>
               <button
                 @click="removeJob(job.ID)"
                 class="px-3 py-1 text-sm text-red-500 border border-red-300 rounded-lg hover:bg-red-50"
               >
-                Delete
+                {{ t('vScans.delete') }}
               </button>
             </div>
           </div>
@@ -519,7 +521,7 @@ onMounted(() => {
             <div v-if="job.status === 'running'" class="mb-3">
               <div class="flex items-center justify-between mb-1.5">
                 <span class="text-sm font-medium text-gray-700">
-                  Scanning {{ job.progress.total }} websites...
+                  {{ t('vScans.scanningPrefix') }} {{ job.progress.total }} {{ t('vScans.websitesSuffix') }}
                 </span>
                 <span class="text-sm font-bold text-indigo-600">{{ Math.round(job.progress.percent) }}%</span>
               </div>
@@ -535,7 +537,7 @@ onMounted(() => {
 
             <!-- Per-Target Sub-Progress -->
             <div v-if="job.status === 'running' && Object.keys(targetProgressForJob(job.ID)).length > 0" class="mb-3 space-y-2">
-              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Live Scanner Progress</p>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{{ t('vScans.liveProgress') }}</p>
               <div v-for="(tp, tid) in targetProgressForJob(job.ID)" :key="tid"
                 class="bg-gray-50 border border-gray-200 rounded-lg p-3">
                 <div class="flex items-center justify-between mb-1.5">
@@ -563,25 +565,25 @@ onMounted(() => {
               <span v-if="job.progress.completed > 0"
                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                {{ job.progress.completed }} completed
+                {{ job.progress.completed }} {{ t('vScans.completedCount') }}
               </span>
               <span v-if="job.progress.running > 0"
                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 animate-pulse">
                 <div class="w-2 h-2 rounded-full bg-blue-500"></div>
-                {{ job.progress.running }} scanning
+                {{ job.progress.running }} {{ t('vScans.scanningCount') }}
               </span>
               <span v-if="job.progress.pending > 0"
                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
                 <div class="w-2 h-2 rounded-full bg-gray-400"></div>
-                {{ job.progress.pending }} pending
+                {{ job.progress.pending }} {{ t('vScans.pendingCount') }}
               </span>
               <span v-if="job.progress.failed > 0"
                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                {{ job.progress.failed }} failed
+                {{ job.progress.failed }} {{ t('vScans.failedCount') }}
               </span>
               <span class="text-xs text-gray-400 mr-2">
-                {{ job.progress.completed + (job.progress.failed || 0) }} / {{ job.progress.total }} sites
+                {{ job.progress.completed + (job.progress.failed || 0) }} / {{ job.progress.total }} {{ t('vScans.sites') }}
               </span>
             </div>
           </div>
@@ -592,18 +594,18 @@ onMounted(() => {
         <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
         </svg>
-        <p class="text-lg text-gray-400">No scans yet</p>
-        <p class="text-sm text-gray-400 mt-1">Start a new scan to check your targets</p>
+        <p class="text-lg text-gray-400">{{ t('vScans.noScansTitle') }}</p>
+        <p class="text-sm text-gray-400 mt-1">{{ t('vScans.noScansDesc') }}</p>
       </div>
 
       <!-- Pagination -->
       <div v-if="scanTotalPages > 1" class="flex items-center justify-between mt-4">
-        <p class="text-sm text-gray-500">Page {{ scanPage }} of {{ scanTotalPages }}</p>
+        <p class="text-sm text-gray-500">{{ t('vScans.page') }} {{ scanPage }} {{ t('vScans.of') }} {{ scanTotalPages }}</p>
         <div class="flex gap-2">
           <button @click="scanPage--; loadData()" :disabled="scanPage <= 1"
-            class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Previous</button>
+            class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">{{ t('vScans.previous') }}</button>
           <button @click="scanPage++; loadData()" :disabled="scanPage >= scanTotalPages"
-            class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
+            class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">{{ t('vScans.next') }}</button>
         </div>
       </div>
     </div>

@@ -2,8 +2,10 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { login } from '../api'
+import { useI18n } from '../i18n'
 
 const router = useRouter()
+const { t } = useI18n()
 const form = ref({ username: '', password: '' })
 const error = ref('')
 const loading = ref(false)
@@ -36,12 +38,12 @@ async function handleLogin() {
           </svg>
         </div>
         <h1 class="text-3xl font-bold text-white">Seku</h1>
-        <p class="text-indigo-300 mt-2">Web Security Scanner</p>
+        <p class="text-indigo-300 mt-2">{{ t('vLogin.tagline') }}</p>
       </div>
 
       <!-- Login Form -->
       <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-2xl">
-        <h2 class="text-xl font-semibold text-white mb-6 text-center">Sign In</h2>
+        <h2 class="text-xl font-semibold text-white mb-6 text-center">{{ t('vLogin.signIn') }}</h2>
 
         <div v-if="error" class="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg mb-4 text-sm text-center">
           {{ error }}
@@ -49,7 +51,7 @@ async function handleLogin() {
 
         <form @submit.prevent="handleLogin" class="space-y-5">
           <div>
-            <label class="block text-sm text-indigo-200 mb-1">Username</label>
+            <label class="block text-sm text-indigo-200 mb-1">{{ t('vLogin.username') }}</label>
             <input
               v-model="form.username"
               type="text"
@@ -59,7 +61,7 @@ async function handleLogin() {
             />
           </div>
           <div>
-            <label class="block text-sm text-indigo-200 mb-1">Password</label>
+            <label class="block text-sm text-indigo-200 mb-1">{{ t('vLogin.password') }}</label>
             <div class="relative">
               <input
                 v-model="form.password"
@@ -85,19 +87,19 @@ async function handleLogin() {
             :disabled="loading"
             class="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium disabled:opacity-50"
           >
-            {{ loading ? 'Signing in...' : 'Sign In' }}
+            {{ loading ? t('vLogin.signingIn') : t('vLogin.signIn') }}
           </button>
         </form>
         <!-- Link to register -->
         <div class="mt-6 text-center">
           <router-link to="/register" class="text-indigo-300 hover:text-indigo-100 text-sm transition-colors">
-            ليس لديك حساب؟ سجّل الآن
+            {{ t('vLogin.noAccount') }}
           </router-link>
         </div>
       </div>
 
-      <p class="text-center text-indigo-400 text-xs mt-6">Seku — Web Security Scanner</p>
-      <p class="text-center text-indigo-500 text-[10px] mt-1">Powered by Irtikaz Technical Solutions • شركة ارتكاز للحلول التقنية</p>
+      <p class="text-center text-indigo-400 text-xs mt-6">{{ t('vLogin.footer') }}</p>
+      <p class="text-center text-indigo-500 text-[10px] mt-1">{{ t('vLogin.poweredBy') }}</p>
     </div>
   </div>
 </template>
