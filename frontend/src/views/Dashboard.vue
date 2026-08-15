@@ -1,9 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getDashboardStats, getDashboardEnhanced } from '../api'
+import { getDashboardStats, getDashboardEnhanced, getTargets } from '../api'
 import { Doughnut, Bar } from 'vue-chartjs'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js'
 import { useI18n } from '../i18n'
+import OnboardingChecklist from '../components/OnboardingChecklist.vue'
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement)
 
@@ -12,6 +13,21 @@ const { t } = useI18n()
 const stats = ref(null)
 const enhanced = ref(null)
 const loading = ref(true)
+
+// --- Onboarding checklist state ---
+const onboardUser = JSON.parse(localStorage.getItem('user') || '{}')
+const onboardIsAdmin = onboardUser.role === 'admin'
+const hasTargets = ref(false)
+const hasVerified = ref(false)
+const hasScans = ref(false)
+const onboardDismissed = ref(localStorage.getItem('seku_onboard_dismissed') === '1')
+const onboardReady = ref(false)
+// Show only when data is loaded, not dismissed, and not all steps complete.
+const showOnboarding = computed(() =>
+  onboardReady.value &&
+  !onboardDismissed.value &&
+  !(hasTargets.value && hasVerified.value && hasScans.value)
+)
 
 
 const scoreChartData = ref({ labels: [], datasets: [] })
@@ -68,6 +84,20 @@ onMounted(async () => {
   try {
     const { data } = await getDashboardStats()
     stats.value = data
+
+    // Determine onboarding progress from stats + targets.
+    hasTargets.value = (data.total_targets || 0) > 0
+    hasScans.value = (data.total_scans || 0) > 0
+    try {
+      const tRes = await getTargets({ limit: 100 })
+      const tList = tRes.data?.data || tRes.data || []
+      const anyVerified = Array.isArray(tList) && tList.some((x) => x.verified === true || x.is_verified === true)
+      // Admins skip domain verification; a completed scan also implies a verified domain.
+      hasVerified.value = onboardIsAdmin || anyVerified || hasScans.value
+    } catch {
+      hasVerified.value = onboardIsAdmin || hasScans.value
+    }
+    onboardReady.value = true
 
     // Load enhanced dashboard data
     try {
@@ -195,6 +225,15 @@ function getGradeColor(grade) {
       <h1 class="text-3xl font-bold text-gray-900">{{ t('vDashboard.title') }}</h1>
       <p class="text-gray-500 mt-1">{{ t('vDashboard.subtitle') }}</p>
     </div>
+
+    <!-- First-run onboarding checklist -->
+    <OnboardingChecklist
+      v-if="showOnboarding"
+      :has-targets="hasTargets"
+      :has-verified="hasVerified"
+      :has-scans="hasScans"
+      @dismiss="onboardDismissed = true"
+    />
 
     <div v-if="loading" class="flex justify-center py-20">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>

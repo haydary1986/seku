@@ -1,0 +1,46 @@
+{
+  "ar": {
+    "vOnboarding": {
+      "title": "خطوات البداية",
+      "subtitle": "أكمل هذه الخطوات لإجراء أول فحص أمني",
+      "dismiss": "لا تُظهر مجدداً",
+      "stepsCompleted": "خطوات مكتملة",
+      "step1Title": "أضف موقعاً",
+      "step1Desc": "أضف أول موقع تريد فحصه",
+      "step1Cta": "إضافة موقع",
+      "step2Title": "تحقّق من الملكية",
+      "step2Desc": "أثبت ملكيتك للنطاق عبر سجل TXT أو ملف تحقّق",
+      "step2Cta": "تحقّق الآن",
+      "step3Title": "شغّل فحصاً",
+      "step3Desc": "ابدأ أول فحص أمني على موقعك",
+      "step3Cta": "ابدأ الفحص",
+      "step4Title": "اطّلع على التقرير",
+      "step4Desc": "راجع النتائج ودرجات الأمان والثغرات",
+      "step4Cta": "عرض التقارير",
+      "targetsEmptyCta": "أضف أول موقع",
+      "scansEmptyCta": "ابدأ أول فحص"
+    }
+  },
+  "en": {
+    "vOnboarding": {
+      "title": "Get started",
+      "subtitle": "Complete these steps to run your first security scan",
+      "dismiss": "Dismiss",
+      "stepsCompleted": "steps completed",
+      "step1Title": "Add a target",
+      "step1Desc": "Add the first website you want to scan",
+      "step1Cta": "Add target",
+      "step2Title": "Verify ownership",
+      "step2Desc": "Prove domain ownership via a DNS TXT record or a file",
+      "step2Cta": "Verify now",
+      "step3Title": "Run a scan",
+      "step3Desc": "Start your first security scan",
+      "step3Cta": "Start scan",
+      "step4Title": "View the report",
+      "step4Desc": "Review results, security scores and findings",
+      "step4Cta": "View reports",
+      "targetsEmptyCta": "Add your first target",
+      "scansEmptyCta": "Start your first scan"
+    }
+  }
+}

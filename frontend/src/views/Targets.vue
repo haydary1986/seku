@@ -2,8 +2,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { getTargets, createTarget, createBulkTargets, deleteTarget, cleanupDeadTargets, cleanupDuplicateTargets, initiateVerification, getVerificationStatus, checkVerification, getTags, createTag, deleteTag, tagTarget, untagTarget, getTargetTags } from '../api'
 import { useI18n } from '../i18n'
+import vOnboarding from '../i18n/fragments/vOnboarding.json'
 
-const { t } = useI18n()
+const { t: _t, lang } = useI18n()
+// Resolve vOnboarding.* from the fragment; delegate all other keys to i18n.
+const t = (k) => k.startsWith('vOnboarding.')
+  ? (vOnboarding[lang.value]?.vOnboarding?.[k.slice(12)] ?? _t(k))
+  : _t(k)
 const targets = ref([])
 const loading = ref(true)
 const showAddForm = ref(false)
@@ -815,6 +820,15 @@ uobasrah.edu.iq, University of Basrah, University"
         </svg>
         <p class="text-lg">{{ t('vTargets.noTargets') }}</p>
         <p class="text-sm mt-1">{{ t('vTargets.noTargetsHint') }}</p>
+        <button
+          @click="showAddForm = true; showBulkForm = false; showManageTags = false"
+          class="mt-5 inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          {{ t('vOnboarding.targetsEmptyCta') }}
+        </button>
       </div>
     </div>
 

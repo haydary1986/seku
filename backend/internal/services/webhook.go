@@ -11,6 +11,7 @@ import (
 
 	"seku/internal/config"
 	"seku/internal/models"
+	"seku/internal/safehttp"
 )
 
 // SendScanCompletedWebhooks dispatches webhook notifications for a completed scan job.
@@ -42,6 +43,8 @@ func sendWebhook(wh models.Webhook, job *models.ScanJob, results []models.ScanRe
 		sendTelegramWebhook(wh.URL, wh.Secret, job, results)
 	case "discord":
 		sendDiscordWebhook(wh.URL, job, results)
+	case "teams":
+		sendTeamsWebhook(wh.URL, job, results)
 	case "custom":
 		sendCustomWebhook(wh.URL, wh.Secret, job, results)
 	}
@@ -181,6 +184,44 @@ func sendDiscordWebhook(url string, job *models.ScanJob, results []models.ScanRe
 	postJSON(url, payload, nil)
 }
 
+func sendTeamsWebhook(url string, job *models.ScanJob, results []models.ScanResult) {
+	avgScore := calcAvgScore(results)
+	grade := scoreToGrade(avgScore)
+
+	// Build per-site summary lines (max 10)
+	var siteLines []string
+	limit := len(results)
+	if limit > 10 {
+		limit = 10
+	}
+	for _, r := range results[:limit] {
+		g := scoreToGrade(r.OverallScore)
+		siteLines = append(siteLines, fmt.Sprintf("- %s: %.0f/1000 (%s)", r.ScanTarget.URL, r.OverallScore, g))
+	}
+	if len(results) > 10 {
+		siteLines = append(siteLines, fmt.Sprintf("...and %d more", len(results)-10))
+	}
+
+	var textLines []string
+	textLines = append(textLines, fmt.Sprintf("Targets: %d", len(results)))
+	textLines = append(textLines, fmt.Sprintf("Avg Score: %.0f/1000 (%s)", avgScore, grade))
+	if len(siteLines) > 0 {
+		textLines = append(textLines, "")
+		textLines = append(textLines, siteLines...)
+	}
+
+	payload := map[string]interface{}{
+		"@type":      "MessageCard",
+		"@context":   "http://schema.org/extensions",
+		"themeColor": "0E7C5A",
+		"summary":    "Seku scan",
+		"title":      fmt.Sprintf("Seku: %s completed", job.Name),
+		"text":       strings.Join(textLines, "\n\n"),
+	}
+
+	postJSON(url, payload, nil)
+}
+
 func sendCustomWebhook(url, secret string, job *models.ScanJob, results []models.ScanResult) {
 	avgScore := calcAvgScore(results)
 
@@ -262,6 +303,11 @@ func calcAvgScore(results []models.ScanResult) float64 {
 }
 
 func postJSON(url string, payload interface{}, headers map[string]string) {
+	// SSRF guard: never deliver a webhook to an internal/reserved address.
+	if !safehttp.IsSafeHost(url) {
+		log.Printf("[webhook] blocked delivery to disallowed host: %s", url)
+		return
+	}
 	body, err := json.Marshal(payload)
 	if err != nil {
 		log.Printf("[webhook] failed to marshal payload: %v", err)
@@ -278,7 +324,7 @@ func postJSON(url string, payload interface{}, headers map[string]string) {
 		req.Header.Set(k, v)
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := safehttp.Client(10 * time.Second)
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("[webhook] failed to send to %s: %v", url, err)

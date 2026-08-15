@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getScanResult, analyzeResult, getAIAnalysis, downloadReport, exportSARIF, exportCSV, getUpgradeSuggestions, getScoreHistory, getComplianceReport, getRemediationGuide, createGitHubIssue, createJiraIssue, getFixPriority, getTimelineComparison, updateCheckTriage, shareResult } from '../api'
+import { getScanResult, analyzeResult, getAIAnalysis, downloadReport, exportSARIF, exportCSV, getUpgradeSuggestions, getScoreHistory, getComplianceReport, getRemediationGuide, createGitHubIssue, createJiraIssue, getFixPriority, getTimelineComparison, updateCheckTriage, shareResult, startScan } from '../api'
 import { categoryInfo, getCheckExplanation } from '../data/securityKnowledge'
 import { useToast } from '../composables/useToast'
 
@@ -176,6 +176,27 @@ const badgeSnippet = computed(() =>
     ? `<a href="${shareOrigin}${shareInfo.value.share_url}"><img src="${shareOrigin}${shareInfo.value.badge_url}" alt="Scanned by Seku"></a>`
     : ''
 )
+
+// --- Re-scan this site ---
+const rescanLoading = ref(false)
+async function rescanSite() {
+  if (rescanLoading.value) return
+  const targetId = result.value?.scan_target_id
+  if (!targetId) {
+    toast.error('تعذّر تحديد الموقع لإعادة الفحص')
+    return
+  }
+  rescanLoading.value = true
+  try {
+    await startScan({ target_ids: [targetId] })
+    toast.success('بدأ فحص جديد لهذا الموقع')
+    router.push('/scans')
+  } catch (e) {
+    toast.error(e.response?.data?.error || 'تعذّر بدء الفحص')
+  } finally {
+    rescanLoading.value = false
+  }
+}
 
 function getUpgradeCommand(suggestion) {
   const lib = suggestion.library.toLowerCase()
@@ -723,6 +744,13 @@ onMounted(async () => {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
               </svg>
               {{ shareLoading ? '...' : 'مشاركة عامة' }}
+            </button>
+            <button @click="rescanSite" :disabled="rescanLoading"
+              class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 flex items-center gap-2 text-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              {{ rescanLoading ? '...' : 'أعد الفحص / Re-scan' }}
             </button>
           </div>
 

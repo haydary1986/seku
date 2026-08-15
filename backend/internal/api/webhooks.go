@@ -88,9 +88,9 @@ func UpdateWebhook(c *fiber.Ctx) error {
 		webhook.Name = req.Name
 	}
 	if req.Type != "" {
-		validTypes := map[string]bool{"slack": true, "telegram": true, "discord": true, "custom": true}
+		validTypes := map[string]bool{"slack": true, "telegram": true, "discord": true, "teams": true, "custom": true}
 		if !validTypes[req.Type] {
-			return c.Status(400).JSON(fiber.Map{"error": "Type must be slack, telegram, discord, or custom"})
+			return c.Status(400).JSON(fiber.Map{"error": "Type must be slack, telegram, discord, teams, or custom"})
 		}
 		webhook.Type = req.Type
 	}

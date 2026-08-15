@@ -3,9 +3,14 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { getScanJobs, getTargets, startScan, cancelScan, deleteScanJob } from '../api'
 import { useI18n } from '../i18n'
+import vOnboarding from '../i18n/fragments/vOnboarding.json'
 
 const router = useRouter()
-const { t } = useI18n()
+const { t: _t, lang } = useI18n()
+// Resolve vOnboarding.* from the fragment; delegate all other keys to i18n.
+const t = (k) => k.startsWith('vOnboarding.')
+  ? (vOnboarding[lang.value]?.vOnboarding?.[k.slice(12)] ?? _t(k))
+  : _t(k)
 const isAdmin = computed(() => {
   try { return JSON.parse(localStorage.getItem('user') || '{}').role === 'admin' } catch { return false }
 })
@@ -596,6 +601,17 @@ onMounted(() => {
         </svg>
         <p class="text-lg text-gray-400">{{ t('vScans.noScansTitle') }}</p>
         <p class="text-sm text-gray-400 mt-1">{{ t('vScans.noScansDesc') }}</p>
+        <button
+          v-if="targets.length > 0"
+          @click="showStartForm = true"
+          class="mt-5 inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          {{ t('vOnboarding.scansEmptyCta') }}
+        </button>
       </div>
 
       <!-- Pagination -->

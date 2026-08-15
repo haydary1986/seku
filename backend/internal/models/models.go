@@ -276,7 +276,7 @@ type Webhook struct {
 	gorm.Model
 	OrganizationID uint   `json:"organization_id"`
 	Name           string `json:"name" gorm:"not null"`
-	Type           string `json:"type" gorm:"not null"` // slack, telegram, discord, custom
+	Type           string `json:"type" gorm:"not null"` // slack, telegram, discord, teams, custom
 	URL            string `json:"url" gorm:"not null"`
 	Secret         string `json:"secret"` // for telegram bot token or custom auth
 	IsActive       bool   `json:"is_active" gorm:"default:true"`
