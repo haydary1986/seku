@@ -61,7 +61,7 @@ const routes = [
   { path: '/ai-chat', name: 'AIChat', component: AIChat },
   { path: '/compare', name: 'Compare', component: Compare },
   { path: '/webhooks', name: 'Webhooks', component: Webhooks },
-  { path: '/docs', name: 'Docs', component: Docs },
+  { path: '/docs', name: 'Docs', component: Docs, meta: { public: true } },
   { path: '/discovery', name: 'Discovery', component: Discovery },
   { path: '/directives', name: 'Directives', component: Directives },
   { path: '/data-leak', name: 'DataLeak', component: DataLeak },

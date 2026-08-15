@@ -3,6 +3,9 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getScanResult, analyzeResult, getAIAnalysis, downloadReport, exportSARIF, exportCSV, getUpgradeSuggestions, getScoreHistory, getComplianceReport, getRemediationGuide, createGitHubIssue, createJiraIssue, getFixPriority, getTimelineComparison, updateCheckTriage, shareResult } from '../api'
 import { categoryInfo, getCheckExplanation } from '../data/securityKnowledge'
+import { useToast } from '../composables/useToast'
+
+const toast = useToast()
 import PasswordInput from '../components/PasswordInput.vue'
 import { Radar, Line } from 'vue-chartjs'
 import { Chart as ChartJS, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, CategoryScale, LinearScale } from 'chart.js'
@@ -155,13 +158,19 @@ async function shareThisReport() {
   try {
     const { data } = await shareResult(route.params.id)
     shareInfo.value = data
+    toast.success('تم إنشاء رابط المشاركة العام')
   } catch (e) {
-    alert(e.response?.data?.error || 'تعذّر إنشاء رابط المشاركة')
+    toast.error(e.response?.data?.error || 'تعذّر إنشاء رابط المشاركة')
   } finally {
     shareLoading.value = false
   }
 }
-function copyText(t) { if (navigator?.clipboard) navigator.clipboard.writeText(t) }
+function copyText(t) {
+  if (navigator?.clipboard) {
+    navigator.clipboard.writeText(t)
+    toast.success('تم النسخ')
+  }
+}
 const badgeSnippet = computed(() =>
   shareInfo.value
     ? `<a href="${shareOrigin}${shareInfo.value.share_url}"><img src="${shareOrigin}${shareInfo.value.badge_url}" alt="Scanned by Seku"></a>`

@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from './i18n'
 import { useTheme } from './stores/theme'
 import { refreshAuth } from './api'
+import Toast from './components/Toast.vue'
 
 const { t, lang, dir, toggleLang } = useI18n()
 const { theme, toggleTheme } = useTheme()
@@ -92,6 +93,9 @@ function logout() {
 </script>
 
 <template>
+  <!-- Global toast notifications (app-wide) -->
+  <Toast />
+
   <!-- Public pages - no sidebar (landing, login, methodology) -->
   <router-view v-if="route.meta?.public" />
 
