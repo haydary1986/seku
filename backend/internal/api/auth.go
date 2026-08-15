@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -15,10 +16,17 @@ import (
 
 var jwtSecret []byte
 
+// defaultInsecureJWT is the old hardcoded value — refuse to run with it.
+const defaultInsecureJWT = "seku-secret-change-in-production"
+
 func init() {
 	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		secret = "seku-secret-change-in-production"
+	if secret == "" || secret == defaultInsecureJWT {
+		log.Fatal("FATAL: JWT_SECRET must be set to a strong random value (>= 32 chars). " +
+			"Refusing to start with an empty or default secret — this would allow anyone to forge admin tokens.")
+	}
+	if len(secret) < 32 {
+		log.Println("WARNING: JWT_SECRET is shorter than 32 characters; use a longer random secret.")
 	}
 	jwtSecret = []byte(secret)
 }

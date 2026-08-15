@@ -155,9 +155,14 @@ func HandleWebSocket(c *websocket.Conn) {
 		return
 	}
 
+	// JWT_SECRET is guaranteed non-empty at runtime (the api package fails fast
+	// on startup otherwise). Fail closed rather than fall back to a known value.
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		secret = "seku-secret-change-in-production"
+		c.WriteMessage(websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server misconfigured"))
+		c.Close()
+		return
 	}
 
 	parsed, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {

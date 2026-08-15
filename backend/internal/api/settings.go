@@ -74,6 +74,9 @@ func getSetting(key string) string {
 
 func AnalyzeScanResult(c *fiber.Ctx) error {
 	resultID := c.Params("id")
+	if !CanAccessResult(c, resultID) {
+		return c.Status(404).JSON(fiber.Map{"error": "Scan result not found"})
+	}
 
 	// Get scan result with checks
 	var scanResult models.ScanResult
@@ -157,6 +160,9 @@ func AnalyzeScanResult(c *fiber.Ctx) error {
 
 func GetAIAnalysis(c *fiber.Ctx) error {
 	resultID := c.Params("id")
+	if !CanAccessResult(c, resultID) {
+		return c.Status(404).JSON(fiber.Map{"error": "No AI analysis found for this result"})
+	}
 
 	var analysis models.AIAnalysis
 	if err := config.DB.Where("scan_result_id = ? AND status = ?", resultID, "completed").

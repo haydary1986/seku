@@ -121,12 +121,31 @@ func UpdateTarget(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Target not found"})
 	}
 
-	var update models.ScanTarget
-	if err := c.BodyParser(&update); err != nil {
+	// Explicit whitelist DTO — never trust the full model from the body
+	// (prevents over-posting organization_id to move a target between tenants).
+	var body struct {
+		Name        string `json:"name"`
+		Institution string `json:"institution"`
+		URL         string `json:"url"`
+	}
+	if err := c.BodyParser(&body); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	config.DB.Model(&target).Updates(update)
+	updates := map[string]interface{}{
+		"name":        body.Name,
+		"institution": body.Institution,
+	}
+	// Changing the URL invalidates any prior domain verification, so a new host
+	// can't inherit the old ownership proof and be scanned.
+	if body.URL != "" && body.URL != target.URL {
+		updates["url"] = body.URL
+		config.DB.Model(&models.DomainVerification{}).
+			Where("scan_target_id = ?", target.ID).
+			Updates(map[string]interface{}{"is_verified": false, "verified_at": nil})
+	}
+	config.DB.Model(&target).Updates(updates)
+	config.DB.First(&target, target.ID)
 	return c.JSON(target)
 }
 
@@ -391,6 +410,9 @@ func GetScanJobs(c *fiber.Ctx) error {
 
 func GetScanJob(c *fiber.Ctx) error {
 	id := c.Params("id")
+	if !CanAccessJob(c, id) {
+		return c.Status(404).JSON(fiber.Map{"error": "Scan job not found"})
+	}
 	var job models.ScanJob
 	if err := config.DB.Preload("Results.ScanTarget").Preload("Results.Checks").First(&job, id).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Scan job not found"})
@@ -530,19 +552,24 @@ func StartScan(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "No targets found to scan"})
 	}
 
-	// Check domain verification (skip for system admin)
+	// Check domain verification (skip for system admin). A target is scannable
+	// only if it is verified, its CURRENT host still matches the verified domain
+	// (so changing the URL after verifying can't retarget the scan), and the host
+	// is not an internal/reserved address (SSRF guard).
 	if !isAdmin {
 		var unverifiedDomains []string
 		for _, target := range targets {
 			var verification models.DomainVerification
 			err := config.DB.Where("scan_target_id = ? AND is_verified = ?", target.ID, true).First(&verification).Error
-			if err != nil {
+			if err != nil ||
+				!strings.EqualFold(verification.Domain, extractDomain(target.URL)) ||
+				!isSafeOutboundHost(target.URL) {
 				unverifiedDomains = append(unverifiedDomains, target.URL)
 			}
 		}
 		if len(unverifiedDomains) > 0 {
 			return c.Status(403).JSON(fiber.Map{
-				"error":              "Some targets are not verified. Please verify domain ownership before scanning.",
+				"error":              "Some targets are not verified (or their URL changed / points to a private address). Please re-verify domain ownership before scanning.",
 				"unverified_domains": unverifiedDomains,
 			})
 		}
@@ -579,6 +606,24 @@ func StartScan(c *fiber.Ctx) error {
 	}
 	config.DB.Create(&job)
 
+	// Deep scans are pay-per-scan: atomically consume one paid credit per target.
+	// If any credit is missing/already used, roll back and refuse — this closes the
+	// check-then-use race that could otherwise grant a free deep scan.
+	if isDeep && !isAdmin {
+		targetIDs := make([]uint, 0, len(targets))
+		for _, t := range targets {
+			targetIDs = append(targetIDs, t.ID)
+		}
+		if !consumeDeepScanCredits(GetUserOrgID(c), targetIDs, job.ID) {
+			config.DB.Delete(&job)
+			return c.Status(402).JSON(fiber.Map{
+				"error":        "payment_required",
+				"message":      "الفحص العميق مدفوع. اطلب فحصاً عميقاً وادفع عبر الحوالة الداخلية أولاً.",
+				"payment_info": paymentInfoMap(),
+			})
+		}
+	}
+
 	// Create scan results for each target
 	for _, target := range targets {
 		result := models.ScanResult{
@@ -587,14 +632,6 @@ func StartScan(c *fiber.Ctx) error {
 			Status:       "pending",
 		}
 		config.DB.Create(&result)
-	}
-
-	// Consume one paid credit per target for deep scans (non-admin).
-	if isDeep && !isAdmin {
-		orgID := GetUserOrgID(c)
-		for _, target := range targets {
-			consumeDeepScanCredit(orgID, target.ID, job.ID)
-		}
 	}
 
 	// Run scan in background — use policy-based engine if specified, otherwise plan-based
@@ -622,6 +659,9 @@ func StartScan(c *fiber.Ctx) error {
 
 func DeleteScanJob(c *fiber.Ctx) error {
 	id := c.Params("id")
+	if !CanAccessJob(c, id) {
+		return c.Status(404).JSON(fiber.Map{"error": "Scan job not found"})
+	}
 	var job models.ScanJob
 	if err := config.DB.First(&job, id).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Scan job not found"})
@@ -772,6 +812,9 @@ func GetDashboardStats(c *fiber.Ctx) error {
 
 func GetScanResult(c *fiber.Ctx) error {
 	id := c.Params("id")
+	if !CanAccessResult(c, id) {
+		return c.Status(404).JSON(fiber.Map{"error": "Scan result not found"})
+	}
 	var result models.ScanResult
 	if err := config.DB.Preload("ScanTarget").Preload("Checks").First(&result, id).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Scan result not found"})
@@ -918,6 +961,9 @@ func GetLeaderboard(c *fiber.Ctx) error {
 
 func GetScoreHistory(c *fiber.Ctx) error {
 	targetID := c.Params("id")
+	if !CanAccessTarget(c, targetID) {
+		return c.Status(404).JSON(fiber.Map{"error": "Target not found"})
+	}
 
 	type HistoryPoint struct {
 		Score     float64 `json:"score"`
@@ -946,6 +992,9 @@ func CompareScanResults(c *fiber.Ctx) error {
 
 	if oldID == "" || newID == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "Both 'old' and 'new' result IDs are required"})
+	}
+	if !CanAccessResult(c, oldID) || !CanAccessResult(c, newID) {
+		return c.Status(404).JSON(fiber.Map{"error": "Result not found"})
 	}
 
 	var oldResult, newResult models.ScanResult
@@ -1094,6 +1143,9 @@ func CompareScanResults(c *fiber.Ctx) error {
 
 func GetComplianceReport(c *fiber.Ctx) error {
 	resultID := c.Params("id")
+	if !CanAccessResult(c, resultID) {
+		return c.Status(404).JSON(fiber.Map{"error": "Result not found"})
+	}
 
 	var checks []models.CheckResult
 	config.DB.Where("scan_result_id = ?", resultID).Find(&checks)
@@ -1237,6 +1289,9 @@ func GetRemediationGuide(c *fiber.Ctx) error {
 func CancelScan(c *fiber.Ctx) error {
 	id := c.Params("id")
 	jobID, _ := strconv.ParseUint(id, 10, 64)
+	if !CanAccessJob(c, jobID) {
+		return c.Status(404).JSON(fiber.Map{"error": "Scan job not found"})
+	}
 
 	var job models.ScanJob
 	if err := config.DB.First(&job, jobID).Error; err != nil {
@@ -1471,6 +1526,9 @@ func GetTimelineComparison(c *fiber.Ctx) error {
 
 func GetFixPriority(c *fiber.Ctx) error {
 	resultID := c.Params("id")
+	if !CanAccessResult(c, resultID) {
+		return c.Status(404).JSON(fiber.Map{"error": "Result not found"})
+	}
 
 	var checks []models.CheckResult
 	config.DB.Where("scan_result_id = ? AND (status = 'fail' OR status = 'warn')", resultID).

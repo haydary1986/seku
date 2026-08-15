@@ -49,6 +49,80 @@ func ScopedDB(c *fiber.Ctx) *gorm.DB {
 	return config.DB.Where("organization_id = ?", orgID)
 }
 
+// --- Ownership guards: prevent cross-tenant IDOR on :id endpoints ---
+// System admins bypass all guards; other users may only touch resources that
+// belong to their own organization.
+
+func isAdminCtx(c *fiber.Ctx) bool {
+	role, _ := c.Locals("role").(string)
+	return role == "admin"
+}
+
+// CanAccessJob reports whether the caller may access a ScanJob by id.
+func CanAccessJob(c *fiber.Ctx, jobID interface{}) bool {
+	if isAdminCtx(c) {
+		return true
+	}
+	orgID := GetUserOrgID(c)
+	if orgID == 0 {
+		return false
+	}
+	var count int64
+	config.DB.Model(&models.ScanJob{}).Where("id = ? AND organization_id = ?", jobID, orgID).Count(&count)
+	return count > 0
+}
+
+// CanAccessResult reports whether the caller may access a ScanResult by id
+// (resolved through its scan job's organization).
+func CanAccessResult(c *fiber.Ctx, resultID interface{}) bool {
+	if isAdminCtx(c) {
+		return true
+	}
+	orgID := GetUserOrgID(c)
+	if orgID == 0 {
+		return false
+	}
+	var count int64
+	config.DB.Table("scan_results").
+		Joins("JOIN scan_jobs ON scan_jobs.id = scan_results.scan_job_id").
+		Where("scan_results.id = ? AND scan_jobs.organization_id = ?", resultID, orgID).
+		Count(&count)
+	return count > 0
+}
+
+// CanAccessTarget reports whether the caller may access a ScanTarget by id.
+func CanAccessTarget(c *fiber.Ctx, targetID interface{}) bool {
+	if isAdminCtx(c) {
+		return true
+	}
+	orgID := GetUserOrgID(c)
+	if orgID == 0 {
+		return false
+	}
+	var count int64
+	config.DB.Model(&models.ScanTarget{}).Where("id = ? AND organization_id = ?", targetID, orgID).Count(&count)
+	return count > 0
+}
+
+// CanAccessCheck reports whether the caller may access a CheckResult by id
+// (resolved through its result → job organization).
+func CanAccessCheck(c *fiber.Ctx, checkID interface{}) bool {
+	if isAdminCtx(c) {
+		return true
+	}
+	orgID := GetUserOrgID(c)
+	if orgID == 0 {
+		return false
+	}
+	var count int64
+	config.DB.Table("check_results").
+		Joins("JOIN scan_results ON scan_results.id = check_results.scan_result_id").
+		Joins("JOIN scan_jobs ON scan_jobs.id = scan_results.scan_job_id").
+		Where("check_results.id = ? AND scan_jobs.organization_id = ?", checkID, orgID).
+		Count(&count)
+	return count > 0
+}
+
 // OrgID extracts current org ID from context
 func OrgID(c *fiber.Ctx) uint {
 	return GetUserOrgID(c)

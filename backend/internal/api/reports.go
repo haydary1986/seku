@@ -17,6 +17,9 @@ import (
 
 func GeneratePDFReport(c *fiber.Ctx) error {
 	id := c.Params("id")
+	if !CanAccessResult(c, id) {
+		return c.Status(404).JSON(fiber.Map{"error": "Scan result not found"})
+	}
 
 	var result models.ScanResult
 	if err := config.DB.Preload("ScanTarget").Preload("Checks").First(&result, id).Error; err != nil {
@@ -49,6 +52,9 @@ func GeneratePDFReport(c *fiber.Ctx) error {
 // ExportSARIF generates a SARIF v2.1.0 JSON report for a scan result.
 func ExportSARIF(c *fiber.Ctx) error {
 	id := c.Params("id")
+	if !CanAccessResult(c, id) {
+		return c.Status(404).JSON(fiber.Map{"error": "Result not found"})
+	}
 
 	var result models.ScanResult
 	if err := config.DB.Preload("ScanTarget").First(&result, id).Error; err != nil {
@@ -78,6 +84,9 @@ func ExportSARIF(c *fiber.Ctx) error {
 // GetUpgradeSuggestions returns smart upgrade suggestions for libraries found in a scan.
 func GetUpgradeSuggestions(c *fiber.Ctx) error {
 	resultID := c.Params("id")
+	if !CanAccessResult(c, resultID) {
+		return c.Status(404).JSON(fiber.Map{"error": "Result not found"})
+	}
 
 	var checks []models.CheckResult
 	config.DB.Where("scan_result_id = ?", resultID).Find(&checks)
@@ -89,6 +98,9 @@ func GetUpgradeSuggestions(c *fiber.Ctx) error {
 // ExportCSV generates a CSV report for a scan result.
 func ExportCSV(c *fiber.Ctx) error {
 	id := c.Params("id")
+	if !CanAccessResult(c, id) {
+		return c.Status(404).JSON(fiber.Map{"error": "Result not found"})
+	}
 	var result models.ScanResult
 	if err := config.DB.Preload("ScanTarget").First(&result, id).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Result not found"})

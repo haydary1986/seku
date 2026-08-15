@@ -168,7 +168,7 @@ func markVerified(c *fiber.Ctx, v *models.DomainVerification, method string) err
 // reports whether it contains the expected verification key.
 func checkFileVerification(domain, key string) bool {
 	expected := fmt.Sprintf("vscan-verify=%s", key)
-	client := &http.Client{Timeout: 8 * time.Second}
+	client := safeHTTPClient(8 * time.Second) // SSRF guard: blocks internal/reserved IPs + rebinding
 	for _, scheme := range []string{"https", "http"} {
 		url := fmt.Sprintf("%s://%s%s", scheme, domain, verifyFilePath)
 		req, err := http.NewRequest("GET", url, nil)

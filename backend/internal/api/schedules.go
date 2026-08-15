@@ -11,11 +11,21 @@ import (
 	"seku/internal/scheduler"
 )
 
-// GetSchedules lists all scheduled scans.
+// GetSchedules lists the caller's scheduled scans (org-scoped).
 func GetSchedules(c *fiber.Ctx) error {
 	var schedules []models.ScheduledScan
-	config.DB.Order("created_at desc").Find(&schedules)
+	ScopedDB(c).Order("created_at desc").Find(&schedules)
 	return c.JSON(schedules)
+}
+
+// validateTargetOwnership ensures every target id belongs to the caller's org.
+func validateTargetOwnership(c *fiber.Ctx, ids []uint) bool {
+	for _, id := range ids {
+		if !CanAccessTarget(c, id) {
+			return false
+		}
+	}
+	return true
 }
 
 // CreateSchedule creates a new scheduled scan.
@@ -39,30 +49,33 @@ func CreateSchedule(c *fiber.Ctx) error {
 	if req.Schedule != "daily" && req.Schedule != "weekly" && req.Schedule != "monthly" {
 		return c.Status(400).JSON(fiber.Map{"error": "Schedule must be daily, weekly, or monthly"})
 	}
+	if !validateTargetOwnership(c, req.TargetIDs) {
+		return c.Status(403).JSON(fiber.Map{"error": "One or more targets do not belong to your organization"})
+	}
 
 	targetIDsJSON, _ := json.Marshal(req.TargetIDs)
-
 	nextRun := scheduler.CalculateNextRun(req.Schedule, req.DayOfWeek, req.HourUTC)
 
 	sched := models.ScheduledScan{
-		Name:      req.Name,
-		TargetIDs: string(targetIDsJSON),
-		Schedule:  req.Schedule,
-		DayOfWeek: req.DayOfWeek,
-		HourUTC:   req.HourUTC,
-		IsActive:  true,
-		NextRunAt: &nextRun,
-		CreatedBy: UserID(c),
+		OrganizationID: GetUserOrgID(c),
+		Name:           req.Name,
+		TargetIDs:      string(targetIDsJSON),
+		Schedule:       req.Schedule,
+		DayOfWeek:      req.DayOfWeek,
+		HourUTC:        req.HourUTC,
+		IsActive:       true,
+		NextRunAt:      &nextRun,
+		CreatedBy:      UserID(c),
 	}
 	config.DB.Create(&sched)
 	return c.Status(201).JSON(sched)
 }
 
-// UpdateSchedule updates an existing scheduled scan.
+// UpdateSchedule updates an existing scheduled scan (org-scoped).
 func UpdateSchedule(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var sched models.ScheduledScan
-	if err := config.DB.First(&sched, id).Error; err != nil {
+	if err := ScopedDB(c).First(&sched, id).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Scheduled scan not found"})
 	}
 
@@ -81,6 +94,9 @@ func UpdateSchedule(c *fiber.Ctx) error {
 		sched.Name = req.Name
 	}
 	if len(req.TargetIDs) > 0 {
+		if !validateTargetOwnership(c, req.TargetIDs) {
+			return c.Status(403).JSON(fiber.Map{"error": "One or more targets do not belong to your organization"})
+		}
 		targetIDsJSON, _ := json.Marshal(req.TargetIDs)
 		sched.TargetIDs = string(targetIDsJSON)
 	}
@@ -97,22 +113,22 @@ func UpdateSchedule(c *fiber.Ctx) error {
 	return c.JSON(sched)
 }
 
-// DeleteSchedule removes a scheduled scan.
+// DeleteSchedule removes a scheduled scan (org-scoped).
 func DeleteSchedule(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var sched models.ScheduledScan
-	if err := config.DB.First(&sched, id).Error; err != nil {
+	if err := ScopedDB(c).First(&sched, id).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Scheduled scan not found"})
 	}
 	config.DB.Delete(&sched)
 	return c.JSON(fiber.Map{"message": "Scheduled scan deleted"})
 }
 
-// ToggleSchedule toggles the is_active flag of a scheduled scan.
+// ToggleSchedule toggles the is_active flag of a scheduled scan (org-scoped).
 func ToggleSchedule(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var sched models.ScheduledScan
-	if err := config.DB.First(&sched, id).Error; err != nil {
+	if err := ScopedDB(c).First(&sched, id).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Scheduled scan not found"})
 	}
 

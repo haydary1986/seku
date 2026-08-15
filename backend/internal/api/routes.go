@@ -2,12 +2,28 @@ package api
 
 import (
 	"os"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 )
+
+// rateLimit builds a per-IP limiter that returns 429 when exceeded.
+func rateLimit(max int, window time.Duration) fiber.Handler {
+	return limiter.New(limiter.Config{
+		Max:        max,
+		Expiration: window,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(429).JSON(fiber.Map{"error": "Too many requests. Please slow down and try again shortly."})
+		},
+	})
+}
 
 func SetupRoutes(app *fiber.App) {
 	// Middleware
@@ -53,9 +69,11 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/downloads/stats", GetDownloadStats)
 	api.Get("/downloads/agent/:platform", DownloadAgent)
 
-	// Public routes (no auth required)
-	api.Post("/auth/login", Login)
-	api.Post("/auth/register", Register)
+	// Public routes (no auth required) — auth endpoints are rate-limited to blunt
+	// credential brute-force (10 attempts / minute / IP).
+	authLimiter := rateLimit(10, time.Minute)
+	api.Post("/auth/login", authLimiter, Login)
+	api.Post("/auth/register", authLimiter, Register)
 	api.Get("/criteria", GetScanCriteria) // public page: scan criteria & scoring
 	api.Get("/plans", GetPlans)           // public: plan details with scan categories
 	api.Get("/pricing", GetPublicPricing) // public: deep-scan price (no account details)
@@ -125,12 +143,14 @@ func SetupRoutes(app *fiber.App) {
 	results.Get("/:id/csv", ExportCSV)
 	results.Get("/:id/fix-priority", GetFixPriority)
 
-	// AI Analysis
-	protected.Post("/ai/analyze/:id", AnalyzeScanResult)
+	// AI Analysis — rate-limited: these call a paid AI provider on the admin key,
+	// so cap per-IP usage to prevent bill-drain abuse (20 / minute).
+	aiLimiter := rateLimit(20, time.Minute)
+	protected.Post("/ai/analyze/:id", aiLimiter, AnalyzeScanResult)
 	protected.Get("/ai/analysis/:id", GetAIAnalysis)
 
 	// AI Chat
-	protected.Post("/ai/chat", ChatWithAI)
+	protected.Post("/ai/chat", aiLimiter, ChatWithAI)
 
 	// Dashboard & Leaderboard
 	protected.Get("/dashboard", GetDashboardStats)

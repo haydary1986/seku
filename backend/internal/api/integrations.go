@@ -34,6 +34,9 @@ func CreateGitHubIssue(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "check_id, repo_owner, repo_name, and token are required"})
 	}
 
+	if !CanAccessCheck(c, req.CheckID) {
+		return c.Status(404).JSON(fiber.Map{"error": "Check result not found"})
+	}
 	var check models.CheckResult
 	if err := config.DB.First(&check, req.CheckID).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Check result not found"})
@@ -113,6 +116,9 @@ func CreateJiraIssue(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "check_id, jira_url, project_key, token, and email are required"})
 	}
 
+	if !CanAccessCheck(c, req.CheckID) {
+		return c.Status(404).JSON(fiber.Map{"error": "Check result not found"})
+	}
 	var check models.CheckResult
 	if err := config.DB.First(&check, req.CheckID).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Check result not found"})
@@ -145,6 +151,10 @@ func CreateJiraIssue(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to marshal request"})
 	}
 
+	// SSRF guard: the Jira base URL is user-supplied — refuse internal hosts.
+	if !isSafeOutboundHost(req.JiraURL) {
+		return c.Status(400).JSON(fiber.Map{"error": "Jira URL host is not allowed"})
+	}
 	httpReq, err := http.NewRequest("POST", req.JiraURL+"/rest/api/3/issue", bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create HTTP request"})
@@ -152,15 +162,15 @@ func CreateJiraIssue(c *fiber.Ctx) error {
 	httpReq.SetBasicAuth(req.Email, req.Token)
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := safeHTTPClient(10 * time.Second)
 	resp, err := client.Do(httpReq)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to reach Jira API: " + err.Error()})
+		return c.Status(502).JSON(fiber.Map{"error": "Failed to reach Jira API"})
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		return c.Status(resp.StatusCode).JSON(fiber.Map{"error": fmt.Sprintf("Jira API returned status %d", resp.StatusCode)})
+		return c.Status(502).JSON(fiber.Map{"error": "Jira API rejected the request"})
 	}
 
 	var jiraResp map[string]interface{}

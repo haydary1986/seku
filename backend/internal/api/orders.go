@@ -1,10 +1,13 @@
 package api
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"seku/internal/config"
 	"seku/internal/models"
 )
@@ -212,17 +215,35 @@ func hasPaidDeepScanCredit(orgID, targetID uint) bool {
 	return count > 0
 }
 
-// consumeDeepScanCredit marks one paid credit for the target as used by a scan job.
-func consumeDeepScanCredit(orgID, targetID, scanJobID uint) bool {
-	var order models.DeepScanOrder
-	if err := config.DB.Where("organization_id = ? AND scan_target_id = ? AND status = ?", orgID, targetID, "paid").
-		Order("created_at ASC").First(&order).Error; err != nil {
-		return false
+// consumeDeepScanCredits atomically claims one paid credit per target within a
+// single transaction. If ANY target lacks a consumable credit, the whole
+// transaction rolls back and it returns false — preventing the check-then-use
+// race that could otherwise grant a free deep scan.
+func consumeDeepScanCredits(orgID uint, targetIDs []uint, scanJobID uint) bool {
+	if len(targetIDs) == 0 {
+		return true
 	}
-	now := time.Now()
-	order.Status = "used"
-	order.UsedByScanJob = scanJobID
-	order.UsedAt = &now
-	config.DB.Save(&order)
-	return true
+	err := config.DB.Transaction(func(tx *gorm.DB) error {
+		now := time.Now()
+		for _, tid := range targetIDs {
+			var order models.DeepScanOrder
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+				Where("organization_id = ? AND scan_target_id = ? AND status = ?", orgID, tid, "paid").
+				Order("created_at ASC").First(&order).Error; err != nil {
+				return fmt.Errorf("no paid credit for target %d", tid)
+			}
+			// Conditional update: only succeeds if the credit is still 'paid'.
+			res := tx.Model(&models.DeepScanOrder{}).
+				Where("id = ? AND status = ?", order.ID, "paid").
+				Updates(map[string]interface{}{"status": "used", "used_by_scan_job": scanJobID, "used_at": &now})
+			if res.Error != nil {
+				return res.Error
+			}
+			if res.RowsAffected != 1 {
+				return fmt.Errorf("credit for target %d already consumed", tid)
+			}
+		}
+		return nil
+	})
+	return err == nil
 }

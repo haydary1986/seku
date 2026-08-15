@@ -44,14 +44,35 @@ func runDueScans() {
 			continue
 		}
 
-		// Load targets
+		// Load targets — scoped to the schedule's own organization (prevents a
+		// crafted schedule from scanning another tenant's / arbitrary targets).
 		var targets []models.ScanTarget
 		if len(targetIDs) > 0 {
-			config.DB.Where("id IN ?", targetIDs).Find(&targets)
+			config.DB.Where("id IN ? AND organization_id = ?", targetIDs, sched.OrganizationID).Find(&targets)
 		}
 		if len(targets) == 0 {
-			log.Printf("[Scheduler] No targets found for schedule %d, skipping", sched.ID)
+			log.Printf("[Scheduler] No owned targets for schedule %d, skipping", sched.ID)
 			continue
+		}
+
+		// Non-admin schedules may only scan verified domains. Because changing a
+		// target's URL invalidates its verification, this also blocks retargeting
+		// and internal-host abuse at run time.
+		var creator models.User
+		config.DB.First(&creator, sched.CreatedBy)
+		if creator.Role != "admin" {
+			verified := targets[:0]
+			for _, t := range targets {
+				var v models.DomainVerification
+				if err := config.DB.Where("scan_target_id = ? AND is_verified = ?", t.ID, true).First(&v).Error; err == nil {
+					verified = append(verified, t)
+				}
+			}
+			targets = verified
+			if len(targets) == 0 {
+				log.Printf("[Scheduler] No verified targets for schedule %d, skipping", sched.ID)
+				continue
+			}
 		}
 
 		// Create ScanJob

@@ -42,21 +42,34 @@ func openDatabase() (*gorm.DB, error) {
 		if dbPath == "" {
 			dbPath = "vscan.db"
 		}
-		db, err := gorm.Open(sqlite.Open(dbPath), gormConfig)
+		// WAL + busy_timeout are essential for concurrent scans: they turn most
+		// "database is locked" errors into short waits and allow readers during writes.
+		dsn := dbPath + "?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_foreign_keys=on"
+		db, err := gorm.Open(sqlite.Open(dsn), gormConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to SQLite: %w", err)
 		}
-		log.Println("Connected to SQLite:", dbPath)
+		driverIsSQLite = true
+		log.Println("Connected to SQLite (WAL):", dbPath)
 		return db, nil
 	}
 }
+
+// driverIsSQLite records whether the active driver is SQLite, so the pool can be
+// limited to a single writer (SQLite has one writer regardless of connections).
+var driverIsSQLite bool
 
 func configurePool(db *gorm.DB) {
 	sqlDB, err := db.DB()
 	if err != nil {
 		return
 	}
-	sqlDB.SetMaxOpenConns(25)
+	if driverIsSQLite {
+		// SQLite has a single writer; one open connection avoids lock contention.
+		sqlDB.SetMaxOpenConns(1)
+	} else {
+		sqlDB.SetMaxOpenConns(25)
+	}
 	sqlDB.SetMaxIdleConns(5)
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 }
