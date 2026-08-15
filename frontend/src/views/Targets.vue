@@ -82,14 +82,7 @@ async function startVerification(targetId) {
   verificationError.value = ''
   try {
     const { data } = await initiateVerification(targetId)
-    verificationStatuses.value[targetId] = {
-      verified: false,
-      initiated: true,
-      verification: data.verification,
-      txt_record: data.txt_record,
-      domain: data.domain,
-      instructions: data.instructions,
-    }
+    verificationStatuses.value[targetId] = { ...data, verified: false, initiated: true }
     verifyingTarget.value = targetId
   } catch (e) {
     console.error('Failed to initiate verification:', e)
@@ -126,8 +119,27 @@ function getTxtRecord(targetId) {
   return verificationStatuses.value[targetId]?.txt_record || ''
 }
 
+function getFileContent(targetId) {
+  return verificationStatuses.value[targetId]?.file_content || getTxtRecord(targetId)
+}
+
+function getFilePath(targetId) {
+  return verificationStatuses.value[targetId]?.file_path || '/.well-known/seku-verify.txt'
+}
+
+function getFileUrl(targetId) {
+  return verificationStatuses.value[targetId]?.file_url || ''
+}
+
 function getDomain(targetId) {
   return verificationStatuses.value[targetId]?.domain || ''
+}
+
+// Which verification method is displayed in the expanded instructions.
+const verifyMethod = ref('txt')
+
+function copyText(text) {
+  if (navigator?.clipboard) navigator.clipboard.writeText(text)
 }
 
 async function addTarget() {
@@ -731,37 +743,64 @@ uobasrah.edu.iq, University of Basrah, University"
           <tr v-if="!isAdmin" v-for="target in filteredTargets" :key="'verify-' + target.ID" v-show="verifyingTarget === target.ID && isInitiated(target.ID) && !isVerified(target.ID)">
             <td colspan="7" class="px-4 py-4 bg-blue-50 border-t border-blue-100">
               <div class="max-w-2xl">
-                <h4 class="font-semibold text-gray-900 mb-3">Domain Verification for {{ getDomain(target.ID) }}</h4>
-                <div class="bg-white rounded-lg border border-blue-200 p-4 mb-4">
-                  <p class="text-sm text-gray-600 mb-2">Add this TXT record to your DNS:</p>
-                  <div class="flex items-center gap-2">
-                    <code class="bg-gray-100 text-gray-800 px-3 py-2 rounded text-sm font-mono flex-1">
-                      {{ getTxtRecord(target.ID) }}
-                    </code>
-                    <button
-                      @click="navigator.clipboard.writeText(getTxtRecord(target.ID))"
-                      class="px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors"
-                      title="Copy to clipboard"
-                    >
-                      Copy
-                    </button>
-                  </div>
+                <h4 class="font-semibold text-gray-900 mb-1">إثبات ملكية النطاق: {{ getDomain(target.ID) }}</h4>
+                <p class="text-sm text-gray-600 mb-3">اختر طريقة واحدة — أي طريقة تكفي للتحقق.</p>
+
+                <!-- Method tabs -->
+                <div class="inline-flex rounded-lg border border-blue-200 bg-white p-1 mb-4">
+                  <button @click="verifyMethod = 'txt'"
+                    :class="verifyMethod === 'txt' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
+                    class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors">
+                    سجل DNS TXT
+                  </button>
+                  <button @click="verifyMethod = 'file'"
+                    :class="verifyMethod === 'file' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
+                    class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors">
+                    رفع ملف
+                  </button>
                 </div>
-                <div class="text-sm text-gray-600 space-y-1 mb-4">
-                  <p class="font-medium text-gray-700">Steps:</p>
-                  <ol class="list-decimal list-inside space-y-1 mr-4">
-                    <li>Log in to your DNS provider for {{ getDomain(target.ID) }}</li>
-                    <li>Add a new TXT record to the root domain</li>
-                    <li>Set the value to: <code class="bg-gray-100 px-1 rounded text-xs">{{ getTxtRecord(target.ID) }}</code></li>
-                    <li>Wait for DNS propagation (may take up to 24 hours)</li>
-                    <li>Click "Check Verification" below</li>
+
+                <!-- Method 1: DNS TXT -->
+                <div v-if="verifyMethod === 'txt'">
+                  <div class="bg-white rounded-lg border border-blue-200 p-4 mb-4">
+                    <p class="text-sm text-gray-600 mb-2">أضف سجل TXT التالي على النطاق الجذر (@):</p>
+                    <div class="flex items-center gap-2">
+                      <code class="bg-gray-100 text-gray-800 px-3 py-2 rounded text-sm font-mono flex-1 break-all">{{ getTxtRecord(target.ID) }}</code>
+                      <button @click="copyText(getTxtRecord(target.ID))" class="px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors">نسخ</button>
+                    </div>
+                  </div>
+                  <ol class="list-decimal list-inside space-y-1 mr-4 text-sm text-gray-600 mb-4">
+                    <li>سجّل الدخول إلى مزوّد DNS الخاص بـ {{ getDomain(target.ID) }}</li>
+                    <li>أضف سجل TXT جديد على النطاق الجذر (@)</li>
+                    <li>اجعل القيمة: <code class="bg-gray-100 px-1 rounded text-xs">{{ getTxtRecord(target.ID) }}</code></li>
+                    <li>انتظر انتشار DNS (قد يصل إلى 24 ساعة)</li>
+                    <li>اضغط "تحقّق الآن"</li>
                   </ol>
                 </div>
-                <button
-                  @click="verifyDomain(target.ID)"
-                  class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
-                >
-                  Check Verification
+
+                <!-- Method 2: file upload -->
+                <div v-else>
+                  <div class="bg-white rounded-lg border border-blue-200 p-4 mb-3">
+                    <p class="text-sm text-gray-600 mb-2">١) أنشئ ملفاً باسم <code class="bg-gray-100 px-1 rounded text-xs">seku-verify.txt</code> محتواه:</p>
+                    <div class="flex items-center gap-2 mb-3">
+                      <code class="bg-gray-100 text-gray-800 px-3 py-2 rounded text-sm font-mono flex-1 break-all">{{ getFileContent(target.ID) }}</code>
+                      <button @click="copyText(getFileContent(target.ID))" class="px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors">نسخ</button>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2">٢) ارفعه على موقعك في المسار:</p>
+                    <div class="flex items-center gap-2">
+                      <code class="bg-gray-100 text-gray-800 px-3 py-2 rounded text-sm font-mono flex-1 break-all">{{ getFilePath(target.ID) }}</code>
+                      <button @click="copyText(getFilePath(target.ID))" class="px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors">نسخ</button>
+                    </div>
+                  </div>
+                  <p class="text-sm text-gray-600 mb-4">
+                    ٣) تأكّد أنه يفتح على:
+                    <a :href="getFileUrl(target.ID)" target="_blank" class="text-indigo-600 hover:underline break-all">{{ getFileUrl(target.ID) }}</a>
+                    ثم اضغط "تحقّق الآن".
+                  </p>
+                </div>
+
+                <button @click="verifyDomain(target.ID)" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm">
+                  تحقّق الآن
                 </button>
               </div>
             </td>

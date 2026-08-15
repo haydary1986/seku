@@ -186,7 +186,32 @@ type DomainVerification struct {
 	Domain          string     `json:"domain" gorm:"not null"`
 	VerificationKey string     `json:"verification_key" gorm:"not null"` // e.g., vscan-verify=abc123
 	IsVerified      bool       `json:"is_verified" gorm:"default:false"`
+	Method          string     `json:"method"` // dns_txt | file — how it was verified
 	VerifiedAt      *time.Time `json:"verified_at"`
+}
+
+// DeepScanOrder is a pay-per-scan purchase for a single deep scan on one target.
+// Payment is a manual internal transfer: the user creates a pending order, pays
+// via the transfer method shown in payment settings, submits the transfer ref,
+// an admin marks it paid, then the user consumes it by running one deep scan.
+type DeepScanOrder struct {
+	gorm.Model
+	OrganizationID uint         `json:"organization_id" gorm:"not null;index"`
+	UserID         uint         `json:"user_id" gorm:"not null"`
+	ScanTargetID   uint         `json:"scan_target_id" gorm:"not null;index"`
+	Domain         string       `json:"domain"`
+	AmountIQD      int          `json:"amount_iqd"`                    // price at time of order
+	Status         string       `json:"status" gorm:"default:pending"` // pending | paid | rejected | used
+	PaymentRef     string       `json:"payment_ref"`                   // transfer reference entered by user
+	ContactName    string       `json:"contact_name"`
+	ContactPhone   string       `json:"contact_phone"`
+	AdminNotes     string       `json:"admin_notes"`
+	ApprovedBy     uint         `json:"approved_by"`
+	ApprovedAt     *time.Time   `json:"approved_at"`
+	UsedByScanJob  uint         `json:"used_by_scan_job"` // ScanJob that consumed this credit
+	UsedAt         *time.Time   `json:"used_at"`
+	ScanTarget     ScanTarget   `json:"scan_target,omitempty" gorm:"foreignKey:ScanTargetID"`
+	Organization   Organization `json:"organization,omitempty" gorm:"foreignKey:OrganizationID"`
 }
 
 // --- Automation ---

@@ -58,6 +58,7 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/auth/register", Register)
 	api.Get("/criteria", GetScanCriteria) // public page: scan criteria & scoring
 	api.Get("/plans", GetPlans)           // public: plan details with scan categories
+	api.Get("/pricing", GetPublicPricing) // public: deep-scan price (no account details)
 	api.Get("/docs", GetAPIDocs)          // public: API documentation
 	api.Get("/seo/public", GetPublicSEO)  // public: SEO config (GA ID, verification tags)
 
@@ -74,6 +75,12 @@ func SetupRoutes(app *fiber.App) {
 	// Upgrade Requests
 	protected.Post("/upgrade/request", RequestUpgrade)
 	protected.Get("/upgrade/requests", GetMyUpgradeRequests)
+
+	// Deep-scan pricing + pay-per-scan orders (manual internal transfer)
+	protected.Get("/payment-info", GetPaymentInfo)
+	protected.Post("/orders", CreateDeepScanOrder)
+	protected.Get("/orders", GetMyOrders)
+	protected.Put("/orders/:id/payment", SubmitPayment)
 
 	// Targets
 	targets := protected.Group("/targets")
@@ -229,6 +236,11 @@ func SetupRoutes(app *fiber.App) {
 	admin.Get("/upgrade/all", GetAllUpgradeRequests)
 	admin.Put("/upgrade/:id/approve", ApproveUpgrade)
 	admin.Put("/upgrade/:id/reject", RejectUpgrade)
+
+	// Deep-scan order management (admin): confirm internal transfers
+	admin.Get("/orders/all", ListAllOrders)
+	admin.Put("/orders/:id/approve", MarkOrderPaid)
+	admin.Put("/orders/:id/reject", RejectOrder)
 
 	// Purge all scan data (admin)
 	admin.Post("/purge-scans", PurgeAllScans)

@@ -151,13 +151,14 @@ func Register(c *fiber.Ctx) error {
 		slug = slug + "-" + time.Now().Format("20060102150405")
 	}
 
-	// Create Organization with free plan (1 target, 5 scans/month)
+	// Free plan: light scans are free (deep scans are paid per-scan). Limits are
+	// generous since the value is in paid deep scans, not in adding targets.
 	org := models.Organization{
 		Name:       req.OrgName,
 		Slug:       slug,
 		Plan:       "free",
-		MaxTargets: 1,
-		MaxScans:   5,
+		MaxTargets: 25,
+		MaxScans:   100, // free LIGHT scans per month
 		IsActive:   true,
 	}
 	if err := config.DB.Create(&org).Error; err != nil {

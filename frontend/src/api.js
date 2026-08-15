@@ -75,6 +75,7 @@ export const getComplianceReport = (id) => api.get(`/results/${id}/compliance`)
 // Public: Scan Criteria / Methodology / Plans
 export const getScanCriteria = () => api.get('/criteria')
 export const getPlans = () => api.get('/plans')
+export const getPublicPricing = () => api.get('/pricing')
 
 // AI Analysis
 export const analyzeResult = (id) => api.post(`/ai/analyze/${id}`)
@@ -109,6 +110,16 @@ export const getMyUpgradeRequests = () => api.get('/upgrade/requests')
 export const getAllUpgradeRequests = () => api.get('/upgrade/all')
 export const approveUpgrade = (id, notes) => api.put(`/upgrade/${id}/approve`, { admin_notes: notes })
 export const rejectUpgrade = (id, notes) => api.put(`/upgrade/${id}/reject`, { admin_notes: notes })
+
+// Deep-scan pricing + pay-per-scan orders (manual internal transfer)
+export const getPaymentInfo = () => api.get('/payment-info')
+export const createDeepScanOrder = (data) => api.post('/orders', data)
+export const getMyOrders = () => api.get('/orders')
+export const submitOrderPayment = (id, paymentRef) => api.put(`/orders/${id}/payment`, { payment_ref: paymentRef })
+// Admin: confirm/reject internal transfers
+export const getAllOrders = (status) => api.get('/orders/all' + (status ? `?status=${status}` : ''))
+export const approveOrder = (id, notes) => api.put(`/orders/${id}/approve`, { admin_notes: notes })
+export const rejectOrder = (id, notes) => api.put(`/orders/${id}/reject`, { admin_notes: notes })
 
 // Scheduled Scans
 export const getSchedules = () => api.get('/schedules')

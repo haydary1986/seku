@@ -27,6 +27,17 @@ const emailMessage = ref('')
 const emailTesting = ref(false)
 const testEmailAddress = ref('')
 
+// Payment / deep-scan billing state
+const payment = ref({
+  deep_scan_price_iqd: '',
+  payment_method: '',
+  payment_account: '',
+  payment_instructions_ar: '',
+  payment_instructions_en: '',
+})
+const paymentSaving = ref(false)
+const paymentMessage = ref('')
+
 // Proxy state
 const proxyStats = ref(null)
 const proxyRefreshing = ref(false)
@@ -59,6 +70,11 @@ async function loadSettings() {
     if (data.ai_model) settings.value.ai_model = data.ai_model
     if (data.ai_base_url) settings.value.ai_base_url = data.ai_base_url
 
+    // Payment / deep-scan billing
+    for (const k of Object.keys(payment.value)) {
+      if (data[k] !== undefined && data[k] !== null) payment.value[k] = data[k]
+    }
+
     if (emailRes.data) {
       const ec = emailRes.data
       if (ec.smtp_host) emailConfig.value.smtp_host = ec.smtp_host
@@ -86,6 +102,21 @@ async function saveSettings() {
     message.value = 'Failed to save: ' + (e.response?.data?.error || e.message)
   } finally {
     saving.value = false
+  }
+}
+
+async function savePayment() {
+  paymentSaving.value = true
+  paymentMessage.value = ''
+  try {
+    // Send only the payment keys so the masked AI key is never resent.
+    await updateSettings({ ...payment.value })
+    paymentMessage.value = 'تم حفظ إعدادات الدفع.'
+    setTimeout(() => paymentMessage.value = '', 3000)
+  } catch (e) {
+    paymentMessage.value = 'تعذّر الحفظ: ' + (e.response?.data?.error || e.message)
+  } finally {
+    paymentSaving.value = false
   }
 }
 
@@ -238,6 +269,60 @@ onMounted(() => {
           <button type="submit" :disabled="saving"
             class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
             {{ saving ? 'Saving...' : 'Save Settings' }}
+          </button>
+        </form>
+      </div>
+
+      <!-- Payment / Deep-scan billing -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">الدفع والفحص العميق (حوالة داخلية)</h3>
+            <p class="text-sm text-gray-500">سعر الفحص العميق وتعليمات الحوالة التي تظهر للمستخدمين.</p>
+          </div>
+        </div>
+
+        <form @submit.prevent="savePayment" class="space-y-4">
+          <div class="grid md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">سعر الفحص العميق (د.ع)</label>
+              <input v-model="payment.deep_scan_price_iqd" type="number" min="0" placeholder="25000"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">طريقة الدفع</label>
+              <input v-model="payment.payment_method" type="text" placeholder="ZainCash / حوالة مصرفية"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">حساب الاستلام</label>
+              <input v-model="payment.payment_account" type="text" placeholder="07XXXXXXXXX / رقم الحساب"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">تعليمات الدفع (عربي)</label>
+            <textarea v-model="payment.payment_instructions_ar" rows="3" placeholder="حوّل المبلغ إلى الرقم أعلاه ثم أدخل رقم إشعار الحوالة في صفحة الطلبات."
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Payment instructions (English)</label>
+            <textarea v-model="payment.payment_instructions_en" rows="2" placeholder="Transfer the amount to the account above, then submit the transfer reference on the Orders page."
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></textarea>
+          </div>
+
+          <div v-if="paymentMessage" :class="['px-4 py-3 rounded-lg text-sm', paymentMessage.includes('تعذّر') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700']">
+            {{ paymentMessage }}
+          </div>
+
+          <button type="submit" :disabled="paymentSaving"
+            class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+            {{ paymentSaving ? '...' : 'حفظ إعدادات الدفع' }}
           </button>
         </form>
       </div>

@@ -1,9 +1,13 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { getScanJobs, getTargets, startScan, cancelScan, deleteScanJob } from '../api'
 
 const router = useRouter()
+const isAdmin = computed(() => {
+  try { return JSON.parse(localStorage.getItem('user') || '{}').role === 'admin' } catch { return false }
+})
+const paymentRequired = ref(false)
 const jobs = ref([])
 const targets = ref([])
 const loading = ref(true)
@@ -58,6 +62,7 @@ const scanError = ref('')
 async function runScan() {
   scanning.value = true
   scanError.value = ''
+  paymentRequired.value = false
   try {
     const payload = {
       name: scanForm.value.name,
@@ -76,7 +81,11 @@ async function runScan() {
     scanForm.value = { name: '', target_ids: [], selectAll: true, policy: 'standard', enable_login: false, enable_nuclei: false, enable_crawl: false, enable_oob: false, enable_dalfox: false, enable_ffuf: false, authorized: false }
     await loadData()
   } catch (e) {
-    if (e.response?.status === 403 && e.response?.data?.unverified_domains) {
+    if (e.response?.status === 402) {
+      paymentRequired.value = true
+      const domains = (e.response.data?.unpaid_targets || []).join('، ')
+      scanError.value = `الفحص العميق مدفوع${domains ? ` (النطاقات: ${domains})` : ''}. اطلب فحصاً عميقاً وادفع عبر الحوالة الداخلية من صفحة "الفحوص المدفوعة".`
+    } else if (e.response?.status === 403 && e.response?.data?.unverified_domains) {
       const domains = e.response.data.unverified_domains.join(', ')
       scanError.value = `يجب التحقق من ملكية النطاقات التالية قبل الفحص: ${domains}. اذهب إلى صفحة المواقع لإتمام التحقق.`
     } else if (e.response?.data?.error) {
@@ -234,7 +243,10 @@ onMounted(() => {
       </svg>
       <div>
         <p>{{ scanError }}</p>
-        <router-link v-if="scanError.includes('التحقق')" to="/targets" class="text-indigo-600 hover:underline text-sm mt-1 inline-block">
+        <router-link v-if="paymentRequired" to="/orders" class="text-indigo-600 hover:underline text-sm mt-1 inline-block font-medium">
+          اطلب فحصاً عميقاً وادفع &larr;
+        </router-link>
+        <router-link v-else-if="scanError.includes('التحقق')" to="/targets" class="text-indigo-600 hover:underline text-sm mt-1 inline-block">
           الذهاب إلى صفحة المواقع
         </router-link>
       </div>
@@ -356,6 +368,9 @@ onMounted(() => {
               </div>
               <p class="text-xs text-gray-500 mb-1">40 categories, ~2-5min per site</p>
               <p class="text-xs text-gray-400">Full assessment incl. login brute-force, nuclei CVEs, crawl &amp; OOB SSRF</p>
+              <span v-if="!isAdmin" class="mt-2 inline-flex items-center gap-1 self-start text-[11px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                مدفوع — حوالة داخلية
+              </span>
               <div v-if="scanForm.policy === 'deep'" class="absolute top-2 right-2">
                 <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
               </div>

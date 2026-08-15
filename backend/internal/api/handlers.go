@@ -471,6 +471,11 @@ func StartScan(c *fiber.Ctx) error {
 	}
 
 	userID, _ := c.Locals("user_id").(uint)
+	userRole, _ := c.Locals("role").(string)
+	isAdmin := userRole == "admin"
+	// A "deep" (paid) scan is the deep policy or any intrusive/advanced tool.
+	isDeep := req.Policy == "deep" || req.EnableLogin || req.EnableNuclei ||
+		req.EnableCrawl || req.EnableOOB || req.EnableDalfox || req.EnableFFUF
 
 	// Get user's organization via OrgMembership
 	var membership models.OrgMembership
@@ -500,7 +505,9 @@ func StartScan(c *fiber.Ctx) error {
 			config.DB.Model(&models.ScanJob{}).
 				Where("organization_id = ? AND created_at >= ?", org.ID, startOfMonth).
 				Count(&monthlyScans)
-			if org.MaxScans > 0 && int(monthlyScans) >= org.MaxScans {
+			// The monthly cap governs FREE (light) scans only; paid deep scans are
+			// billed per-scan and are not blocked by the free quota.
+			if !isDeep && org.MaxScans > 0 && int(monthlyScans) >= org.MaxScans {
 				return c.Status(403).JSON(fiber.Map{
 					"error":   "Monthly scan limit reached for your plan. Please upgrade.",
 					"limit":   org.MaxScans,
@@ -524,8 +531,7 @@ func StartScan(c *fiber.Ctx) error {
 	}
 
 	// Check domain verification (skip for system admin)
-	userRole, _ := c.Locals("role").(string)
-	if userRole != "admin" {
+	if !isAdmin {
 		var unverifiedDomains []string
 		for _, target := range targets {
 			var verification models.DomainVerification
@@ -538,6 +544,25 @@ func StartScan(c *fiber.Ctx) error {
 			return c.Status(403).JSON(fiber.Map{
 				"error":              "Some targets are not verified. Please verify domain ownership before scanning.",
 				"unverified_domains": unverifiedDomains,
+			})
+		}
+	}
+
+	// Deep scans are pay-per-scan: non-admins need a paid credit per target.
+	if isDeep && !isAdmin {
+		orgID := GetUserOrgID(c)
+		var unpaid []string
+		for _, target := range targets {
+			if !hasPaidDeepScanCredit(orgID, target.ID) {
+				unpaid = append(unpaid, target.URL)
+			}
+		}
+		if len(unpaid) > 0 {
+			return c.Status(402).JSON(fiber.Map{
+				"error":          "payment_required",
+				"message":        "الفحص العميق مدفوع. اطلب فحصاً عميقاً وادفع عبر الحوالة الداخلية أولاً.",
+				"unpaid_targets": unpaid,
+				"payment_info":   paymentInfoMap(),
 			})
 		}
 	}
@@ -564,10 +589,20 @@ func StartScan(c *fiber.Ctx) error {
 		config.DB.Create(&result)
 	}
 
+	// Consume one paid credit per target for deep scans (non-admin).
+	if isDeep && !isAdmin {
+		orgID := GetUserOrgID(c)
+		for _, target := range targets {
+			consumeDeepScanCredit(orgID, target.ID, job.ID)
+		}
+	}
+
 	// Run scan in background — use policy-based engine if specified, otherwise plan-based
 	var engine *scanner.Engine
 	if req.Policy != "" {
 		engine = scanner.NewEngineForPolicy(req.Policy)
+	} else if isDeep {
+		engine = scanner.NewEngineForPolicy("deep")
 	} else {
 		engine = scanner.NewEngineForPlan(plan)
 	}

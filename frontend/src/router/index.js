@@ -30,6 +30,8 @@ import NucleiTool from '../views/NucleiTool.vue'
 import Downloads from '../views/Downloads.vue'
 import Correlations from '../views/Correlations.vue'
 import Agents from '../views/Agents.vue'
+import Orders from '../views/Orders.vue'
+import AdminOrders from '../views/AdminOrders.vue'
 
 const routes = [
   // Public pages
@@ -46,6 +48,7 @@ const routes = [
   { path: '/correlations', name: 'Correlations', component: Correlations },
   { path: '/targets', name: 'Targets', component: Targets },
   { path: '/scans', name: 'Scans', component: Scans },
+  { path: '/orders', name: 'Orders', component: Orders },
   { path: '/scans/:id', name: 'ScanDetail', component: ScanDetail },
   { path: '/results/:id', name: 'ResultDetail', component: ResultDetail },
   { path: '/leaderboard', name: 'Leaderboard', component: Leaderboard },
@@ -64,6 +67,7 @@ const routes = [
   { path: '/settings', name: 'Settings', component: Settings, meta: { admin: true } },
   { path: '/seo', name: 'SEOSettings', component: SEOSettings, meta: { admin: true } },
   { path: '/subscriptions', name: 'Subscriptions', component: Subscriptions, meta: { admin: true } },
+  { path: '/admin/orders', name: 'AdminOrders', component: AdminOrders, meta: { admin: true } },
   { path: '/tools/nuclei', name: 'NucleiTool', component: NucleiTool, meta: { admin: true } },
   { path: '/agents', name: 'Agents', component: Agents, meta: { admin: true } },
 ]

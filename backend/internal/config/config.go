@@ -48,6 +48,7 @@ func InitDatabase() {
 		&models.Agent{},
 		&models.AgentJob{},
 		&models.DownloadStat{},
+		&models.DeepScanOrder{},
 	)
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)

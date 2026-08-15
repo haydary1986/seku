@@ -39,6 +39,7 @@
     "dashboard": "Dashboard",
     "targets": "Targets",
     "scans": "Scans",
+    "orders": "Deep Scans",
     "leaderboard": "Leaderboard",
     "schedules": "Schedules",
     "upgrade": "Upgrade Plan",
