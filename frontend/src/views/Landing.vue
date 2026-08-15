@@ -27,6 +27,44 @@ function t(ar, en) {
   return lang.value === 'ar' ? ar : en
 }
 
+// --- Instant teaser scan (public, rate-limited) ---
+const scanUrl = ref('')
+const scanning = ref(false)
+const scanResult = ref(null)
+const scanErr = ref('')
+function gradeColor(g) {
+  if (!g) return '#6b7280'
+  if (g.startsWith('A')) return '#0b8457'
+  if (g.startsWith('B')) return '#5c9e1f'
+  if (g.startsWith('C')) return '#b8860b'
+  if (g.startsWith('D')) return '#db6b00'
+  return '#d6293e'
+}
+async function runQuickScan() {
+  const url = scanUrl.value.trim()
+  if (!url) return
+  scanning.value = true
+  scanErr.value = ''
+  scanResult.value = null
+  try {
+    const res = await fetch('/api/public/quickscan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      scanErr.value = data.error || t('تعذّر الفحص، حاول لاحقاً.', 'Scan failed, try again later.')
+      return
+    }
+    scanResult.value = data
+  } catch {
+    scanErr.value = t('تعذّر الاتصال.', 'Connection failed.')
+  } finally {
+    scanning.value = false
+  }
+}
+
 function handleScroll() {
   scrolled.value = window.scrollY > 10
 }
@@ -256,6 +294,48 @@ const steps = computed(() => [
             <router-link :to="isRTL ? '/methodology-ar' : '/methodology'" class="px-8 py-3.5 bg-white text-gray-700 font-semibold rounded-xl border border-gray-300 hover:border-indigo-300 hover:text-indigo-600 transition-all">
               {{ t('تعرّف على معايير التقييم', 'View Assessment Criteria') }}
             </router-link>
+          </div>
+
+          <!-- Instant teaser scan -->
+          <div class="mt-10 max-w-xl mx-auto">
+            <div class="flex flex-col sm:flex-row gap-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-2">
+              <input v-model="scanUrl" @keyup.enter="runQuickScan" type="text" dir="ltr"
+                :placeholder="t('example.edu.iq', 'example.com')"
+                class="flex-1 px-4 py-3 rounded-xl border-0 focus:ring-0 text-sm text-gray-900" />
+              <button @click="runQuickScan" :disabled="scanning"
+                class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap">
+                {{ scanning ? t('جارٍ الفحص…', 'Scanning…') : t('افحص موقعك الآن', 'Scan your site now') }}
+              </button>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">{{ t('فحص خفيف فوري ومجاني — سجّل لعرض التقرير الكامل.', 'Instant free light scan — sign up for the full report.') }}</p>
+
+            <div v-if="scanErr" class="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{{ scanErr }}</div>
+
+            <div v-if="scanResult" class="mt-4 bg-white rounded-2xl border border-gray-200 shadow-md p-5" :class="isRTL ? 'text-right' : 'text-left'">
+              <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <p class="text-xs text-gray-500 break-all">{{ scanResult.domain }}</p>
+                  <div class="flex items-baseline gap-1">
+                    <span class="text-3xl font-extrabold" :style="{ color: gradeColor(scanResult.grade) }">{{ Math.round(scanResult.score) }}</span>
+                    <span class="text-gray-400">/1000</span>
+                    <span class="text-xl font-bold mx-2" :style="{ color: gradeColor(scanResult.grade) }">{{ scanResult.grade }}</span>
+                  </div>
+                </div>
+                <div class="flex gap-2 text-xs">
+                  <span class="px-2 py-1 rounded bg-red-50 text-red-600">{{ t('حرِجة', 'Crit') }}: {{ scanResult.summary.critical || 0 }}</span>
+                  <span class="px-2 py-1 rounded bg-orange-50 text-orange-600">{{ t('عالية', 'High') }}: {{ scanResult.summary.high || 0 }}</span>
+                  <span class="px-2 py-1 rounded bg-yellow-50 text-yellow-700">{{ t('متوسطة', 'Med') }}: {{ scanResult.summary.medium || 0 }}</span>
+                </div>
+              </div>
+              <ul v-if="scanResult.top_findings?.length" class="mt-3 space-y-1 text-sm text-gray-600">
+                <li v-for="(f, i) in scanResult.top_findings" :key="i" class="flex items-center gap-2">
+                  <span class="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0"></span>{{ f.name }}
+                </li>
+              </ul>
+              <button @click="openSignup" class="mt-4 w-full px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700">
+                {{ t('سجّل لعرض التقرير الكامل مجاناً', 'Sign up for the full report — free') }}
+              </button>
+            </div>
           </div>
 
           <!-- Trust badges -->

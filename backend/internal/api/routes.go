@@ -79,6 +79,8 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/pricing", GetPublicPricing) // public: deep-scan price (no account details)
 	api.Get("/public/report/:token", GetPublicReport) // public: shared scan summary
 	api.Get("/public/badge/:token", GetPublicBadge)   // public: embeddable SVG badge
+	// Landing-page teaser scan: unauthenticated, heavily rate-limited, no persistence.
+	api.Post("/public/quickscan", rateLimit(3, time.Minute), PublicQuickScan)
 	api.Get("/docs", GetAPIDocs)          // public: API documentation
 	api.Get("/seo/public", GetPublicSEO)  // public: SEO config (GA ID, verification tags)
 
