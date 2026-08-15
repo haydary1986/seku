@@ -178,24 +178,25 @@ type catAgg struct {
 // grade and spreads sites across A–F — instead of the old weighted average where a
 // site that merely lacked active exploits (SQLi/XSS/malware all "pass" = 1000) was
 // pulled to an A+ regardless of its real posture.
-const (
-	warnFactor      = 0.5 // a partial "warn" deducts half of a full "fail"
-	maxCatDeduction = 320 // one noisy category can't dominate the whole score
-	minConfFactor   = 0.5 // even lower-confidence findings still count somewhat
-)
+// minConfFactor floors the confidence multiplier so lower-confidence findings
+// still count somewhat.
+const minConfFactor = 0.5
 
-// severityPenalty is the full-fail deduction for a finding of the given severity
-// (Balanced calibration). Info/none deduct nothing.
-func severityPenalty(sev string) float64 {
+// penaltyFor is the full-fail deduction for a finding of the given severity.
+// Values are env-tunable (Balanced defaults) so the calibration can be adjusted
+// without a rebuild. With ~36 categories and many sub-checks, per-finding values
+// are deliberately small so cumulative penalties spread sites across A–F rather
+// than flooring almost everyone.
+func penaltyFor(sev string) float64 {
 	switch strings.ToLower(strings.TrimSpace(sev)) {
 	case "critical":
-		return 320
+		return float64(envInt("SEKU_PEN_CRIT", 120))
 	case "high":
-		return 130
+		return float64(envInt("SEKU_PEN_HIGH", 60))
 	case "medium":
-		return 55
+		return float64(envInt("SEKU_PEN_MED", 25))
 	case "low":
-		return 16
+		return float64(envInt("SEKU_PEN_LOW", 8))
 	default:
 		return 0
 	}
@@ -206,6 +207,9 @@ func severityPenalty(sev string) float64 {
 func ComputeScores(checks []models.CheckResult) ScoreResult {
 	qualCat := map[string]*catAgg{}
 	catDeduction := map[string]float64{} // security deductions accumulated per category
+
+	warnF := float64(envInt("SEKU_PEN_WARN_PCT", 50)) / 100.0 // partial "warn" weight
+	catCap := float64(envInt("SEKU_PEN_CATCAP", 150))         // max deduction per category
 
 	securityScored := false
 	critFail := false
@@ -237,11 +241,11 @@ func ComputeScores(checks []models.CheckResult) ScoreResult {
 		// Deduct for failing/warning findings, scaled by the finding's severity,
 		// confidence, and fail-vs-warn. Passing checks deduct nothing.
 		if c.Status == "fail" || c.Status == "warn" {
-			base := severityPenalty(c.Severity)
+			base := penaltyFor(c.Severity)
 			if base > 0 {
 				factor := 1.0
 				if c.Status == "warn" {
-					factor = warnFactor
+					factor = warnF
 				}
 				conf := float64(confidenceOf(c)) / 100.0
 				if conf < minConfFactor {
@@ -267,8 +271,8 @@ func ComputeScores(checks []models.CheckResult) ScoreResult {
 
 	var totalDeduction float64
 	for _, d := range catDeduction {
-		if d > maxCatDeduction {
-			d = maxCatDeduction
+		if d > catCap {
+			d = catCap
 		}
 		totalDeduction += d
 	}
