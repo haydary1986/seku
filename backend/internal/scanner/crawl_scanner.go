@@ -96,7 +96,7 @@ func (s *CrawlScanner) scan(rawURL string, cfg *ScanConfig) []models.CheckResult
 
 	target := ensureHTTPS(rawURL)
 	host := extractHost(target)
-	urls := s.run(bin, target)
+	urls := s.run(bin, target, cfg)
 
 	withParams := 0
 	hits := map[string][]string{} // label -> example URLs
@@ -146,7 +146,7 @@ func (s *CrawlScanner) scan(rawURL string, cfg *ScanConfig) []models.CheckResult
 	return []models.CheckResult{summary, sensitive}
 }
 
-func (s *CrawlScanner) run(bin, target string) []string {
+func (s *CrawlScanner) run(bin, target string, cfg *ScanConfig) []string {
 	timeout := time.Duration(envInt("SEKU_KATANA_TIMEOUT", crawlDefaultTimeout)) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -158,6 +158,8 @@ func (s *CrawlScanner) run(bin, target string) []string {
 		"-c", "10",
 		"-timeout", "10",
 	}
+	// Authenticated crawl: inject the session so katana discovers pages behind login.
+	args = append(args, cfg.authToolArgs()...)
 	cmd := exec.CommandContext(ctx, bin, args...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

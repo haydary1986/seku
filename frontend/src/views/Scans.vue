@@ -36,6 +36,9 @@ const scanForm = ref({
   enable_dalfox: false,
   enable_ffuf: false,
   authorized: false,
+  auth_cookie: '',
+  auth_header: '',
+  auth_cookie_b: '',
 })
 
 async function loadData() {
@@ -75,10 +78,13 @@ async function runScan() {
       enable_dalfox: scanForm.value.enable_dalfox,
       enable_ffuf: scanForm.value.enable_ffuf,
       authorized: scanForm.value.authorized,
+      auth_cookie: scanForm.value.auth_cookie,
+      auth_header: scanForm.value.auth_header,
+      auth_cookie_b: scanForm.value.auth_cookie_b,
     }
     await startScan(payload)
     showStartForm.value = false
-    scanForm.value = { name: '', target_ids: [], selectAll: true, policy: 'standard', enable_login: false, enable_nuclei: false, enable_crawl: false, enable_oob: false, enable_dalfox: false, enable_ffuf: false, authorized: false }
+    scanForm.value = { name: '', target_ids: [], selectAll: true, policy: 'standard', enable_login: false, enable_nuclei: false, enable_crawl: false, enable_oob: false, enable_dalfox: false, enable_ffuf: false, authorized: false, auth_cookie: '', auth_header: '', auth_cookie_b: '' }
     await loadData()
   } catch (e) {
     if (e.response?.status === 402) {
@@ -412,6 +418,29 @@ onMounted(() => {
             <input type="checkbox" v-model="scanForm.authorized" class="mt-0.5 rounded border-gray-300 text-red-600" />
             <span>I confirm I am authorized to actively test the selected target(s). Required for the login brute-force test.</span>
           </label>
+
+          <!-- Authenticated scanning (session injection + IDOR/BOLA) -->
+          <div class="mt-4 pt-4 border-t border-red-100">
+            <p class="text-sm font-semibold text-gray-900 mb-1">فحص مُصادَق (اختياري)</p>
+            <p class="text-xs text-gray-500 mb-3">الصق جلسة تسجيل دخول ليصل الفحص إلى الصفحات خلف الدخول. أضف جلسة مستخدم ثانٍ لتفعيل فحص IDOR/BOLA (وصول مستخدم لبيانات مستخدم آخر).</p>
+            <div class="space-y-2">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">كوكي الجلسة (المستخدم أ) — قيمة رأس Cookie الكاملة</label>
+                <input v-model="scanForm.auth_cookie" type="text" dir="ltr" placeholder="sid=abc123; other=value"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">رأس إضافي (اختياري) — مثل التوكن</label>
+                <input v-model="scanForm.auth_header" type="text" dir="ltr" placeholder="Authorization: Bearer eyJ..."
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">كوكي مستخدم ثانٍ (المستخدم ب) — لفحص IDOR/BOLA</label>
+                <input v-model="scanForm.auth_cookie_b" type="text" dir="ltr" placeholder="sid=xyz789 (حساب مختلف على نفس النظام)"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono" />
+              </div>
+            </div>
+          </div>
         </div>
 
         <button

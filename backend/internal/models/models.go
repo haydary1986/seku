@@ -129,6 +129,9 @@ type ScanJob struct {
 	EnableDalfox bool         `json:"enable_dalfox"`
 	EnableFFUF   bool         `json:"enable_ffuf"`
 	Authorized   bool         `json:"authorized"`
+	AuthCookie   string       `json:"auth_cookie"`
+	AuthHeader   string       `json:"auth_header"`
+	AuthCookieB  string       `json:"auth_cookie_b"`
 	Results      []ScanResult `json:"results" gorm:"foreignKey:ScanJobID"`
 }
 

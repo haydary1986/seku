@@ -484,6 +484,11 @@ type StartScanRequest struct {
 	EnableDalfox bool `json:"enable_dalfox"`
 	EnableFFUF   bool `json:"enable_ffuf"`
 	Authorized   bool `json:"authorized"`
+	// Authenticated scanning (optional): a session to inject so scanners reach
+	// pages behind login; AuthCookieB is a second identity for IDOR/BOLA testing.
+	AuthCookie  string `json:"auth_cookie"`
+	AuthHeader  string `json:"auth_header"`
+	AuthCookieB string `json:"auth_cookie_b"`
 }
 
 func StartScan(c *fiber.Ctx) error {
@@ -613,6 +618,9 @@ func StartScan(c *fiber.Ctx) error {
 		EnableDalfox:   req.EnableDalfox,
 		EnableFFUF:     req.EnableFFUF,
 		Authorized:     req.Authorized,
+		AuthCookie:     req.AuthCookie,
+		AuthHeader:     req.AuthHeader,
+		AuthCookieB:    req.AuthCookieB,
 	}
 	if job.Name == "" {
 		job.Name = "Scan " + time.Now().Format("2006-01-02 15:04")
@@ -664,6 +672,9 @@ func StartScan(c *fiber.Ctx) error {
 		EnableDalfox: req.EnableDalfox,
 		EnableFFUF:   req.EnableFFUF,
 		Authorized:   req.Authorized,
+		AuthCookie:   req.AuthCookie,
+		AuthHeader:   req.AuthHeader,
+		AuthCookieB:  req.AuthCookieB,
 	})
 	go engine.RunScan(&job)
 

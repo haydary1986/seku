@@ -88,7 +88,7 @@ func (s *NucleiScanner) scan(rawURL string, cfg *ScanConfig) []models.CheckResul
 
 	findings, runErr := s.run(bin, ensureHTTPS(rawURL),
 		envStr("SEKU_NUCLEI_SEVERITY", "low,medium,high,critical"),
-		envStr("SEKU_NUCLEI_TAGS", ""))
+		envStr("SEKU_NUCLEI_TAGS", ""), cfg)
 	return s.assemble(findings, runErr)
 }
 
@@ -144,11 +144,11 @@ func RunNucleiAdHoc(target, severity, tags string) []models.CheckResult {
 	if strings.TrimSpace(severity) == "" {
 		severity = "low,medium,high,critical"
 	}
-	findings, runErr := s.run(bin, ensureHTTPS(target), severity, tags)
+	findings, runErr := s.run(bin, ensureHTTPS(target), severity, tags, nil)
 	return s.assemble(findings, runErr)
 }
 
-func (s *NucleiScanner) run(bin, target, severity, tags string) ([]nucleiFinding, error) {
+func (s *NucleiScanner) run(bin, target, severity, tags string, cfg *ScanConfig) ([]nucleiFinding, error) {
 	timeout := time.Duration(envInt("SEKU_NUCLEI_TIMEOUT", nucleiDefaultTimeout)) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -169,6 +169,8 @@ func (s *NucleiScanner) run(bin, target, severity, tags string) ([]nucleiFinding
 	if td := envStr("SEKU_NUCLEI_TEMPLATES_DIR", ""); td != "" {
 		args = append(args, "-t", td) // -t accepts a template directory
 	}
+	// Authenticated scan: inject the session so nuclei tests behind login.
+	args = append(args, cfg.authToolArgs()...)
 
 	cmd := exec.CommandContext(ctx, bin, args...)
 	stdout, err := cmd.StdoutPipe()
