@@ -75,10 +75,6 @@ onMounted(loadUsers)
 <template>
   <div>
     <div class="flex items-center justify-between mb-8">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">User Management</h1>
-        <p class="text-gray-500 mt-1">Manage system users and permissions</p>
-      </div>
       <button @click="openAdd" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm">
         Add User
       </button>

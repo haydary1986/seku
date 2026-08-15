@@ -266,12 +266,8 @@ onMounted(() => loadLeaderboard())
 
 <template>
   <div>
-    <!-- Header -->
-    <div class="mb-8 flex items-start justify-between">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">{{ t('vLeaderboard.title') }}</h1>
-        <p class="text-gray-500 mt-1">{{ t('vLeaderboard.subtitle') }}</p>
-      </div>
+    <!-- Export -->
+    <div class="mb-8 flex items-start justify-end">
       <button
         v-if="data?.rankings?.length"
         @click="downloadCSV"

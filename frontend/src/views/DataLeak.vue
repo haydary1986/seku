@@ -79,13 +79,6 @@ onBeforeUnmount(() => {
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-8">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">Data Leak Scanner</h1>
-        <p class="text-gray-500 mt-1">Scan university domains for leaked credentials and data breaches</p>
-      </div>
-    </div>
-
     <!-- Scan Control -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
       <div class="flex items-center gap-3 mb-4">

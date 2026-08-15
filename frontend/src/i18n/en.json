@@ -34,12 +34,20 @@
     "download": "Download",
     "copy": "Copy"
   },
+  "navGroup": {
+    "main": "Main",
+    "analysis": "Analysis",
+    "automation": "Automation & Integrations",
+    "admin": "Administration",
+    "account": "Account"
+  },
   "nav": {
     "home": "Home",
     "dashboard": "Dashboard",
     "targets": "Targets",
     "scans": "Scans",
     "orders": "Deep Scans",
+    "orderQueue": "Payment Queue (Admin)",
     "leaderboard": "Leaderboard",
     "schedules": "Schedules",
     "upgrade": "Upgrade Plan",

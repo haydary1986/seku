@@ -208,11 +208,6 @@ onMounted(() => {
 
 <template>
   <div>
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900">Settings</h1>
-      <p class="text-gray-500 mt-1">Configure AI analysis, email alerts, and system settings</p>
-    </div>
-
     <div v-if="loading" class="flex justify-center py-20">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
     </div>

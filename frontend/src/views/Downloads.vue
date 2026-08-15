@@ -36,10 +36,6 @@ onMounted(load)
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m5.6 0c0 5-3.4 9.7-8.6 11C7.4 19.7 4 15 4 10V6l8-3 8 3v4z" />
           </svg>
         </div>
-        <h1 class="text-3xl md:text-4xl font-bold">Seku Agent</h1>
-        <p class="mt-2 text-indigo-100 max-w-2xl mx-auto">
-          شغّل الفحص الأمني <strong>داخل شبكتك المحلية</strong> — نزّل الوكيل على جهاز داخل الشبكة، وافحص الراوتر والسيرفرات والأجهزة الداخلية من لوحة التحكم.
-        </p>
         <div class="mt-6 inline-flex items-center gap-2 bg-white/15 backdrop-blur rounded-full px-5 py-2">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />

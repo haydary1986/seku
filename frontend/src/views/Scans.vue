@@ -220,11 +220,7 @@ onMounted(() => {
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-8">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">{{ t('vScans.pageTitle') }}</h1>
-        <p class="text-gray-500 mt-1">{{ t('vScans.pageSubtitle') }}</p>
-      </div>
+    <div class="flex items-center justify-end gap-3 mb-8">
       <div class="flex items-center gap-3">
         <!-- Status Filter -->
         <select v-model="statusFilter" @change="scanPage = 1; loadData()" class="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white">

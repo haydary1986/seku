@@ -337,11 +337,7 @@ onMounted(async () => {
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-8">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">{{ t('vTargets.title') }}</h1>
-        <p class="text-gray-500 mt-1">{{ t('vTargets.subtitle') }} ({{ totalTargets }} {{ t('vTargets.total') }})</p>
-      </div>
+    <div class="flex items-center justify-end mb-8">
       <div class="flex gap-2 flex-wrap">
         <button @click="scanDeadTargets" :disabled="cleanupLoading"
           class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors text-sm flex items-center gap-1.5">

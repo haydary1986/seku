@@ -97,8 +97,6 @@ onMounted(async () => {
 
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-gray-900 mb-6">إدارة الاشتراكات</h1>
-
     <div v-if="loading" class="text-center py-12 text-gray-500">جارٍ التحميل...</div>
 
     <div v-else>

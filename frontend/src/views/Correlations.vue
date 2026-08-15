@@ -159,11 +159,7 @@ onUnmounted(() => cy && cy.destroy())
 
 <template>
   <div class="max-w-4xl mx-auto p-4 md:p-6">
-    <div class="flex items-start justify-between gap-3 mb-3">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900">الروابط المشتركة</h1>
-        <p class="text-sm text-gray-500 mt-1">ابحث عن موقع أو استكشف «شجرة التحقيق» لتتبّع الروابط من الأطراف إلى الجذور المشتركة.</p>
-      </div>
+    <div class="flex items-start justify-end gap-3 mb-3">
       <button @click="load(true)" :disabled="loading" class="flex-shrink-0 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">تحديث</button>
     </div>
 

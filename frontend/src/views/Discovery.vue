@@ -84,11 +84,6 @@ async function addToTargets() {
 
 <template>
   <div>
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900">Domain Discovery</h1>
-      <p class="text-gray-500 mt-1">Search the internet for websites by domain extension and add them to your targets</p>
-    </div>
-
     <!-- Search Section -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
       <!-- Presets -->

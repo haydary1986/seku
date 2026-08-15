@@ -99,11 +99,6 @@ onMounted(loadAll)
 
 <template>
   <div class="max-w-5xl mx-auto">
-    <div class="mb-6">
-      <h1 class="text-3xl font-bold text-gray-900">{{ t('vOrders.title') }}</h1>
-      <p class="text-gray-500 mt-1">{{ t('vOrders.subtitle') }}</p>
-    </div>
-
     <div v-if="message" class="bg-green-50 border border-green-200 text-green-700 rounded-lg p-4 mb-6">{{ message }}</div>
 
     <!-- Price + payment method banner -->

@@ -133,10 +133,6 @@ onMounted(load)
   <div>
     <!-- Header -->
     <div class="flex items-center justify-between mb-8">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">إعدادات SEO</h1>
-        <p class="text-gray-500 mt-1">تحسين ظهور الموقع في محركات البحث</p>
-      </div>
       <button @click="save" :disabled="saving"
         class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2 text-sm font-medium">
         <div v-if="saving" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>

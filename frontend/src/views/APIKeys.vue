@@ -78,11 +78,7 @@ onMounted(async () => {
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-8">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">API Keys</h1>
-        <p class="text-gray-500 mt-1">Manage programmatic access to Seku API</p>
-      </div>
+    <div class="flex items-center justify-end mb-8">
       <button
         v-if="hasAPIAccess"
         @click="showGenerateForm = !showGenerateForm"

@@ -34,12 +34,20 @@
     "download": "تحميل",
     "copy": "نسخ"
   },
+  "navGroup": {
+    "main": "الرئيسية",
+    "analysis": "التحليل",
+    "automation": "الأتمتة والتكامل",
+    "admin": "الإدارة",
+    "account": "الحساب"
+  },
   "nav": {
     "home": "الرئيسية",
     "dashboard": "لوحة التحكم",
     "targets": "المواقع",
     "scans": "الفحوصات",
     "orders": "الفحوص المدفوعة",
+    "orderQueue": "طلبات الدفع (إدارة)",
     "leaderboard": "الترتيب",
     "schedules": "الجدولة",
     "upgrade": "ترقية الخطة",

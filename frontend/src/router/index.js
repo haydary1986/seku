@@ -85,13 +85,11 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
 
-  // If logged in and visiting landing, go to dashboard
-  if (to.meta.landing && token) {
-    next('/dashboard')
-    return
-  }
+  // Logged-in users may freely browse public pages (landing, pricing, docs…);
+  // we no longer force them to the dashboard. Public marketing pages show a
+  // "My Dashboard" shortcut instead of Login when authenticated.
 
-  // If not logged in and page requires auth, go to landing
+  // If not logged in and the page requires auth, go to landing.
   if (!to.meta.public && !token) {
     next('/')
     return

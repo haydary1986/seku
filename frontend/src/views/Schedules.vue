@@ -117,11 +117,7 @@ onMounted(loadData)
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-8">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">Scheduled Scans</h1>
-        <p class="text-gray-500 mt-1">Automate recurring security scans</p>
-      </div>
+    <div class="flex items-center justify-end mb-8">
       <button
         @click="showCreateForm = !showCreateForm"
         class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"

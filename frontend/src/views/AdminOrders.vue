@@ -61,10 +61,6 @@ onMounted(load)
 <template>
   <div class="max-w-5xl mx-auto">
     <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">{{ t('vAdminOrders.title') }}</h1>
-        <p class="text-gray-500 mt-1">{{ t('vAdminOrders.subtitle') }}</p>
-      </div>
       <select v-model="statusFilter" @change="load" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
         <option value="">{{ t('vAdminOrders.allStatuses') }}</option>
         <option value="pending">{{ t('vAdminOrders.statusPending') }}</option>

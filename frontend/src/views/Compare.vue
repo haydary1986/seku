@@ -85,11 +85,6 @@ loadJobs()
 
 <template>
   <div>
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Scan Comparison</h1>
-      <p class="text-gray-500 dark:text-gray-400 mt-1">Compare before and after scan results side by side</p>
-    </div>
-
     <!-- Loading state -->
     <div v-if="jobsLoading" class="flex justify-center py-20">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>

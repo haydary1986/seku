@@ -221,11 +221,6 @@ function getGradeColor(grade) {
 
 <template>
   <div>
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900">{{ t('vDashboard.title') }}</h1>
-      <p class="text-gray-500 mt-1">{{ t('vDashboard.subtitle') }}</p>
-    </div>
-
     <!-- First-run onboarding checklist -->
     <OnboardingChecklist
       v-if="showOnboarding"

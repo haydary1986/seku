@@ -130,14 +130,7 @@ onUnmounted(() => timer && clearInterval(timer))
 
 <template>
   <div class="max-w-4xl mx-auto p-4 md:p-6">
-    <div class="flex items-start justify-between gap-3 mb-4">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900">الوكلاء</h1>
-        <p class="text-sm text-gray-500 mt-1">
-          وكلاء محليون يفحصون <strong>داخل شبكتك</strong> (راوترات، سيرفرات، أجهزة داخلية). نزّل الوكيل من صفحة
-          <router-link to="/downloads" class="text-indigo-600 hover:underline">التحميل</router-link>، شغّله بالتوكن، ثم عيّن له فحصاً.
-        </p>
-      </div>
+    <div class="flex items-start justify-end gap-3 mb-4">
       <button @click="showCreate = !showCreate" class="flex-shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
         + إنشاء وكيل
       </button>

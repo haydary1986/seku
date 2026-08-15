@@ -167,19 +167,6 @@ onUnmounted(() => {
 
 <template>
   <div class="max-w-4xl mx-auto p-4 md:p-6">
-    <div class="mb-4">
-      <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
-        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-        Nuclei Scan
-      </h1>
-      <p class="text-sm text-gray-500 mt-1">
-        Run nuclei against a single URL or IP. Scans run in the background — you can leave the page and check History later.
-        Only scan systems you are authorized to test.
-      </p>
-    </div>
-
     <!-- Tabs -->
     <div class="flex gap-1 border-b border-gray-200 mb-5">
       <button
