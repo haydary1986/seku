@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"bufio"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -8,6 +9,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
@@ -85,6 +87,7 @@ func (s *SubdomainScanner) enumerateSubdomains(baseDomain string) []discoveredSu
 			s.fetchAlienVaultOTX,
 			s.fetchRapidDNS,
 			s.fetchWebArchive,
+			s.fetchSubfinder,
 		}
 		for _, fetchFn := range sources {
 			wg.Add(1)
@@ -174,6 +177,42 @@ func isCloudflareIP(ips []string) bool {
 		}
 	}
 	return false
+}
+
+// fetchSubfinder runs ProjectDiscovery's subfinder (if present) for broad passive
+// subdomain enumeration across 30+ sources — a big superset of the built-in APIs.
+// Degrades gracefully (returns nil) if the binary is missing.
+func (s *SubdomainScanner) fetchSubfinder(baseDomain string) []string {
+	bin := envStr("SEKU_SUBFINDER_BIN", "subfinder")
+	if _, err := exec.LookPath(bin); err != nil {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(envInt("SEKU_SUBFINDER_TIMEOUT", 60))*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, bin, "-silent", "-d", baseDomain)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil
+	}
+	if err := cmd.Start(); err != nil {
+		return nil
+	}
+	var out []string
+	sc := bufio.NewScanner(stdout)
+	sc.Buffer(make([]byte, 64*1024), 1024*1024)
+	for sc.Scan() {
+		name := strings.TrimSpace(strings.ToLower(sc.Text()))
+		if name != "" && strings.HasSuffix(name, baseDomain) {
+			out = append(out, name)
+		}
+		if len(out) >= 3000 {
+			break
+		}
+	}
+	_ = cmd.Wait()
+	return out
 }
 
 // fetchCrtSh queries Certificate Transparency logs via crt.sh to discover
