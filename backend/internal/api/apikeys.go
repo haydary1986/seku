@@ -18,16 +18,12 @@ func GenerateAPIKey(c *fiber.Ctx) error {
 	userID := UserID(c)
 	orgID := GetUserOrgID(c)
 
-	// Check plan allows API access (pro or enterprise)
+	// API keys are available to any authenticated organization — the product is
+	// pay-per-scan on the free plan, so gating keys behind legacy paid tiers made
+	// no sense (a paying deep-scan customer couldn't get a key).
 	org := GetUserOrg(c)
 	if org == nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Organization not found"})
-	}
-	if org.Plan != "pro" && org.Plan != "enterprise" {
-		return c.Status(403).JSON(fiber.Map{
-			"error": "API key access requires a Pro or Enterprise plan. Please upgrade.",
-			"plan":  org.Plan,
-		})
 	}
 
 	var req struct {

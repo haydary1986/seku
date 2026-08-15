@@ -64,7 +64,7 @@ async function handleRegister() {
 
         <!-- Free plan notice -->
         <div class="bg-indigo-500/20 border border-indigo-500/50 text-indigo-200 px-4 py-3 rounded-lg mb-5 text-sm text-center">
-          ستبدأ بالخطة المجانية - 5 مواقع، 10 فحوصات شهريا
+          ستبدأ بالخطة المجانية — فحوص خفيفة مجانية، والفحص العميق بالدفع لكل نطاق
         </div>
 
         <div v-if="error" class="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg mb-4 text-sm text-center">

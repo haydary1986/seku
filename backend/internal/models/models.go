@@ -113,13 +113,23 @@ type ScanTarget struct {
 
 type ScanJob struct {
 	gorm.Model
-	OrganizationID uint         `json:"organization_id"`
-	Name           string       `json:"name"`
-	Status         string       `json:"status" gorm:"default:pending"`
-	StartedAt      *time.Time   `json:"started_at"`
-	EndedAt        *time.Time   `json:"ended_at"`
-	UserID         uint         `json:"user_id"`
-	Results        []ScanResult `json:"results" gorm:"foreignKey:ScanJobID"`
+	OrganizationID uint       `json:"organization_id"`
+	Name           string     `json:"name"`
+	Status         string     `json:"status" gorm:"default:pending"`
+	StartedAt      *time.Time `json:"started_at"`
+	EndedAt        *time.Time `json:"ended_at"`
+	UserID         uint       `json:"user_id"`
+	// Scan configuration persisted so an interrupted job resumes with the SAME
+	// policy/tools it was started with (not always "deep").
+	Policy       string       `json:"policy"`
+	EnableLogin  bool         `json:"enable_login"`
+	EnableNuclei bool         `json:"enable_nuclei"`
+	EnableCrawl  bool         `json:"enable_crawl"`
+	EnableOOB    bool         `json:"enable_oob"`
+	EnableDalfox bool         `json:"enable_dalfox"`
+	EnableFFUF   bool         `json:"enable_ffuf"`
+	Authorized   bool         `json:"authorized"`
+	Results      []ScanResult `json:"results" gorm:"foreignKey:ScanJobID"`
 }
 
 type ScanResult struct {
@@ -201,8 +211,9 @@ type DeepScanOrder struct {
 	ScanTargetID   uint         `json:"scan_target_id" gorm:"not null;index"`
 	Domain         string       `json:"domain"`
 	AmountIQD      int          `json:"amount_iqd"`                    // price at time of order
-	Status         string       `json:"status" gorm:"default:pending"` // pending | paid | rejected | used
-	PaymentRef     string       `json:"payment_ref"`                   // transfer reference entered by user
+	Status          string       `json:"status" gorm:"default:pending"` // pending | paid | rejected | used
+	PaymentRef      string       `json:"payment_ref"`                   // transfer reference entered by user
+	PaymentProofURL string       `json:"payment_proof_url"`             // uploaded transfer screenshot
 	ContactName    string       `json:"contact_name"`
 	ContactPhone   string       `json:"contact_phone"`
 	AdminNotes     string       `json:"admin_notes"`

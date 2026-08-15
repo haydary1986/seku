@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { getPaymentInfo, getMyOrders, createDeepScanOrder, submitOrderPayment, getTargets } from '../api'
+import { getPaymentInfo, getMyOrders, createDeepScanOrder, submitOrderPayment, uploadOrderProof, getTargets } from '../api'
 
 const loading = ref(true)
 const payment = ref({})
@@ -68,6 +68,18 @@ async function sendRef(order) {
     await loadAll()
   } catch (e) {
     createError.value = e.response?.data?.error || 'تعذّر إرسال رقم الحوالة.'
+  }
+}
+
+async function uploadProof(order, event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+  try {
+    await uploadOrderProof(order.ID, file)
+    message.value = 'تم رفع إثبات الحوالة.'
+    await loadAll()
+  } catch (e) {
+    createError.value = e.response?.data?.error || 'تعذّر رفع الإثبات.'
   }
 }
 
@@ -157,7 +169,7 @@ onMounted(loadAll)
         </div>
 
         <!-- pending: enter transfer reference -->
-        <div v-if="o.status === 'pending'" class="mt-3 pt-3 border-t border-gray-100">
+        <div v-if="o.status === 'pending'" class="mt-3 pt-3 border-t border-gray-100 space-y-3">
           <p v-if="o.payment_ref" class="text-sm text-gray-600">رقم الحوالة المُرسل: <code class="bg-gray-100 px-1 rounded">{{ o.payment_ref }}</code> — بانتظار مراجعة المشرف.</p>
           <div v-else class="flex flex-wrap items-end gap-2">
             <div class="flex-1 min-w-[220px]">
@@ -166,6 +178,14 @@ onMounted(loadAll)
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
             <button @click="sendRef(o)" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm">أرسلت الحوالة</button>
+          </div>
+          <!-- optional proof screenshot -->
+          <div class="text-xs text-gray-500">
+            <span v-if="o.payment_proof_url" class="text-green-600">✓ تم إرفاق صورة الحوالة.</span>
+            <label v-else class="inline-flex items-center gap-2 cursor-pointer text-indigo-600 hover:underline">
+              <input type="file" accept="image/*,.pdf" class="hidden" @change="uploadProof(o, $event)" />
+              إرفاق صورة/إيصال الحوالة (اختياري)
+            </label>
           </div>
         </div>
 

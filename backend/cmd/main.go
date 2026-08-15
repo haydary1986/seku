@@ -3,6 +3,9 @@ package main
 import (
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -60,6 +63,20 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+
+	// Graceful shutdown: on SIGTERM/SIGINT (e.g. a Coolify redeploy) stop
+	// accepting new requests and let in-flight handlers finish, instead of
+	// hard-killing the process mid-write and corrupting scan data.
+	go func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
+		<-sig
+		log.Println("Shutdown signal received — draining in-flight requests...")
+		_ = app.ShutdownWithTimeout(25 * time.Second)
+	}()
+
 	log.Printf("Seku server starting on :%s", port)
-	log.Fatal(app.Listen(":" + port))
+	if err := app.Listen(":" + port); err != nil {
+		log.Printf("server stopped: %v", err)
+	}
 }

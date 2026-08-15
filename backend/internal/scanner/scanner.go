@@ -45,6 +45,12 @@ func (m *activeScanManager) Remove(jobID uint) {
 	m.mu.Unlock()
 }
 
+// scanSlots caps how many scan jobs run concurrently across the whole process.
+// Each deep scan spawns heavy subprocesses (nuclei/katana/ffuf), so without a
+// global cap several simultaneous deep scans can OOM a small container and take
+// every in-flight scan down with it. Excess jobs queue until a slot frees.
+var scanSlots = make(chan struct{}, envInt("SEKU_MAX_CONCURRENT_SCANS", 3))
+
 // MaxScore is the maximum score for any check (1000-point scale)
 const MaxScore = 1000.0
 
@@ -402,9 +408,24 @@ func ResumeInterruptedJobs() {
 			Where("scan_job_id = ? AND status = ?", job.ID, "running").
 			Update("status", "pending")
 
-		// Launch scan in background — scanTarget skips already-completed results
+		// Launch scan in background — resume with the job's ORIGINAL policy/config
+		// (not always "deep"), preserving the scan tier and billing intent.
 		go func(j models.ScanJob) {
-			engine := NewEngineForPolicy("deep") // use deep by default for resumed jobs
+			var engine *Engine
+			if j.Policy != "" {
+				engine = NewEngineForPolicy(j.Policy)
+			} else {
+				engine = NewEngine()
+			}
+			engine.WithConfig(&ScanConfig{
+				EnableLogin:  j.EnableLogin,
+				EnableNuclei: j.EnableNuclei,
+				EnableCrawl:  j.EnableCrawl,
+				EnableOOB:    j.EnableOOB,
+				EnableDalfox: j.EnableDalfox,
+				EnableFFUF:   j.EnableFFUF,
+				Authorized:   j.Authorized,
+			})
 			engine.RunScan(&j)
 		}(job)
 	}
@@ -413,6 +434,10 @@ func ResumeInterruptedJobs() {
 // RunScan executes all scanners against a target. Supports cancellation via ActiveScans.
 // If the scan is resumed after server restart, it skips already-completed targets.
 func (e *Engine) RunScan(job *models.ScanJob) {
+	// Global concurrency gate — queue if the process is already at capacity.
+	scanSlots <- struct{}{}
+	defer func() { <-scanSlots }()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	ActiveScans.Register(job.ID, cancel)
 	defer ActiveScans.Remove(job.ID)

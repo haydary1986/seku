@@ -98,6 +98,51 @@ func sendEmail(cfg models.EmailConfig, to string, job *models.ScanJob, results [
 	}
 }
 
+// SendSimpleEmail sends a one-off HTML email using the configured SMTP settings.
+// Fire-and-forget: silently no-ops if email isn't configured.
+func SendSimpleEmail(to, subject, htmlBody string) {
+	if to == "" {
+		return
+	}
+	var cfg models.EmailConfig
+	if err := config.DB.First(&cfg).Error; err != nil || !cfg.IsConfigured {
+		return
+	}
+	auth := smtp.PlainAuth("", cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPHost)
+	msg := fmt.Sprintf("From: %s <%s>\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=utf-8\r\n\r\n%s",
+		cfg.FromName, cfg.FromEmail, to, subject, htmlBody)
+	addr := fmt.Sprintf("%s:%d", cfg.SMTPHost, cfg.SMTPPort)
+	if err := smtp.SendMail(addr, auth, cfg.FromEmail, []string{to}, []byte(msg)); err != nil {
+		log.Printf("[email] failed to send to %s: %v", to, err)
+	}
+}
+
+// AdminNotifyEmail returns the address for admin notifications: the configured
+// admin_notify_email setting, else the first system admin's email.
+func AdminNotifyEmail() string {
+	var s models.Settings
+	if err := config.DB.Where("key = ?", "admin_notify_email").First(&s).Error; err == nil && s.Value != "" {
+		return s.Value
+	}
+	var admin models.User
+	if err := config.DB.Where("role = ?", "admin").First(&admin).Error; err == nil {
+		return admin.Email
+	}
+	return ""
+}
+
+// EmailShell wraps body content in the standard Seku email chrome.
+func EmailShell(title, bodyHTML string) string {
+	return fmt.Sprintf(`<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"></head>
+<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8fafc;">
+<div style="background:linear-gradient(135deg,#047857,#065f46);color:white;padding:26px;border-radius:12px;text-align:center;">
+  <h1 style="margin:0;font-size:20px;">%s</h1>
+</div>
+<div style="padding:22px;background:#fff;border-radius:0 0 12px 12px;color:#1f2937;line-height:1.7;">%s</div>
+<p style="text-align:center;color:#9ca3af;font-size:12px;margin-top:16px;">Sent by Seku · sec.erticaz.com</p>
+</body></html>`, title, bodyHTML)
+}
+
 // SendTestEmail sends a test email to verify SMTP configuration.
 func SendTestEmail(cfg models.EmailConfig, to string) error {
 	auth := smtp.PlainAuth("", cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPHost)

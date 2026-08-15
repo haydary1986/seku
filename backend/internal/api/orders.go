@@ -2,7 +2,10 @@ package api
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -10,6 +13,7 @@ import (
 	"gorm.io/gorm/clause"
 	"seku/internal/config"
 	"seku/internal/models"
+	"seku/internal/services"
 )
 
 // defaultDeepScanPriceIQD is used when the admin hasn't set a price yet.
@@ -90,6 +94,7 @@ func CreateDeepScanOrder(c *fiber.Ctx) error {
 		ContactPhone:   req.ContactPhone,
 	}
 	config.DB.Create(&order)
+	go notifyOrderCreated(order)
 
 	return c.Status(201).JSON(fiber.Map{
 		"order":        order,
@@ -117,6 +122,49 @@ func SubmitPayment(c *fiber.Ctx) error {
 	}
 
 	order.PaymentRef = req.PaymentRef
+	config.DB.Save(&order)
+	go notifyPaymentSubmitted(order)
+	return c.JSON(order)
+}
+
+// UploadPaymentProof attaches a transfer screenshot/receipt to a pending order.
+// POST /orders/:id/proof  (multipart form field "proof")
+func UploadPaymentProof(c *fiber.Ctx) error {
+	orgID := GetUserOrgID(c)
+	var order models.DeepScanOrder
+	if err := config.DB.Where("id = ? AND organization_id = ?", c.Params("id"), orgID).First(&order).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Order not found"})
+	}
+	if order.Status != "pending" {
+		return c.Status(400).JSON(fiber.Map{"error": "This order can no longer be updated"})
+	}
+	file, err := c.FormFile("proof")
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "No file provided"})
+	}
+	if file.Size > 5*1024*1024 {
+		return c.Status(400).JSON(fiber.Map{"error": "File too large (max 5MB)"})
+	}
+	name := strings.ToLower(file.Filename)
+	ext := ""
+	for _, e := range []string{".png", ".jpg", ".jpeg", ".webp", ".pdf"} {
+		if strings.HasSuffix(name, e) {
+			ext = e
+			break
+		}
+	}
+	if ext == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid format. Use PNG, JPG, WebP, or PDF."})
+	}
+	dir := "uploads/proofs"
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create upload directory"})
+	}
+	saved := fmt.Sprintf("proof-%d-%d%s", order.ID, time.Now().Unix(), ext)
+	if err := c.SaveFile(file, filepath.Join(dir, saved)); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to save file"})
+	}
+	order.PaymentProofURL = "/uploads/proofs/" + saved
 	config.DB.Save(&order)
 	return c.JSON(order)
 }
@@ -167,6 +215,7 @@ func MarkOrderPaid(c *fiber.Ctx) error {
 	order.ApprovedBy = adminID
 	order.ApprovedAt = &now
 	config.DB.Save(&order)
+	go notifyOrderPaid(order)
 	return c.JSON(order)
 }
 
@@ -191,7 +240,55 @@ func RejectOrder(c *fiber.Ctx) error {
 	order.Status = "rejected"
 	order.AdminNotes = req.AdminNotes
 	config.DB.Save(&order)
+	go notifyOrderRejected(order)
 	return c.JSON(order)
+}
+
+// --- Order notification emails (fire-and-forget) ---
+
+func userEmailByID(id uint) string {
+	var u models.User
+	if err := config.DB.First(&u, id).Error; err != nil {
+		return ""
+	}
+	return u.Email
+}
+
+func notifyOrderCreated(o models.DeepScanOrder) {
+	services.SendSimpleEmail(userEmailByID(o.UserID),
+		"تم استلام طلب فحص عميق — Seku",
+		services.EmailShell("طلب فحص عميق جديد", fmt.Sprintf(
+			"<p>استلمنا طلبك لفحص عميق للنطاق <b>%s</b> بمبلغ <b>%d د.ع</b>.</p><p>حوّل المبلغ عبر الحوالة الداخلية ثم أدخل رقم الإشعار في صفحة \"الفحوص المدفوعة\". يُفعّل فحصك بعد تأكيد الحوالة.</p>",
+			o.Domain, o.AmountIQD)))
+	services.SendSimpleEmail(services.AdminNotifyEmail(),
+		fmt.Sprintf("طلب فحص عميق جديد #%d — %s", o.ID, o.Domain),
+		services.EmailShell("طلب جديد بانتظار المراجعة", fmt.Sprintf(
+			"<p>طلب #%d للنطاق <b>%s</b> بمبلغ <b>%d د.ع</b>.</p><p>راجع صفحة إدارة الطلبات لتأكيد الحوالة.</p>",
+			o.ID, o.Domain, o.AmountIQD)))
+}
+
+func notifyPaymentSubmitted(o models.DeepScanOrder) {
+	services.SendSimpleEmail(services.AdminNotifyEmail(),
+		fmt.Sprintf("حوالة مُرسلة للطلب #%d — %s", o.ID, o.Domain),
+		services.EmailShell("رقم حوالة بانتظار التأكيد", fmt.Sprintf(
+			"<p>أدخل العميل رقم الحوالة <b>%s</b> للطلب #%d (%s).</p><p>راجع صفحة إدارة الطلبات لتأكيد الاستلام.</p>",
+			o.PaymentRef, o.ID, o.Domain)))
+}
+
+func notifyOrderPaid(o models.DeepScanOrder) {
+	services.SendSimpleEmail(userEmailByID(o.UserID),
+		"تم تأكيد دفعتك — ابدأ فحصك العميق",
+		services.EmailShell("رصيدك جاهز", fmt.Sprintf(
+			"<p>تم تأكيد دفعتك للنطاق <b>%s</b>. رصيد فحص عميق واحد جاهز الآن.</p><p>افتح صفحة الفحوص وابدأ الفحص العميق.</p>",
+			o.Domain)))
+}
+
+func notifyOrderRejected(o models.DeepScanOrder) {
+	services.SendSimpleEmail(userEmailByID(o.UserID),
+		"تحديث بخصوص طلبك — Seku",
+		services.EmailShell("طلب مرفوض", fmt.Sprintf(
+			"<p>عذراً، لم نتمكّن من تأكيد طلبك للنطاق <b>%s</b>.</p><p>السبب: %s</p><p>يمكنك إنشاء طلب جديد أو التواصل معنا.</p>",
+			o.Domain, o.AdminNotes)))
 }
 
 // paymentInfoMap is the shared payment-info shape used by several handlers.

@@ -87,6 +87,9 @@ onMounted(load)
             </p>
             <p v-if="o.payment_ref" class="text-sm text-gray-700 mt-1">رقم الحوالة: <code class="bg-gray-100 px-1 rounded">{{ o.payment_ref }}</code></p>
             <p v-else-if="o.status === 'pending'" class="text-xs text-amber-600 mt-1">المستخدم لم يُدخل رقم الحوالة بعد.</p>
+            <p v-if="o.payment_proof_url" class="text-sm mt-1">
+              <a :href="o.payment_proof_url" target="_blank" class="text-indigo-600 hover:underline">عرض إثبات الحوالة المرفق ↗</a>
+            </p>
           </div>
           <span class="text-xs px-3 py-1 rounded-full font-medium" :class="(statusMeta[o.status] || statusMeta.pending).cls">
             {{ (statusMeta[o.status] || statusMeta.pending).label }}

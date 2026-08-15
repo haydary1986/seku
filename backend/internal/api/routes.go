@@ -99,6 +99,7 @@ func SetupRoutes(app *fiber.App) {
 	protected.Post("/orders", CreateDeepScanOrder)
 	protected.Get("/orders", GetMyOrders)
 	protected.Put("/orders/:id/payment", SubmitPayment)
+	protected.Post("/orders/:id/proof", UploadPaymentProof)
 
 	// Targets
 	targets := protected.Group("/targets")

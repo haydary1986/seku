@@ -594,12 +594,25 @@ func StartScan(c *fiber.Ctx) error {
 		}
 	}
 
-	// Create scan job
+	// Create scan job — persist the exact policy/config so a resume after a
+	// restart uses the same settings (and the same billing tier) it started with.
+	effectivePolicy := req.Policy
+	if effectivePolicy == "" && isDeep {
+		effectivePolicy = "deep"
+	}
 	job := models.ScanJob{
 		OrganizationID: GetUserOrgID(c),
 		Name:           req.Name,
 		Status:         "pending",
 		UserID:         userID,
+		Policy:         effectivePolicy,
+		EnableLogin:    req.EnableLogin,
+		EnableNuclei:   req.EnableNuclei,
+		EnableCrawl:    req.EnableCrawl,
+		EnableOOB:      req.EnableOOB,
+		EnableDalfox:   req.EnableDalfox,
+		EnableFFUF:     req.EnableFFUF,
+		Authorized:     req.Authorized,
 	}
 	if job.Name == "" {
 		job.Name = "Scan " + time.Now().Format("2006-01-02 15:04")

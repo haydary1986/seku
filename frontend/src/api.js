@@ -116,6 +116,11 @@ export const getPaymentInfo = () => api.get('/payment-info')
 export const createDeepScanOrder = (data) => api.post('/orders', data)
 export const getMyOrders = () => api.get('/orders')
 export const submitOrderPayment = (id, paymentRef) => api.put(`/orders/${id}/payment`, { payment_ref: paymentRef })
+export const uploadOrderProof = (id, file) => {
+  const fd = new FormData()
+  fd.append('proof', file)
+  return api.post(`/orders/${id}/proof`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+}
 // Admin: confirm/reject internal transfers
 export const getAllOrders = (status) => api.get('/orders/all' + (status ? `?status=${status}` : ''))
 export const approveOrder = (id, notes) => api.put(`/orders/${id}/approve`, { admin_notes: notes })
