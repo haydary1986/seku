@@ -200,76 +200,7 @@ const steps = computed(() => [
       </Transition>
     </Teleport>
 
-    <!-- Navbar -->
-    <nav :class="['fixed top-0 inset-x-0 z-50 transition-all duration-300', scrolled ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100' : 'bg-white/60 backdrop-blur-sm']">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-16">
-          <!-- Logo -->
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-              </svg>
-            </div>
-            <span class="text-xl font-bold text-gray-900">Seku</span>
-          </div>
-
-          <!-- Center links (hidden on mobile) -->
-          <div class="hidden md:flex items-center gap-8">
-            <a href="#" @click.prevent="window.scrollTo({top:0,behavior:'smooth'})" class="text-sm font-medium text-gray-700 hover:text-indigo-600 transition-colors">{{ t('الرئيسية', 'Home') }}</a>
-            <router-link :to="isRTL ? '/methodology-ar' : '/methodology'" class="text-sm font-medium text-gray-700 hover:text-indigo-600 transition-colors">{{ t('معايير التقييم', 'Methodology') }}</router-link>
-            <router-link to="/pricing" class="text-sm font-medium text-gray-700 hover:text-indigo-600 transition-colors">{{ t('الأسعار', 'Pricing') }}</router-link>
-          </div>
-
-          <!-- Buttons (hidden on mobile) -->
-          <div class="hidden md:flex items-center gap-3">
-            <router-link v-if="!isLoggedIn" to="/login" class="px-5 py-2 text-sm font-medium text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-colors">
-              {{ t('تسجيل الدخول', 'Login') }}
-            </router-link>
-            <button @click="toggleLang" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 border border-gray-200 rounded-lg hover:border-indigo-300 transition-colors">
-              {{ lang === 'ar' ? 'EN' : 'عربي' }}
-            </button>
-            <button v-if="!isLoggedIn" @click="openSignup" class="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
-              {{ t('ابدأ مجاناً', 'Start Free') }}
-            </button>
-            <button v-else @click="goDashboard" class="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm inline-flex items-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h5v16H6a2 2 0 01-2-2V6zM13 4h5a2 2 0 012 2v4h-7V4zM13 12h7v6a2 2 0 01-2 2h-5v-8z"/></svg>
-              {{ t('لوحتي', 'My Dashboard') }}
-            </button>
-          </div>
-
-          <!-- Mobile hamburger -->
-          <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
-            <svg v-if="!mobileMenuOpen" class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-            <svg v-else class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Mobile menu -->
-      <Transition name="slide">
-        <div v-if="mobileMenuOpen" class="md:hidden bg-white border-t border-gray-100 shadow-lg">
-          <div class="px-4 py-4 space-y-2">
-            <a href="#" @click.prevent="mobileMenuOpen = false; window.scrollTo({top:0,behavior:'smooth'})" class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors">{{ t('الرئيسية', 'Home') }}</a>
-            <router-link :to="isRTL ? '/methodology-ar' : '/methodology'" @click="mobileMenuOpen = false" class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors">{{ t('معايير التقييم', 'Methodology') }}</router-link>
-            <router-link to="/pricing" @click="mobileMenuOpen = false" class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors">{{ t('الأسعار', 'Pricing') }}</router-link>
-            <button @click="toggleLang" class="block w-full text-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200 rounded-lg transition-colors">
-              {{ lang === 'ar' ? 'English' : 'عربي' }}
-            </button>
-            <div class="pt-3 border-t border-gray-100 space-y-2">
-              <template v-if="!isLoggedIn">
-                <router-link to="/login" @click="mobileMenuOpen = false" class="block w-full text-center px-4 py-2.5 text-sm font-medium text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-colors">{{ t('تسجيل الدخول', 'Login') }}</router-link>
-                <button @click="openSignup" class="block w-full text-center px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">{{ t('ابدأ مجاناً', 'Start Free') }}</button>
-              </template>
-              <router-link v-else to="/dashboard" @click="mobileMenuOpen = false" class="block w-full text-center px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">{{ t('لوحتي', 'My Dashboard') }}</router-link>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </nav>
-
-    <!-- Spacer for fixed navbar -->
-    <div class="h-16"></div>
+    <!-- Navbar is provided globally by the shared PublicHeader (unified across all public pages) -->
 
     <!-- Hero Section -->
     <section class="relative overflow-hidden">

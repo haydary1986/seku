@@ -47,7 +47,7 @@ const isLoggedIn = computed(() => !!localStorage.getItem('token'))
 // Public marketing pages get the shared PublicHeader menu — except Landing
 // (has its own hero nav) and the standalone auth/report pages.
 const showPublicHeader = computed(() =>
-  route.meta?.public && !['Landing', 'Login', 'Register', 'PublicReport'].includes(route.name),
+  route.meta?.public && !['Login', 'Register', 'PublicReport'].includes(route.name),
 )
 
 // Icon paths (reused across nav items)
