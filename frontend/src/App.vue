@@ -1,14 +1,40 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from './i18n'
 import { useTheme } from './stores/theme'
+import { refreshAuth } from './api'
 
 const { t, lang, dir, toggleLang } = useI18n()
 const { theme, toggleTheme } = useTheme()
 const router = useRouter()
 const route = useRoute()
 const sidebarOpen = ref(false)
+
+// Sliding session: refresh the token while the user is active so it doesn't
+// expire mid-use (fixes intermittent logout, esp. on auto-refreshing pages).
+let refreshTimer = null
+async function keepSessionAlive() {
+  if (!localStorage.getItem('token')) return
+  try {
+    const { data } = await refreshAuth()
+    if (data?.token) localStorage.setItem('token', data.token)
+  } catch {
+    /* a genuine 401 is handled by the axios interceptor */
+  }
+}
+function onVisible() {
+  if (document.visibilityState === 'visible') keepSessionAlive()
+}
+onMounted(() => {
+  keepSessionAlive()
+  refreshTimer = setInterval(keepSessionAlive, 6 * 60 * 60 * 1000)
+  document.addEventListener('visibilitychange', onVisible)
+})
+onUnmounted(() => {
+  if (refreshTimer) clearInterval(refreshTimer)
+  document.removeEventListener('visibilitychange', onVisible)
+})
 
 const user = computed(() => {
   try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} }

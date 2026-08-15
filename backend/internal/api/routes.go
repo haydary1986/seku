@@ -66,6 +66,7 @@ func SetupRoutes(app *fiber.App) {
 
 	// Profile
 	protected.Get("/auth/profile", GetProfile)
+	protected.Get("/auth/refresh", RefreshAccessToken)
 	protected.Put("/auth/profile", UpdateProfile)
 	protected.Get("/auth/organization", GetMyOrganization)
 	protected.Put("/auth/password", ChangePassword)

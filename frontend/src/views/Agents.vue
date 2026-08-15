@@ -123,7 +123,7 @@ function jobFindings(j) {
 
 onMounted(() => {
   load()
-  timer = setInterval(load, 8000)
+  timer = setInterval(load, 15000)
 })
 onUnmounted(() => timer && clearInterval(timer))
 </script>

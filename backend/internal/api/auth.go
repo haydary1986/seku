@@ -88,6 +88,27 @@ func Login(c *fiber.Ctx) error {
 	})
 }
 
+// RefreshAccessToken issues a fresh 72h token for the current authenticated
+// user (sliding session), so active users are not logged out mid-use.
+func RefreshAccessToken(c *fiber.Ctx) error {
+	userID, _ := c.Locals("user_id").(uint)
+	var user models.User
+	if err := config.DB.First(&user, userID).Error; err != nil {
+		return c.Status(401).JSON(fiber.Map{"error": "user not found"})
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id":  user.ID,
+		"username": user.Username,
+		"role":     user.Role,
+		"exp":      time.Now().Add(72 * time.Hour).Unix(),
+	})
+	tokenString, err := token.SignedString(jwtSecret)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate token"})
+	}
+	return c.JSON(fiber.Map{"token": tokenString})
+}
+
 func Register(c *fiber.Ctx) error {
 	var req RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
