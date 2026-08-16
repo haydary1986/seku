@@ -78,11 +78,11 @@ const faqs = ref([
 </script>
 
 <template>
-  <div class="bg-white" dir="rtl">
+  <div class="public-shell" dir="rtl">
     <!-- Hero -->
-    <section class="relative bg-gradient-to-br from-indigo-700 to-indigo-900 pt-20 pb-24 text-center px-4">
-      <h1 class="text-3xl sm:text-5xl font-extrabold text-white">أسعار بسيطة وواضحة</h1>
-      <p class="mt-4 text-lg sm:text-xl text-indigo-100 max-w-2xl mx-auto">
+    <section class="relative pt-20 pb-24 text-center px-4 ring-grid">
+      <h1 class="text-3xl sm:text-5xl font-extrabold text-white">أسعار <span class="text-gradient">بسيطة وواضحة</span></h1>
+      <p class="mt-4 text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto">
         الفحص الخفيف مجاني للأبد. الفحص العميق مدفوع لكل نطاق عبر حوالة داخلية — بلا اشتراكات.
       </p>
     </section>
@@ -91,38 +91,38 @@ const faqs = ref([
     <section class="relative -mt-14 pb-16 px-4">
       <div class="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div v-for="plan in plans" :key="plan.nameEn"
-          :class="['relative bg-white rounded-2xl border-2 p-6 flex flex-col transition-all hover:shadow-xl',
-                   plan.highlighted ? 'border-indigo-500 shadow-xl shadow-indigo-100' : 'border-gray-200 shadow-sm']">
-          <div v-if="plan.badge" class="absolute -top-3.5 right-4 bg-indigo-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md">
+          :class="['card card-hover p-6 flex flex-col',
+                   plan.highlighted ? 'ring-2 ring-emerald-400 glow-accent' : '']">
+          <div v-if="plan.badge" class="absolute -top-3.5 right-4 bg-accent-grad glow-accent text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md">
             {{ plan.badge }}
           </div>
           <div class="mb-4">
             <div class="flex items-center gap-2 mb-1">
-              <h3 class="text-lg font-bold text-gray-900">{{ plan.name }}</h3>
-              <span class="text-xs text-gray-400">{{ plan.nameEn }}</span>
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">{{ plan.name }}</h3>
+              <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">{{ plan.nameEn }}</span>
             </div>
-            <p class="text-sm text-gray-500">{{ plan.description }}</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ plan.description }}</p>
           </div>
           <div class="mb-6 min-h-[64px]">
             <div class="flex items-baseline gap-2">
-              <span class="text-3xl font-extrabold text-gray-900">{{ plan.priceText }}</span>
+              <span class="text-3xl font-extrabold font-mono text-slate-900 dark:text-white">{{ plan.priceText }}</span>
             </div>
-            <p class="text-xs text-gray-500 mt-1">{{ plan.period }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-mono">{{ plan.period }}</p>
           </div>
           <ul class="flex-1 space-y-3 mb-6">
             <li v-for="(f, idx) in plan.features" :key="idx" class="flex items-start gap-2.5">
-              <svg v-if="f.included" class="w-5 h-5 text-green-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-if="f.included" class="w-5 h-5 text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
               </svg>
-              <svg v-else class="w-5 h-5 text-gray-300 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-else class="w-5 h-5 text-slate-400 dark:text-slate-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
-              <span :class="f.included ? 'text-gray-700 text-sm' : 'text-gray-400 text-sm'">{{ f.text }}</span>
+              <span :class="f.included ? 'text-slate-700 dark:text-slate-300 text-sm' : 'text-slate-400 dark:text-slate-500 text-sm'">{{ f.text }}</span>
             </li>
           </ul>
           <button @click="router.push('/register')"
             :class="['w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all',
-                     plan.highlighted ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-gray-900 text-white hover:bg-gray-800']">
+                     plan.highlighted ? 'bg-accent-grad glow-accent text-white hover:opacity-90' : 'bg-white/10 text-white border border-white/10 hover:bg-white/15']">
             {{ plan.cta }}
           </button>
         </div>
@@ -130,14 +130,14 @@ const faqs = ref([
     </section>
 
     <!-- How it works -->
-    <section class="py-16 bg-gray-50 px-4">
+    <section class="py-16 px-4">
       <div class="max-w-5xl mx-auto">
-        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-10">كيف يعمل؟</h2>
+        <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white text-center mb-10">كيف يعمل؟</h2>
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-6">
-          <div v-for="s in steps" :key="s.n" class="bg-white rounded-xl border border-gray-200 p-5 text-center">
-            <div class="w-10 h-10 mx-auto mb-3 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">{{ s.n }}</div>
-            <h3 class="font-semibold text-gray-900 mb-1">{{ s.title }}</h3>
-            <p class="text-sm text-gray-500">{{ s.text }}</p>
+          <div v-for="s in steps" :key="s.n" class="card card-hover p-5 text-center">
+            <div class="w-10 h-10 mx-auto mb-3 rounded-full bg-accent-grad glow-accent text-white flex items-center justify-center font-bold font-mono">{{ s.n }}</div>
+            <h3 class="font-semibold text-slate-900 dark:text-white mb-1">{{ s.title }}</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ s.text }}</p>
           </div>
         </div>
       </div>
@@ -146,26 +146,26 @@ const faqs = ref([
     <!-- FAQ -->
     <section class="py-16 px-4">
       <div class="max-w-3xl mx-auto">
-        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-10">أسئلة شائعة</h2>
+        <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white text-center mb-10">أسئلة شائعة</h2>
         <div class="space-y-3">
-          <div v-for="(faq, i) in faqs" :key="i" class="border border-gray-200 rounded-xl overflow-hidden">
-            <button @click="faq.open = !faq.open" class="w-full flex items-center justify-between p-4 text-right hover:bg-gray-50">
-              <span class="font-medium text-gray-900">{{ faq.question }}</span>
-              <svg :class="['w-5 h-5 text-gray-400 transition-transform', faq.open ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div v-for="(faq, i) in faqs" :key="i" class="card overflow-hidden">
+            <button @click="faq.open = !faq.open" class="w-full flex items-center justify-between p-4 text-right hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+              <span class="font-medium text-slate-900 dark:text-white">{{ faq.question }}</span>
+              <svg :class="['w-5 h-5 text-slate-400 transition-transform', faq.open ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
               </svg>
             </button>
-            <div v-if="faq.open" class="px-4 pb-4 text-sm text-gray-600 leading-relaxed">{{ faq.answer }}</div>
+            <div v-if="faq.open" class="px-4 pb-4 text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{{ faq.answer }}</div>
           </div>
         </div>
       </div>
     </section>
 
     <!-- CTA -->
-    <section class="py-16 bg-indigo-700 text-center px-4">
+    <section class="py-16 text-center px-4">
       <h2 class="text-2xl sm:text-3xl font-bold text-white mb-3">جاهز تبدأ؟</h2>
-      <p class="text-indigo-100 mb-6">افحص موقعك مجاناً خلال دقائق.</p>
-      <button @click="router.push('/register')" class="px-8 py-3 bg-white text-indigo-700 rounded-xl font-semibold hover:bg-indigo-50 transition-all">
+      <p class="text-slate-300 mb-6">افحص موقعك مجاناً خلال دقائق.</p>
+      <button @click="router.push('/register')" class="px-8 py-3 bg-accent-grad glow-accent text-white rounded-xl font-semibold hover:opacity-90 transition-all">
         أنشئ حساباً مجانياً
       </button>
     </section>

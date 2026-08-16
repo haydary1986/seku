@@ -852,7 +852,8 @@ function printPage() {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto">
+  <div class="public-shell">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Header -->
     <div class="mb-8">
       <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
@@ -922,7 +923,7 @@ function printPage() {
           </div>
 
           <!-- Steps -->
-          <div v-for="(step, i) in gettingStartedSteps" :key="i" class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 p-6">
+          <div v-for="(step, i) in gettingStartedSteps" :key="i" class="card p-6">
             <div class="flex items-start gap-4">
               <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-2xl">
                 {{ step.icon }}
@@ -971,7 +972,7 @@ function printPage() {
             <div
               v-for="scanner in filteredScanners"
               :key="scanner.id"
-              class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 overflow-hidden transition-all hover:shadow-lg"
+              class="card card-hover overflow-hidden"
             >
               <button @click="toggleScanner(scanner.id)" class="w-full text-start p-5">
                 <div class="flex items-start gap-3">
@@ -1030,7 +1031,7 @@ function printPage() {
         <!-- Scoring System -->
         <div v-if="activeTab === 'scoring'" class="space-y-6">
           <!-- Score Scale -->
-          <div class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 p-6">
+          <div class="card p-6">
             <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">
               {{ lang === 'ar' ? '\u0645\u0642\u064A\u0627\u0633 \u0627\u0644\u062F\u0631\u062C\u0627\u062A 0-1000' : '0-1000 Score Scale' }}
             </h2>
@@ -1044,7 +1045,7 @@ function printPage() {
           </div>
 
           <!-- Weighted Average -->
-          <div class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 p-6">
+          <div class="card p-6">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-3">
               {{ lang === 'ar' ? '\u0643\u064A\u0641 \u064A\u064F\u062D\u0633\u0628 \u0627\u0644\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u0645\u0631\u062C\u062D' : 'How Weighted Average Works' }}
             </h3>
@@ -1060,7 +1061,7 @@ function printPage() {
           </div>
 
           <!-- Confidence Score -->
-          <div class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 p-6">
+          <div class="card p-6">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-3">
               {{ lang === 'ar' ? '\u062F\u0631\u062C\u0629 \u0627\u0644\u062B\u0642\u0629' : 'Confidence Score' }}
             </h3>
@@ -1073,7 +1074,7 @@ function printPage() {
           </div>
 
           <!-- CVSS -->
-          <div class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 p-6">
+          <div class="card p-6">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-3">CVSS v3.1</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
               {{ lang === 'ar'
@@ -1090,7 +1091,7 @@ function printPage() {
           </div>
 
           <!-- Scan Policies -->
-          <div class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 p-6">
+          <div class="card p-6">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">
               {{ lang === 'ar' ? '\u0633\u064A\u0627\u0633\u0627\u062A \u0627\u0644\u0641\u062D\u0635' : 'Scan Policies' }}
             </h3>
@@ -1119,7 +1120,7 @@ function printPage() {
 
         <!-- Reports -->
         <div v-if="activeTab === 'reports'" class="space-y-4">
-          <div v-for="report in reportsData" :key="report.title.en" class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 p-6">
+          <div v-for="report in reportsData" :key="report.title.en" class="card p-6">
             <div class="flex items-start gap-4">
               <span class="text-3xl flex-shrink-0">{{ report.icon }}</span>
               <div>
@@ -1134,7 +1135,7 @@ function printPage() {
         <!-- API Reference -->
         <div v-if="activeTab === 'api'" class="space-y-6">
           <!-- Auth -->
-          <div class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 p-6">
+          <div class="card p-6">
             <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-3">
               {{ lang === 'ar' ? '\u0627\u0644\u0645\u0635\u0627\u062F\u0642\u0629' : 'Authentication' }}
             </h2>
@@ -1153,7 +1154,7 @@ function printPage() {
           </div>
 
           <!-- Endpoints Table -->
-          <div class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 p-6">
+          <div class="card p-6">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">
               {{ lang === 'ar' ? '\u0646\u0642\u0627\u0637 \u0627\u0644\u0646\u0647\u0627\u064A\u0629' : 'Endpoints' }}
             </h3>
@@ -1180,7 +1181,7 @@ function printPage() {
           </div>
 
           <!-- Example Requests -->
-          <div class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 p-6">
+          <div class="card p-6">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">
               {{ lang === 'ar' ? '\u0623\u0645\u062B\u0644\u0629 \u0627\u0644\u0637\u0644\u0628\u0627\u062A' : 'Example Requests' }}
             </h3>
@@ -1229,7 +1230,7 @@ console.log(data);</div>
           </div>
 
           <!-- Rate Limits -->
-          <div class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 p-6">
+          <div class="card p-6">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-3">
               {{ lang === 'ar' ? '\u062D\u062F\u0648\u062F \u0627\u0644\u0645\u0639\u062F\u0644' : 'Rate Limits' }}
             </h3>
@@ -1244,7 +1245,7 @@ console.log(data);</div>
 
         <!-- Integrations -->
         <div v-if="activeTab === 'integrations'" class="space-y-4">
-          <div v-for="integ in integrationsData" :key="integ.title.en" class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 p-6">
+          <div v-for="integ in integrationsData" :key="integ.title.en" class="card p-6">
             <div class="flex items-start gap-4">
               <span class="text-3xl flex-shrink-0">{{ integ.icon }}</span>
               <div>
@@ -1255,7 +1256,7 @@ console.log(data);</div>
           </div>
 
           <!-- GitHub Actions Example -->
-          <div class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 p-6">
+          <div class="card p-6">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-lg font-bold text-gray-900 dark:text-white">
                 {{ lang === 'ar' ? '\u0645\u062B\u0627\u0644 GitHub Actions' : 'GitHub Actions Example' }}
@@ -1279,7 +1280,7 @@ jobs:
           </div>
 
           <!-- Docker Example -->
-          <div class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 p-6">
+          <div class="card p-6">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-lg font-bold text-gray-900 dark:text-white">
                 {{ lang === 'ar' ? '\u0645\u062B\u0627\u0644 Docker' : 'Docker Example' }}
@@ -1301,7 +1302,7 @@ jobs:
           <div
             v-for="(faq, i) in filteredFaqs"
             :key="i"
-            class="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 overflow-hidden"
+            class="card overflow-hidden"
           >
             <button
               @click="toggleFaq(i)"
@@ -1319,6 +1320,7 @@ jobs:
         </div>
 
       </div>
+    </div>
     </div>
   </div>
 </template>

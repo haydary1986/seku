@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
-/* Enable dark mode via class strategy */
-@custom-variant dark (&:where(.dark, .dark *));
+/* Enable dark mode via class strategy. `.public-shell` is committed-dark too, so
+   dark:* utilities also fire inside it (public pages render dark for everyone). */
+@custom-variant dark (&:where(.dark, .dark *, .public-shell, .public-shell *));
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SEKU DESIGN SYSTEM — "Security SaaS, with a pulse"
@@ -96,6 +97,44 @@ body::before {
   -webkit-mask-image: radial-gradient(ellipse 120% 90% at 50% 0%, #000 40%, transparent 90%);
 }
 #app { position: relative; z-index: 1; }
+
+/* ── Committed-dark shell for PUBLIC/marketing pages ──────────────────────────
+   Wrap a public page root in `.public-shell` to give it a bold, consistent dark
+   security-console look for EVERY visitor (independent of the theme toggle). It
+   paints the aurora+grid backdrop AND locally redefines the design tokens to
+   their dark values, so `.card`, `.glass`, `.sev-*` inside render dark too. */
+.public-shell {
+  --bg-base: #080d1a;
+  --bg-elev: #0f1729;
+  --bg-panel: rgba(17, 25, 44, 0.72);
+  --border-soft: rgba(148, 163, 184, 0.12);
+  --border-glow: rgba(16, 185, 129, 0.32);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 40px -20px rgba(0, 0, 0, 0.7);
+  --shadow-glow: 0 0 0 1px rgba(16, 185, 129, 0.22), 0 16px 50px -18px rgba(16, 185, 129, 0.38);
+  --text-strong: #f1f5f9;
+  --grid-line: rgba(148, 163, 184, 0.07);
+  position: relative;
+  min-height: 100vh;
+  color: #cbd5e1;
+  background-color: #080d1a;
+  background-image:
+    radial-gradient(70rem 45rem at 88% -12%, rgba(16, 185, 129, 0.20), transparent 60%),
+    radial-gradient(55rem 45rem at -5% 8%, rgba(6, 182, 212, 0.16), transparent 55%),
+    radial-gradient(80rem 55rem at 50% 118%, rgba(99, 102, 241, 0.14), transparent 60%);
+  background-attachment: fixed;
+}
+.public-shell::before {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(ellipse 120% 80% at 50% 0%, #000 45%, transparent 92%);
+  -webkit-mask-image: radial-gradient(ellipse 120% 80% at 50% 0%, #000 45%, transparent 92%);
+}
+.public-shell > * { position: relative; z-index: 1; }
 
 /* ── Reusable surface primitives (opt-in classes) ─────────────────────────── */
 .card {

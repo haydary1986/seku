@@ -102,7 +102,7 @@ const features = computed(() => [
   { title: t('تشفير SSL/TLS', 'SSL/TLS Encryption'), desc: t('فحص شهادة الأمان، إصدار TLS، إعادة التوجيه من HTTP إلى HTTPS', 'Security certificate, TLS version, HTTP to HTTPS redirect'), weight: 20, icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z', bg: 'bg-green-100', icon_color: 'text-green-600' },
   { title: t('ترويسات الأمان', 'Security Headers'), desc: t('فحص HSTS, CSP, X-Frame-Options, X-Content-Type-Options وغيرها', 'HSTS, CSP, X-Frame-Options, X-Content-Type-Options and more'), weight: 20, icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', bg: 'bg-blue-100', icon_color: 'text-blue-600' },
   { title: t('أمان الكوكيز', 'Cookie Security'), desc: t('فحص أعلام Secure, HttpOnly, SameSite لحماية جلسات المستخدمين', 'Secure, HttpOnly, SameSite flags for session protection'), weight: 10, icon: 'M21 12a9 9 0 11-18 0 9 9 0 0118 0z', bg: 'bg-purple-100', icon_color: 'text-purple-600' },
-  { title: t('معلومات السيرفر', 'Server Information'), desc: t('كشف نوع CMS، إخفاء معلومات السيرفر، منع تسريب إصدار البرمجيات', 'CMS detection, server header hiding, version exposure prevention'), weight: 15, icon: 'M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2', bg: 'bg-slate-100', icon_color: 'text-slate-600' },
+  { title: t('معلومات السيرفر', 'Server Information'), desc: t('كشف نوع CMS، إخفاء معلومات السيرفر، منع تسريب إصدار البرمجيات', 'CMS detection, server header hiding, version exposure prevention'), weight: 15, icon: 'M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2', bg: 'bg-slate-500/15', icon_color: 'text-slate-300' },
   { title: t('الملفات والمجلدات', 'Directory & Files'), desc: t('فحص الوصول لملفات حساسة مثل .env, .git, admin, backup', 'Sensitive file exposure (.env, .git, admin, backup)'), weight: 10, icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z', bg: 'bg-yellow-100', icon_color: 'text-yellow-600' },
   { title: t('أداء السيرفر', 'Server Performance'), desc: t('قياس زمن الاستجابة، TTFB، سرعة مصافحة TLS', 'Response time, TTFB, TLS handshake speed'), weight: 15, icon: 'M13 10V3L4 14h7v7l9-11h-7z', bg: 'bg-amber-100', icon_color: 'text-amber-600' },
   { title: t('حماية DDoS', 'DDoS Protection'), desc: t('كشف CDN، جدار حماية WAF، تحديد معدل الطلبات', 'CDN detection, WAF firewall, rate limiting'), weight: 10, icon: 'M20.618 5.984A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', bg: 'bg-red-100', icon_color: 'text-red-600' },
@@ -139,7 +139,7 @@ const steps = computed(() => [
 </script>
 
 <template>
-  <div class="min-h-screen" :dir="isRTL ? 'rtl' : 'ltr'">
+  <div class="public-shell min-h-screen" :dir="isRTL ? 'rtl' : 'ltr'">
 
     <!-- Signup Info Modal -->
     <Teleport to="body">
@@ -322,7 +322,7 @@ const steps = computed(() => [
     </section>
 
     <!-- Scoring Section -->
-    <section class="py-20 bg-gradient-to-br from-slate-900 to-indigo-950 text-white">
+    <section class="py-20 text-white">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
           <h2 class="text-3xl sm:text-4xl font-bold">{{ t('نظام التقييم من 1000 نقطة', '1000-Point Scoring System') }}</h2>
@@ -381,7 +381,7 @@ const steps = computed(() => [
     </section>
 
     <!-- Footer -->
-    <footer class="bg-slate-900 text-gray-400 py-12">
+    <footer class="text-gray-400 dark:text-slate-400 py-12 border-t border-white/10">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-slate-800">
           <!-- Logo & description -->

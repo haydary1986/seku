@@ -28,21 +28,21 @@ async function handleLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4" dir="rtl">
+  <div class="public-shell min-h-screen flex items-center justify-center p-4" dir="rtl">
     <div class="w-full max-w-md">
       <!-- Logo -->
       <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-2xl mb-4">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-accent-grad glow-accent rounded-2xl mb-4">
           <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
           </svg>
         </div>
-        <h1 class="text-3xl font-bold text-white">Seku</h1>
-        <p class="text-indigo-300 mt-2">{{ t('vLogin.tagline') }}</p>
+        <h1 class="text-3xl font-bold text-gradient">Seku</h1>
+        <p class="text-slate-300 mt-2">{{ t('vLogin.tagline') }}</p>
       </div>
 
       <!-- Login Form -->
-      <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-2xl">
+      <div class="glass rounded-2xl p-8 shadow-2xl">
         <h2 class="text-xl font-semibold text-white mb-6 text-center">{{ t('vLogin.signIn') }}</h2>
 
         <div v-if="error" class="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg mb-4 text-sm text-center">
@@ -51,23 +51,23 @@ async function handleLogin() {
 
         <form @submit.prevent="handleLogin" class="space-y-5">
           <div>
-            <label class="block text-sm text-indigo-200 mb-1">{{ t('vLogin.username') }}</label>
+            <label class="block text-sm text-slate-300 mb-1">{{ t('vLogin.username') }}</label>
             <input
               v-model="form.username"
               type="text"
               placeholder="admin"
-              class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              class="w-full px-4 py-3 rounded-lg bg-slate-900/60 border border-white/15 text-slate-100 placeholder-slate-500 focus:border-emerald-400/50 focus:outline-none"
               required
             />
           </div>
           <div>
-            <label class="block text-sm text-indigo-200 mb-1">{{ t('vLogin.password') }}</label>
+            <label class="block text-sm text-slate-300 mb-1">{{ t('vLogin.password') }}</label>
             <div class="relative">
               <input
                 v-model="form.password"
                 :type="showPassword ? 'text' : 'password'"
                 placeholder="********"
-                class="w-full px-4 py-3 pl-12 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                class="w-full px-4 py-3 pl-12 rounded-lg bg-slate-900/60 border border-white/15 text-slate-100 placeholder-slate-500 focus:border-emerald-400/50 focus:outline-none"
                 required
               />
               <button type="button" @click="showPassword = !showPassword"
@@ -85,7 +85,7 @@ async function handleLogin() {
           <button
             type="submit"
             :disabled="loading"
-            class="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium disabled:opacity-50"
+            class="w-full py-3 bg-accent-grad glow-accent text-white rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50"
           >
             {{ loading ? t('vLogin.signingIn') : t('vLogin.signIn') }}
           </button>
@@ -98,8 +98,8 @@ async function handleLogin() {
         </div>
       </div>
 
-      <p class="text-center text-indigo-400 text-xs mt-6">{{ t('vLogin.footer') }}</p>
-      <p class="text-center text-indigo-500 text-[10px] mt-1">{{ t('vLogin.poweredBy') }}</p>
+      <p class="text-center text-slate-400 text-xs mt-6">{{ t('vLogin.footer') }}</p>
+      <p class="text-center text-slate-500 text-[10px] mt-1">{{ t('vLogin.poweredBy') }}</p>
     </div>
   </div>
 </template>
