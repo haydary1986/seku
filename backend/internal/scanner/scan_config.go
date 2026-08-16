@@ -17,6 +17,9 @@ type ScanConfig struct {
 	EnableOOB    bool `json:"enable_oob"`
 	EnableDalfox bool `json:"enable_dalfox"`
 	EnableFFUF   bool `json:"enable_ffuf"`
+	// EnableNucleiDast runs nuclei in active fuzzing mode (SSTI/LFI/XXE/CMDi/SQLi
+	// via parameter fuzzing). Intrusive — requires Authorized.
+	EnableNucleiDast bool `json:"enable_nuclei_dast"`
 	// Authorized is the user's explicit acknowledgement that they are permitted
 	// to actively test the target. Required to enable credential brute-forcing.
 	Authorized bool `json:"authorized"`

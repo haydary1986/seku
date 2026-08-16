@@ -330,11 +330,11 @@ func CleanupDuplicateTargets(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"total_checked":    len(targets),
-		"duplicate_count":  len(duplicates),
-		"unique_count":     len(seen),
-		"dry_run":          dryRun != "false",
-		"duplicates":       duplicates,
+		"total_checked":   len(targets),
+		"duplicate_count": len(duplicates),
+		"unique_count":    len(seen),
+		"dry_run":         dryRun != "false",
+		"duplicates":      duplicates,
 		"message": func() string {
 			if dryRun == "false" {
 				return fmt.Sprintf("Deleted %d duplicate targets", len(duplicates))
@@ -477,13 +477,14 @@ type StartScanRequest struct {
 	TargetIDs []uint `json:"target_ids"`
 	Policy    string `json:"policy"` // light, standard, deep — overrides plan-based engine
 	// Advanced per-scan toggles for the active/intrusive scanners (deep policy).
-	EnableLogin  bool `json:"enable_login"`
-	EnableNuclei bool `json:"enable_nuclei"`
-	EnableCrawl  bool `json:"enable_crawl"`
-	EnableOOB    bool `json:"enable_oob"`
-	EnableDalfox bool `json:"enable_dalfox"`
-	EnableFFUF   bool `json:"enable_ffuf"`
-	Authorized   bool `json:"authorized"`
+	EnableLogin      bool `json:"enable_login"`
+	EnableNuclei     bool `json:"enable_nuclei"`
+	EnableCrawl      bool `json:"enable_crawl"`
+	EnableOOB        bool `json:"enable_oob"`
+	EnableDalfox     bool `json:"enable_dalfox"`
+	EnableFFUF       bool `json:"enable_ffuf"`
+	EnableNucleiDast bool `json:"enable_nuclei_dast"`
+	Authorized       bool `json:"authorized"`
 	// Authenticated scanning (optional): a session to inject so scanners reach
 	// pages behind login; AuthCookieB is a second identity for IDOR/BOLA testing.
 	AuthCookie  string `json:"auth_cookie"`
@@ -502,7 +503,8 @@ func StartScan(c *fiber.Ctx) error {
 	isAdmin := userRole == "admin"
 	// A "deep" (paid) scan is the deep policy or any intrusive/advanced tool.
 	isDeep := req.Policy == "deep" || req.EnableLogin || req.EnableNuclei ||
-		req.EnableCrawl || req.EnableOOB || req.EnableDalfox || req.EnableFFUF
+		req.EnableCrawl || req.EnableOOB || req.EnableDalfox || req.EnableFFUF ||
+		req.EnableNucleiDast
 
 	// Get user's organization via OrgMembership
 	var membership models.OrgMembership
@@ -536,10 +538,10 @@ func StartScan(c *fiber.Ctx) error {
 			// billed per-scan and are not blocked by the free quota.
 			if !isDeep && org.MaxScans > 0 && int(monthlyScans) >= org.MaxScans {
 				return c.Status(403).JSON(fiber.Map{
-					"error":   "Monthly scan limit reached for your plan. Please upgrade.",
-					"limit":   org.MaxScans,
-					"used":    monthlyScans,
-					"plan":    org.Plan,
+					"error": "Monthly scan limit reached for your plan. Please upgrade.",
+					"limit": org.MaxScans,
+					"used":  monthlyScans,
+					"plan":  org.Plan,
 				})
 			}
 		}
@@ -606,21 +608,22 @@ func StartScan(c *fiber.Ctx) error {
 		effectivePolicy = "deep"
 	}
 	job := models.ScanJob{
-		OrganizationID: GetUserOrgID(c),
-		Name:           req.Name,
-		Status:         "pending",
-		UserID:         userID,
-		Policy:         effectivePolicy,
-		EnableLogin:    req.EnableLogin,
-		EnableNuclei:   req.EnableNuclei,
-		EnableCrawl:    req.EnableCrawl,
-		EnableOOB:      req.EnableOOB,
-		EnableDalfox:   req.EnableDalfox,
-		EnableFFUF:     req.EnableFFUF,
-		Authorized:     req.Authorized,
-		AuthCookie:     req.AuthCookie,
-		AuthHeader:     req.AuthHeader,
-		AuthCookieB:    req.AuthCookieB,
+		OrganizationID:   GetUserOrgID(c),
+		Name:             req.Name,
+		Status:           "pending",
+		UserID:           userID,
+		Policy:           effectivePolicy,
+		EnableLogin:      req.EnableLogin,
+		EnableNuclei:     req.EnableNuclei,
+		EnableCrawl:      req.EnableCrawl,
+		EnableOOB:        req.EnableOOB,
+		EnableDalfox:     req.EnableDalfox,
+		EnableFFUF:       req.EnableFFUF,
+		EnableNucleiDast: req.EnableNucleiDast,
+		Authorized:       req.Authorized,
+		AuthCookie:       req.AuthCookie,
+		AuthHeader:       req.AuthHeader,
+		AuthCookieB:      req.AuthCookieB,
 	}
 	if job.Name == "" {
 		job.Name = "Scan " + time.Now().Format("2006-01-02 15:04")
@@ -665,16 +668,17 @@ func StartScan(c *fiber.Ctx) error {
 		engine = scanner.NewEngineForPlan(plan)
 	}
 	engine.WithConfig(&scanner.ScanConfig{
-		EnableLogin:  req.EnableLogin,
-		EnableNuclei: req.EnableNuclei,
-		EnableCrawl:  req.EnableCrawl,
-		EnableOOB:    req.EnableOOB,
-		EnableDalfox: req.EnableDalfox,
-		EnableFFUF:   req.EnableFFUF,
-		Authorized:   req.Authorized,
-		AuthCookie:   req.AuthCookie,
-		AuthHeader:   req.AuthHeader,
-		AuthCookieB:  req.AuthCookieB,
+		EnableLogin:      req.EnableLogin,
+		EnableNuclei:     req.EnableNuclei,
+		EnableCrawl:      req.EnableCrawl,
+		EnableOOB:        req.EnableOOB,
+		EnableDalfox:     req.EnableDalfox,
+		EnableFFUF:       req.EnableFFUF,
+		EnableNucleiDast: req.EnableNucleiDast,
+		Authorized:       req.Authorized,
+		AuthCookie:       req.AuthCookie,
+		AuthHeader:       req.AuthHeader,
+		AuthCookieB:      req.AuthCookieB,
 	})
 	go engine.RunScan(&job)
 
@@ -1017,8 +1021,8 @@ func GetLeaderboard(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"rankings":     result,
-		"total_sites":  totalSites,
+		"rankings":      result,
+		"total_sites":   totalSites,
 		"scanned_sites": len(ranked),
 		"average_score": avgScore,
 	})
@@ -1290,9 +1294,9 @@ func GetComplianceReport(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"overall_compliance": overallCompliance,
-		"total_checks":      totalChecks,
-		"total_passed":      totalCompliant,
-		"owasp_categories":  results,
+		"total_checks":       totalChecks,
+		"total_passed":       totalCompliant,
+		"owasp_categories":   results,
 	})
 }
 
@@ -1603,17 +1607,17 @@ func GetFixPriority(c *fiber.Ctx) error {
 		Find(&checks)
 
 	type FixRecommendation struct {
-		Priority      int     `json:"priority"`
-		CheckName     string  `json:"check_name"`
-		Category      string  `json:"category"`
-		CurrentScore  float64 `json:"current_score"`
-		Impact        float64 `json:"impact"`
-		Severity      string  `json:"severity"`
-		CVSSScore     float64 `json:"cvss_score"`
-		Effort        string  `json:"effort"` // easy, medium, hard
-		OWASP         string  `json:"owasp"`
-		CWE           string  `json:"cwe"`
-		Recommendation string `json:"recommendation"`
+		Priority       int     `json:"priority"`
+		CheckName      string  `json:"check_name"`
+		Category       string  `json:"category"`
+		CurrentScore   float64 `json:"current_score"`
+		Impact         float64 `json:"impact"`
+		Severity       string  `json:"severity"`
+		CVSSScore      float64 `json:"cvss_score"`
+		Effort         string  `json:"effort"` // easy, medium, hard
+		OWASP          string  `json:"owasp"`
+		CWE            string  `json:"cwe"`
+		Recommendation string  `json:"recommendation"`
 	}
 
 	var recommendations []FixRecommendation
@@ -1654,7 +1658,7 @@ func GetFixPriority(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"recommendations":        recommendations,
 		"total_issues":           len(recommendations),
-		"total_potential_impact":  totalImpact,
+		"total_potential_impact": totalImpact,
 		"quick_wins":             quickWins,
 	})
 }
@@ -1752,9 +1756,9 @@ func DiscoverDomains(c *fiber.Ctx) error {
 	}
 
 	type DiscoveredSite struct {
-		Domain     string `json:"domain"`
-		URL        string `json:"url"`
-		AlreadyAdded bool `json:"already_added"`
+		Domain       string `json:"domain"`
+		URL          string `json:"url"`
+		AlreadyAdded bool   `json:"already_added"`
 	}
 
 	var results []DiscoveredSite

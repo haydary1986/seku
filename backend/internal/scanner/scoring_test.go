@@ -108,10 +108,10 @@ func TestComputeScores_HighFailsPreserveVariance(t *testing.T) {
 func TestNormalizeSeverities_CanonicalImpact(t *testing.T) {
 	checks := []models.CheckResult{
 		// score-derived severity would be "critical" for all three fails:
-		chk("headers", "HSTS", "fail", 0, 100),                 // CVSS map → Medium
-		chk("sqli", "SQL Injection Test", "fail", 0, 90),       // CVSS map → Critical
-		chk("seo", "Robots.txt Quality", "fail", 0, 100),       // quality → capped Low
-		chk("content", "Cache Headers", "warn", 300, 80),       // quality → capped Low
+		chk("headers", "HSTS", "fail", 0, 100),           // CVSS map → Medium
+		chk("sqli", "SQL Injection Test", "fail", 0, 90), // CVSS map → Critical
+		chk("seo", "Robots.txt Quality", "fail", 0, 100), // quality → capped Low
+		chk("content", "Cache Headers", "warn", 300, 80), // quality → capped Low
 	}
 	if got := checks[0].Severity; got != "critical" {
 		// sanity: the pipeline starts from the (inflated) score-derived value

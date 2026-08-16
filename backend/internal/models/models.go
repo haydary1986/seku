@@ -121,18 +121,19 @@ type ScanJob struct {
 	UserID         uint       `json:"user_id"`
 	// Scan configuration persisted so an interrupted job resumes with the SAME
 	// policy/tools it was started with (not always "deep").
-	Policy       string       `json:"policy"`
-	EnableLogin  bool         `json:"enable_login"`
-	EnableNuclei bool         `json:"enable_nuclei"`
-	EnableCrawl  bool         `json:"enable_crawl"`
-	EnableOOB    bool         `json:"enable_oob"`
-	EnableDalfox bool         `json:"enable_dalfox"`
-	EnableFFUF   bool         `json:"enable_ffuf"`
-	Authorized   bool         `json:"authorized"`
-	AuthCookie   string       `json:"auth_cookie"`
-	AuthHeader   string       `json:"auth_header"`
-	AuthCookieB  string       `json:"auth_cookie_b"`
-	Results      []ScanResult `json:"results" gorm:"foreignKey:ScanJobID"`
+	Policy           string       `json:"policy"`
+	EnableLogin      bool         `json:"enable_login"`
+	EnableNuclei     bool         `json:"enable_nuclei"`
+	EnableCrawl      bool         `json:"enable_crawl"`
+	EnableOOB        bool         `json:"enable_oob"`
+	EnableDalfox     bool         `json:"enable_dalfox"`
+	EnableFFUF       bool         `json:"enable_ffuf"`
+	EnableNucleiDast bool         `json:"enable_nuclei_dast"`
+	Authorized       bool         `json:"authorized"`
+	AuthCookie       string       `json:"auth_cookie"`
+	AuthHeader       string       `json:"auth_header"`
+	AuthCookieB      string       `json:"auth_cookie_b"`
+	Results          []ScanResult `json:"results" gorm:"foreignKey:ScanJobID"`
 }
 
 type ScanResult struct {
@@ -210,23 +211,23 @@ type DomainVerification struct {
 // an admin marks it paid, then the user consumes it by running one deep scan.
 type DeepScanOrder struct {
 	gorm.Model
-	OrganizationID uint         `json:"organization_id" gorm:"not null;index"`
-	UserID         uint         `json:"user_id" gorm:"not null"`
-	ScanTargetID   uint         `json:"scan_target_id" gorm:"not null;index"`
-	Domain         string       `json:"domain"`
-	AmountIQD      int          `json:"amount_iqd"`                    // price at time of order
+	OrganizationID  uint         `json:"organization_id" gorm:"not null;index"`
+	UserID          uint         `json:"user_id" gorm:"not null"`
+	ScanTargetID    uint         `json:"scan_target_id" gorm:"not null;index"`
+	Domain          string       `json:"domain"`
+	AmountIQD       int          `json:"amount_iqd"`                    // price at time of order
 	Status          string       `json:"status" gorm:"default:pending"` // pending | paid | rejected | used
 	PaymentRef      string       `json:"payment_ref"`                   // transfer reference entered by user
 	PaymentProofURL string       `json:"payment_proof_url"`             // uploaded transfer screenshot
-	ContactName    string       `json:"contact_name"`
-	ContactPhone   string       `json:"contact_phone"`
-	AdminNotes     string       `json:"admin_notes"`
-	ApprovedBy     uint         `json:"approved_by"`
-	ApprovedAt     *time.Time   `json:"approved_at"`
-	UsedByScanJob  uint         `json:"used_by_scan_job"` // ScanJob that consumed this credit
-	UsedAt         *time.Time   `json:"used_at"`
-	ScanTarget     ScanTarget   `json:"scan_target,omitempty" gorm:"foreignKey:ScanTargetID"`
-	Organization   Organization `json:"organization,omitempty" gorm:"foreignKey:OrganizationID"`
+	ContactName     string       `json:"contact_name"`
+	ContactPhone    string       `json:"contact_phone"`
+	AdminNotes      string       `json:"admin_notes"`
+	ApprovedBy      uint         `json:"approved_by"`
+	ApprovedAt      *time.Time   `json:"approved_at"`
+	UsedByScanJob   uint         `json:"used_by_scan_job"` // ScanJob that consumed this credit
+	UsedAt          *time.Time   `json:"used_at"`
+	ScanTarget      ScanTarget   `json:"scan_target,omitempty" gorm:"foreignKey:ScanTargetID"`
+	Organization    Organization `json:"organization,omitempty" gorm:"foreignKey:OrganizationID"`
 }
 
 // --- Automation ---

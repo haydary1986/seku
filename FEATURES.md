@@ -48,6 +48,7 @@
 | `access_control` | **IDOR / BOLA تفاضلي** (جلستان: يقارن وصول مستخدم لبيانات آخر) |
 | `login` | اكتشاف نقطة الدخول + قفل المحاولات + تعداد المستخدمين + بيانات افتراضية (خلف تفويض) |
 | `passive_urls` | **اكتشاف URLs سلبي** عبر gau (Wayback/CommonCrawl/OTX/URLScan): روابط تاريخية، روابط ببارامترات (مرشّحات حقن)، نقاط حسّاسة تاريخية |
+| `dast` | **فحص ديناميكي فعّال (Fuzzing)** عبر `nuclei -dast` على البارامترات: **SSTI، LFI/Path Traversal، XXE، حقن أوامر النظام، SQLi/XSS بالتشويش، Open Redirect، SSRF**. اقتحامي — opt-in ويتطلب `authorized=true`. يجمع روابط البارامترات من gau تلقائياً |
 
 ### ج. تكاملات أدوات خارجية (opt-in، تشغيل binary)
 | الأداة | الدور | التفعيل |
@@ -119,9 +120,11 @@
 |---|---|
 | `JWT_SECRET` | **إلزامي** (≥32 حرف) — بدونه لا يقلع النظام |
 | `SEKU_ENABLE_NUCLEI/KATANA/GAU` | تفعيل أدوات على مستوى الخادم |
+| `SEKU_ENABLE_NUCLEI_DAST` | تفعيل الفحص الديناميكي الفعّال (fuzzing) على مستوى الخادم |
+| `SEKU_DAST_TIMEOUT/RATE/MAX_URLS/TAGS` | ضبط ميزانية/سرعة/عدد روابط/وسوم الـDAST |
 | `SEKU_MAX_CONCURRENT_SCANS` | سقف الفحوص المتزامنة (افتراضي 3) |
 | `SEKU_SCANNER_TIMEOUT` | مهلة كل فاحص (افتراضي 240ث) |
 | `SEKU_PEN_*` | معايرة خصومات التقييم |
 | `deep_scan_price_iqd` + `payment_*` | (إعدادات) سعر وطريقة وحساب الدفع |
 
-> **قيد التطوير (خارطة الدراسة):** خط ProjectDiscovery (httpx/naabu)، nuclei -dast (SSTI/LFI/XXE/CMDi)، arjun، testssl، وضع «الوكيل الأمني AI»، وتقارير بمستوى مختبِري الاختراق (CVSS vectors + retest delta + نتائج مؤكّدة).
+> **قيد التطوير (خارطة الدراسة):** رقابة مستمرة + كشف التغيّر (baseline→delta→تنبيه)، arjun، testssl، وضع «الوكيل الأمني AI»، وتقارير بمستوى مختبِري الاختراق (CVSS vectors + retest delta + نتائج مؤكّدة). **أُنجز:** CI/CD (GitHub/GitLab)، nuclei -dast، دقّة الخطورة (CVSS-based).

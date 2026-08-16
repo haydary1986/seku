@@ -72,6 +72,7 @@ var categorySeverity = map[string]domainSeverity{
 	"secrets":       sevCritical,
 	"js_secrets":    sevCritical,
 	"backup_files":  sevCritical,
+	"dast":          sevCritical, // active fuzzing → confirmed injection (SSTI/LFI/XXE/CMDi/SQLi)
 
 	// High — transport security, access control, sensitive exposure
 	"ssl":             sevHigh,
@@ -104,10 +105,10 @@ var categorySeverity = map[string]domainSeverity{
 	// None — quality / informational (separate score, never in security)
 	"passive_urls": sevNone, // historical URL discovery is advisory, not a vuln
 	"performance":  sevNone,
-	"seo":         sevNone,
-	"content":     sevNone,
-	"hosting":     sevNone,
-	"tech_stack":  sevNone,
+	"seo":          sevNone,
+	"content":      sevNone,
+	"hosting":      sevNone,
+	"tech_stack":   sevNone,
 }
 
 // Grade cap. A confident failure in a CRITICAL domain — a confirmed, exploitable
@@ -140,6 +141,7 @@ var capCategories = map[string]bool{
 	"js_secrets":      true,
 	"backup_files":    true,
 	"cms_cve":         true,
+	"dast":            true, // fuzzing-confirmed injection is a live exploit
 	"directory":       true, // exposed .env/.git/config with verified content
 	"info_disclosure": true, // a leaked secret value
 }
