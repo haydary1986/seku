@@ -37,11 +37,11 @@ const allTags = ref([])
 const targetTags = ref({}) // { targetId: [tag, ...] }
 const showManageTags = ref(false)
 const newTagName = ref('')
-const newTagColor = ref('#6366f1')
+const newTagColor = ref('#10b981')
 const tagFilterId = ref('all')
 const tagDropdownTarget = ref(null) // which target's "Add Tag" dropdown is open
 
-const tagColors = ['#6366f1', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#64748b']
+const tagColors = ['#10b981', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#64748b']
 
 const filteredTargets = computed(() => {
   if (tagFilterId.value === 'all') return targets.value
@@ -230,7 +230,7 @@ async function addNewTag() {
   try {
     await createTag({ name: newTagName.value.trim(), color: newTagColor.value })
     newTagName.value = ''
-    newTagColor.value = '#6366f1'
+    newTagColor.value = '#10b981'
     await loadAllTags()
   } catch (e) {
     alert(e.response?.data?.error || 'Failed to create tag')
@@ -358,7 +358,7 @@ onMounted(async () => {
         </button>
         <button
           @click="showManageTags = !showManageTags; showAddForm = false; showBulkForm = false"
-          class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+          class="px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
         >
           {{ t('vTargets.manageTags') }}
         </button>
@@ -553,14 +553,14 @@ uobasrah.edu.iq, University of Basrah, University"
     </div>
 
     <!-- Manage Tags Panel -->
-    <div v-if="showManageTags" class="bg-white rounded-xl shadow-sm border border-purple-200 p-6 mb-6">
+    <div v-if="showManageTags" class="bg-white rounded-xl shadow-sm border border-emerald-200 p-6 mb-6">
       <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('vTargets.manageTags') }}</h3>
       <div class="flex gap-3 mb-4">
         <input
           v-model="newTagName"
           type="text"
           :placeholder="t('vTargets.tagNamePlaceholder')"
-          class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+          class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
           @keyup.enter="addNewTag"
         />
         <div class="flex items-center gap-2">
@@ -576,7 +576,7 @@ uobasrah.edu.iq, University of Basrah, University"
             ></button>
           </div>
         </div>
-        <button @click="addNewTag" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">
+        <button @click="addNewTag" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm">
           {{ t('vTargets.createTag') }}
         </button>
       </div>
@@ -585,7 +585,7 @@ uobasrah.edu.iq, University of Basrah, University"
           v-for="tag in allTags"
           :key="tag.ID"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-white"
-          :style="{ backgroundColor: tag.color || '#6366f1' }"
+          :style="{ backgroundColor: tag.color || '#10b981' }"
         >
           {{ tag.name }}
           <button @click="removeTag(tag.ID)" class="hover:bg-white/20 rounded-full p-0.5" :title="t('vTargets.deleteTagTitle')">
@@ -613,7 +613,7 @@ uobasrah.edu.iq, University of Basrah, University"
         :key="tag.ID"
         @click="tagFilterId = String(tag.ID)"
         :class="tagFilterId === String(tag.ID) ? 'text-white' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'"
-        :style="tagFilterId === String(tag.ID) ? { backgroundColor: tag.color || '#6366f1' } : {}"
+        :style="tagFilterId === String(tag.ID) ? { backgroundColor: tag.color || '#10b981' } : {}"
         class="px-3 py-1 rounded-full text-xs transition-colors"
       >
         {{ tag.name }}
@@ -663,7 +663,7 @@ uobasrah.edu.iq, University of Basrah, University"
                   v-for="tag in getTagsForTarget(target.ID)"
                   :key="tag.ID"
                   class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs text-white"
-                  :style="{ backgroundColor: tag.color || '#6366f1' }"
+                  :style="{ backgroundColor: tag.color || '#10b981' }"
                 >
                   {{ tag.name }}
                   <button @click.stop="removeTagFromTarget(target.ID, tag.ID)" class="hover:bg-white/20 rounded-full" :title="t('vTargets.removeTagTitle')">
@@ -690,7 +690,7 @@ uobasrah.edu.iq, University of Basrah, University"
                       @click="assignTag(target.ID, tag.ID)"
                       class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2"
                     >
-                      <span class="w-3 h-3 rounded-full inline-block" :style="{ backgroundColor: tag.color || '#6366f1' }"></span>
+                      <span class="w-3 h-3 rounded-full inline-block" :style="{ backgroundColor: tag.color || '#10b981' }"></span>
                       {{ tag.name }}
                     </button>
                   </div>

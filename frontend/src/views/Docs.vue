@@ -816,7 +816,7 @@ function planBadgeColor(plan) {
   const colors = {
     free: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
     basic: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-    pro: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
+    pro: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300',
     enterprise: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
   }
   return colors[plan] || colors.free
@@ -913,7 +913,7 @@ function printPage() {
 
         <!-- Getting Started -->
         <div v-if="activeTab === 'getting-started'" class="space-y-6">
-          <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white">
+          <div class="bg-gradient-to-r from-indigo-500 to-emerald-600 rounded-2xl p-8 text-white">
             <h2 class="text-2xl font-bold mb-2">
               {{ lang === 'ar' ? '\u0645\u0631\u062D\u0628\u0627\u064B \u0628\u0643 \u0641\u064A Seku' : 'Welcome to Seku' }}
             </h2>

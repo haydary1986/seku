@@ -12,7 +12,7 @@ const viewMode = ref('search') // 'search' | 'graph'
 
 const typeMeta = {
   ip: { label: 'نفس الخادم (IP)', color: '#0ea5e9', icon: 'M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01' },
-  nameserver: { label: 'نفس Name Server', color: '#8b5cf6', icon: 'M21 12a9 9 0 11-18 0 9 9 0 0118 0zM3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 010 18M12 3a15 15 0 000 18' },
+  nameserver: { label: 'نفس Name Server', color: '#06b6d4', icon: 'M21 12a9 9 0 11-18 0 9 9 0 0118 0zM3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 010 18M12 3a15 15 0 000 18' },
   mail: { label: 'نفس خادم البريد', color: '#f59e0b', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
   email: { label: 'نفس الإيميل', color: '#ef4444', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
 }
@@ -103,7 +103,7 @@ async function initGraph() {
       { selector: 'node[kind="site"]', style: { 'background-color': '#059669', label: 'data(label)', 'font-size': 7, width: 14, height: 14, color: '#475569', 'text-valign': 'bottom', 'text-margin-y': 2, 'min-zoomed-font-size': 7 } },
       { selector: 'node[kind!="site"]', style: { label: 'data(label)', 'font-size': 8, color: '#fff', 'text-outline-color': '#0f172a', 'text-outline-width': 1, 'text-valign': 'center', width: 'mapData(degree, 2, 12, 28, 66)', height: 'mapData(degree, 2, 12, 28, 66)', 'min-zoomed-font-size': 8 } },
       { selector: 'node[kind="ip"]', style: { 'background-color': '#0ea5e9', shape: 'round-rectangle' } },
-      { selector: 'node[kind="nameserver"]', style: { 'background-color': '#8b5cf6', shape: 'diamond' } },
+      { selector: 'node[kind="nameserver"]', style: { 'background-color': '#06b6d4', shape: 'diamond' } },
       { selector: 'node[kind="mail"]', style: { 'background-color': '#f59e0b', shape: 'hexagon' } },
       { selector: 'node[kind="email"]', style: { 'background-color': '#ef4444', shape: 'triangle' } },
       { selector: 'edge', style: { width: 1, 'line-color': '#cbd5e1', 'curve-style': 'bezier' } },
@@ -188,7 +188,7 @@ onUnmounted(() => cy && cy.destroy())
       <div class="flex flex-wrap items-center gap-3 mb-2 text-xs text-gray-600">
         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:#059669"></span> موقع</span>
         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5" style="background:#0ea5e9"></span> IP</span>
-        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rotate-45" style="background:#8b5cf6"></span> Name Server</span>
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rotate-45" style="background:#06b6d4"></span> Name Server</span>
         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5" style="background:#f59e0b"></span> خادم بريد</span>
         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5" style="background:#ef4444"></span> إيميل</span>
         <button @click="relayout" class="mr-auto px-2 py-1 border border-gray-300 rounded hover:bg-gray-50">إعادة الترتيب</button>

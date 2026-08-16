@@ -65,7 +65,7 @@ const historyChartData = computed(() => {
       label: 'Score',
       data: scoreHistory.value.map(p => Math.round(p.score)),
       borderColor: 'rgb(99, 102, 241)',
-      backgroundColor: 'rgba(99, 102, 241, 0.1)',
+      backgroundColor: 'rgba(16, 185, 129, 0.1)',
       pointBackgroundColor: 'rgb(99, 102, 241)',
       pointRadius: 4,
       pointHoverRadius: 6,
@@ -312,7 +312,7 @@ const radarData = computed(() => {
     datasets: [{
       label: 'Score',
       data: scores,
-      backgroundColor: 'rgba(99, 102, 241, 0.2)',
+      backgroundColor: 'rgba(16, 185, 129, 0.2)',
       borderColor: 'rgb(99, 102, 241)',
       pointBackgroundColor: 'rgb(99, 102, 241)',
     }],
@@ -728,7 +728,7 @@ onMounted(async () => {
               {{ csvLoading ? 'Exporting...' : 'CSV Export' }}
             </button>
             <button @click="runAIAnalysis" :disabled="aiLoading"
-              class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2 text-sm">
+              class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2 text-sm">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
               </svg>
@@ -779,15 +779,15 @@ onMounted(async () => {
       <!-- AI Analysis Panel -->
       <div v-if="showAI" class="card p-6 mb-6">
         <div class="flex items-center gap-2 mb-4">
-          <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
           </svg>
-          <h3 class="text-lg font-semibold text-purple-900 dark:text-purple-300">AI Security Analysis</h3>
-          <span v-if="aiAnalysis" class="text-xs text-purple-500 dark:text-purple-400">({{ aiAnalysis.provider }})</span>
+          <h3 class="text-lg font-semibold text-emerald-900 dark:text-emerald-300">AI Security Analysis</h3>
+          <span v-if="aiAnalysis" class="text-xs text-emerald-500 dark:text-emerald-400">({{ aiAnalysis.provider }})</span>
         </div>
         <div v-if="aiLoading" class="flex items-center justify-center py-10">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 ml-3"></div>
-          <span class="text-purple-600 dark:text-purple-400">AI is analyzing the scan results...</span>
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 ml-3"></div>
+          <span class="text-emerald-600 dark:text-emerald-400">AI is analyzing the scan results...</span>
         </div>
         <div v-else-if="aiAnalysis?.analysis" class="prose prose-sm max-w-none text-slate-800 dark:text-slate-200 whitespace-pre-wrap" dir="ltr" style="text-align: left;">
           {{ aiAnalysis.analysis }}
@@ -912,7 +912,7 @@ onMounted(async () => {
             <!-- CVE badges -->
             <div v-if="suggestion.cves && suggestion.cves.length" class="flex flex-wrap gap-1.5 mb-3">
               <span v-for="cve in suggestion.cves" :key="cve"
-                class="px-2 py-0.5 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded text-xs font-mono">
+                class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded text-xs font-mono">
                 {{ cve }}
               </span>
             </div>
@@ -1098,7 +1098,7 @@ onMounted(async () => {
                     <span class="sev" :class="'sev-' + (check.severity || 'info')">
                       {{ check.severity }}
                     </span>
-                    <span v-if="check.owasp" class="px-2 py-0.5 bg-purple-500/15 text-purple-600 dark:text-purple-400 rounded text-xs font-mono">{{ check.owasp }}</span>
+                    <span v-if="check.owasp" class="px-2 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 rounded text-xs font-mono">{{ check.owasp }}</span>
                     <span v-if="check.cwe" class="px-2 py-0.5 bg-sky-500/15 text-sky-600 dark:text-sky-400 rounded text-xs font-mono">{{ check.cwe }}</span>
                     <span v-if="check.cvss_score > 0" :class="[getCVSSClass(check.cvss_rating), 'px-2 py-0.5 rounded text-xs font-mono']">
                       CVSS {{ check.cvss_score }}
@@ -1229,7 +1229,7 @@ onMounted(async () => {
                               <span v-if="sub.ips.length > 2" class="text-slate-400 dark:text-slate-500">+{{ sub.ips.length - 2 }}</span>
                             </div>
                           </td>
-                          <td class="py-2 px-2 font-mono text-[10px] text-purple-700 dark:text-purple-400" dir="ltr">{{ sub.cname || '—' }}</td>
+                          <td class="py-2 px-2 font-mono text-[10px] text-emerald-700 dark:text-emerald-400" dir="ltr">{{ sub.cname || '—' }}</td>
                         </tr>
                       </tbody>
                     </table>

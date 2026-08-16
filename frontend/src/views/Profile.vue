@@ -172,7 +172,7 @@ onMounted(loadProfile)
           <div>
             <span class="text-gray-500">{{ t('vProfile.plan') }}</span>
             <span :class="['mr-2 px-2 py-0.5 rounded-full text-xs font-medium',
-              org.plan === 'enterprise' ? 'bg-purple-100 text-purple-700' :
+              org.plan === 'enterprise' ? 'bg-emerald-100 text-emerald-700' :
               org.plan === 'pro' ? 'bg-indigo-100 text-indigo-700' :
               org.plan === 'basic' ? 'bg-blue-100 text-blue-700' :
               'bg-gray-100 text-gray-700']">

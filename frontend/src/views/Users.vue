@@ -139,7 +139,7 @@ onMounted(loadUsers)
             <td class="py-3 px-4 text-gray-700">{{ u.full_name || '-' }}</td>
             <td class="py-3 px-4 text-gray-500">{{ u.email || '-' }}</td>
             <td class="py-3 px-4 text-center">
-              <span :class="['px-2 py-1 rounded-full text-xs font-medium', u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700']">
+              <span :class="['px-2 py-1 rounded-full text-xs font-medium', u.role === 'admin' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700']">
                 {{ u.role }}
               </span>
             </td>

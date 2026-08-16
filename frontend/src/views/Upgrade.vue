@@ -47,7 +47,7 @@ const plans = [
     targets: 100,
     scans: 200,
     categories: 17,
-    color: 'from-indigo-500 to-purple-600',
+    color: 'from-indigo-500 to-emerald-600',
     border: 'border-indigo-500/50',
     bg: 'bg-indigo-500/10',
     popular: true,
@@ -199,7 +199,7 @@ onMounted(async () => {
           @click="plan.key !== org?.plan && !hasPending && selectPlan(plan)"
         >
           <!-- Popular badge -->
-          <div v-if="plan.popular" class="absolute -top-3 right-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+          <div v-if="plan.popular" class="absolute -top-3 right-4 bg-gradient-to-r from-indigo-500 to-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full">
             الأكثر طلباً
           </div>
 

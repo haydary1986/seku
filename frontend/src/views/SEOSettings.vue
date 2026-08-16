@@ -284,7 +284,7 @@ onMounted(load)
           <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
             <p class="text-xs text-gray-500 mb-2 font-semibold">معاينة Facebook / WhatsApp:</p>
             <div class="bg-white rounded-lg overflow-hidden border border-gray-300 max-w-md">
-              <div class="bg-gradient-to-br from-indigo-500 to-purple-600 h-32 flex items-center justify-center text-white text-sm">
+              <div class="bg-gradient-to-br from-indigo-500 to-emerald-600 h-32 flex items-center justify-center text-white text-sm">
                 <span v-if="!seo.og_image">صورة OG ستظهر هنا</span>
                 <img v-else :src="seo.og_image" alt="OG" class="w-full h-full object-cover" @error="$event.target.style.display='none'" />
               </div>
