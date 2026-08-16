@@ -42,6 +42,7 @@ const scanForm = ref({
   enable_oob: false,
   enable_dalfox: false,
   enable_ffuf: false,
+  enable_nuclei_dast: false,
   authorized: false,
   auth_cookie: '',
   auth_header: '',
@@ -84,6 +85,7 @@ async function runScan() {
       enable_oob: scanForm.value.enable_oob,
       enable_dalfox: scanForm.value.enable_dalfox,
       enable_ffuf: scanForm.value.enable_ffuf,
+      enable_nuclei_dast: scanForm.value.enable_nuclei_dast,
       authorized: scanForm.value.authorized,
       auth_cookie: scanForm.value.auth_cookie,
       auth_header: scanForm.value.auth_header,
@@ -91,7 +93,7 @@ async function runScan() {
     }
     await startScan(payload)
     showStartForm.value = false
-    scanForm.value = { name: '', target_ids: [], selectAll: true, policy: 'standard', enable_login: false, enable_nuclei: false, enable_crawl: false, enable_oob: false, enable_dalfox: false, enable_ffuf: false, authorized: false, auth_cookie: '', auth_header: '', auth_cookie_b: '' }
+    scanForm.value = { name: '', target_ids: [], selectAll: true, policy: 'standard', enable_login: false, enable_nuclei: false, enable_crawl: false, enable_oob: false, enable_dalfox: false, enable_ffuf: false, enable_nuclei_dast: false, authorized: false, auth_cookie: '', auth_header: '', auth_cookie_b: '' }
     await loadData()
   } catch (e) {
     if (e.response?.status === 402) {
@@ -416,8 +418,12 @@ onMounted(() => {
               <input type="checkbox" v-model="scanForm.enable_ffuf" class="rounded border-gray-300 text-indigo-600" />
               {{ t('vScans.checkFfuf') }}
             </label>
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" v-model="scanForm.enable_nuclei_dast" class="rounded border-gray-300 text-indigo-600" />
+              {{ t('vScans.checkDast') }}
+            </label>
           </div>
-          <label v-if="scanForm.enable_login || scanForm.enable_oob" class="mt-3 flex items-start gap-2 text-xs text-gray-700">
+          <label v-if="scanForm.enable_login || scanForm.enable_oob || scanForm.enable_nuclei_dast" class="mt-3 flex items-start gap-2 text-xs text-gray-700">
             <input type="checkbox" v-model="scanForm.authorized" class="mt-0.5 rounded border-gray-300 text-red-600" />
             <span>{{ t('vScans.authConfirm') }}</span>
           </label>
