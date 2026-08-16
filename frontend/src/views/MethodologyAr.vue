@@ -170,28 +170,6 @@ onMounted(async () => {
 <template>
   <div class="public-shell" dir="rtl">
 
-    <!-- Top Navigation Bar -->
-    <nav class="glass border-b border-gray-200 dark:border-white/10 sticky top-0 z-50">
-      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-14">
-          <router-link to="/" class="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-            <span class="text-sm font-medium">الصفحة الرئيسية</span>
-          </router-link>
-          <div class="flex items-center gap-3">
-            <router-link to="/methodology" class="text-sm text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-              English
-            </router-link>
-            <router-link to="/login" class="px-4 py-1.5 bg-accent-grad glow-accent text-white text-sm font-medium rounded-lg hover:opacity-90 transition-colors">
-              تسجيل الدخول
-            </router-link>
-          </div>
-        </div>
-      </div>
-    </nav>
-
     <!-- Header Banner -->
     <header class="text-white ring-grid">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">

@@ -183,7 +183,7 @@ function logout() {
   <Toast />
 
   <!-- Public pages - no sidebar. Marketing pages get a shared PublicHeader menu. -->
-  <div v-if="route.meta?.public" class="min-h-screen bg-white">
+  <div v-if="route.meta?.public" class="min-h-screen bg-slate-950">
     <PublicHeader v-if="showPublicHeader" />
     <router-view />
   </div>
