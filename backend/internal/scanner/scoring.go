@@ -203,6 +203,55 @@ func penaltyFor(sev string) float64 {
 	}
 }
 
+// NormalizeSeverities aligns each check's displayed Severity (and CVSS metrics
+// for mapped security checks) with the finding's CANONICAL impact, so reports are
+// credible to a security professional:
+//
+//   - a security check that has a CVSS mapping adopts that rating — a missing HSTS
+//     header is Medium (CVSS 6.1), not "critical" merely because the check
+//     hard-fails to a low score;
+//   - quality/SEO/informational categories (sevNone) never display above "low" —
+//     a robots.txt or structured-data nit is not a security finding;
+//   - passing / informational checks display as "info".
+//
+// Because ComputeScores derives penalties from Severity, this ALSO makes the
+// score impact-accurate. The function mutates the slice in place (matching the
+// surrounding OWASP/CVSS/confidence enrichment loops) and is idempotent, so it is
+// safe to run on both fresh scans and stored results during a recompute.
+func NormalizeSeverities(checks []models.CheckResult) {
+	for i := range checks {
+		normalizeSeverity(&checks[i])
+	}
+}
+
+func normalizeSeverity(c *models.CheckResult) {
+	// Quality/SEO/informational categories are not security findings; cap their
+	// displayed severity so they can never read as high/critical.
+	if s, ok := categorySeverity[c.Category]; ok && s == sevNone {
+		switch c.Status {
+		case "fail", "warn":
+			if severityRank(c.Severity) > severityRank("low") {
+				c.Severity = "low"
+			}
+		default:
+			c.Severity = "info"
+		}
+		return
+	}
+	// Security checks with a canonical CVSS mapping adopt it (fail only, matching
+	// where CVSS metrics are enriched). The CVSS map is authoritative for these.
+	if c.Status == "fail" {
+		if m := GetCVSSMapping(c.CheckName); m != nil {
+			c.CVSSScore = m.Score
+			c.CVSSVector = m.Vector
+			c.CVSSRating = m.Rating
+			if m.Rating != "" {
+				c.Severity = strings.ToLower(m.Rating)
+			}
+		}
+	}
+}
+
 // ComputeScores applies the scientific methodology to a set of checks. It is a
 // pure function (no I/O) so it is fully unit-testable.
 func ComputeScores(checks []models.CheckResult) ScoreResult {

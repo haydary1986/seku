@@ -720,6 +720,18 @@ func RecomputeAllScores(c *fiber.Ctx) error {
 		if len(checks) == 0 {
 			continue
 		}
+		// Align stored per-check severities/CVSS with canonical impact BEFORE
+		// scoring, and persist them so existing reports display accurately too
+		// (a missing HSTS shows Medium, SEO nits show Low — not "critical").
+		scanner.NormalizeSeverities(checks)
+		for j := range checks {
+			config.DB.Model(&models.CheckResult{}).Where("id = ?", checks[j].ID).Updates(map[string]interface{}{
+				"severity":    checks[j].Severity,
+				"cvss_score":  checks[j].CVSSScore,
+				"cvss_vector": checks[j].CVSSVector,
+				"cvss_rating": checks[j].CVSSRating,
+			})
+		}
 		sr := scanner.ComputeScores(checks)
 		grade := scanner.SecurityGrade(sr.Security)
 		config.DB.Model(&models.ScanResult{}).Where("id = ?", results[i].ID).Updates(map[string]interface{}{

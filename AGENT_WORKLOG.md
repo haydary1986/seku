@@ -256,4 +256,120 @@ SEKU_NUCLEI_MAX_RESULTS=100
 - للأشمل يدوياً: `SEKU_FFUF_WORDLIST=/app/wordlists/content-large.txt` أو `SEKU_LOGIN_PASS_FILE` لقائمة أكبر (مع رفع `SEKU_LOGIN_MAX_ATTEMPTS`).
 - القوائم المضمّنة الأصلية (95/180/130) تبقى fallback محلي.
 
-**الحصيلة النهائية:** 43 فاحص + ووردلست شاملة + `build/vet/test = 0`. لسّه ما نشرت.
+**الحصيلة النهائية:** 43 فاحص + ووردلست شاملة + `build/vet/test = 0`.
+
+---
+
+## 🚀 النشر (2026-08-12) — ✅ حي
+- Commit `15c0b8f` (الميزات) + `438cfc1` (إصلاح Docker) → push إلى `haydary1986/seku:main`.
+- **فشل أول محاولة:** `nuclei v3.11.1 يتطلّب Go ≥ 1.26` بينما `nuclei-builder` كان `golang:1.25-alpine`.
+  **الإصلاح:** رفعت مرحلة بناء الأدوات إلى `golang:alpine` (أحدث Go)، مستقلة عن backend-builder (يبقى 1.25، مطابق go.mod).
+- إعادة النشر الثانية عبر Coolify API (`GET /deploy?uuid=ivmp7lm9ufgqwjvl0vjvkp0q&force=true`) → **finished** خلال ~3 دقائق.
+- **تحقق حي:** `https://sec.erticaz.com/` = 200، `/health` = 200، المسار الجديد `/api/tools/nuclei` = 401 (موجود، admin-gated).
+
+> **درس للمستقبل:** أدوات ProjectDiscovery الحديثة تتطلّب Go جديد — أبقِ `nuclei-builder` على `golang:alpine`.
+> **تشغيل الميزات:** الفحوص الفعّالة تبقى مطفأة حتى تفعّلها (مفاتيح Advanced per-scan بالواجهة، أو متغيّرات `SEKU_ENABLE_*` بـ Coolify). أداة nuclei المخصّصة: سجّل دخول admin → `/tools/nuclei`.
+
+### 🐞 إصلاح: «No nuclei template matched» (2026-08-12)
+- **السبب:** خطوة `nuclei -update-templates -disable-update-check` بالبناء طبعت البانر وخلصت بـ 0.3s **بلا تنزيل** → مجلد قوالب فارغ → صفر تطابق دائماً.
+- **الإصلاح (commit `3cd18bc`):** `git clone --depth 1` لمستودع `nuclei-templates` مباشرة (بلا `|| true` حتى ما يشحن فارغاً بصمت) + `ENV SEKU_NUCLEI_TEMPLATES_DIR=/root/nuclei-templates`.
+- **تحقق حيّ داخل الحاوية:** `template_yaml_files=13,530` · nuclei/dalfox/ffuf/katana موجودة · wordlists content=4751 pass=10000 users=845. ✅
+
+---
+
+## 🔧 إصلاحات المشاكل (2026-08-12) — ✅ حي
+1. **سقف الوقت لكل فاحص:** كان `const scannerTimeout = 60s` يبتر الفواحص الثقيلة → صار `var` من `SEKU_SCANNER_TIMEOUT` (افتراضي 240s).
+2. **بيانات الداشبورد الحقيقية:** `Dashboard.vue` كان يفبرك أرقام الأصناف → صار يستعمل `category_averages` الحقيقية من `/dashboard/enhanced`.
+3. **Triage للنتائج:** `TriageStatus/TriageNote` بـ `CheckResult` + `PUT /results/checks/:id/triage` (org-scoped) + قائمة بالواجهة. الحالة v1 مرتبطة بصف الفحص.
+- النظام أصلاً عنده SARIF + GitHub/Jira issues + compliance + remediation. الفجوة الكبرى الباقية: **الفحص المُصادَق** (لاحقاً).
+
+---
+
+## 💳 تحوّل SaaS: دفع لكل فحص عميق (2026-08-15) — ✅ منشور
+
+**القرار (بموافقة المستخدم عبر AskUserQuestion):** الفحص الخفيف مجاني للجميع، الفحص العميق مدفوع **لكل فحص/نطاق** عبر **حوالة داخلية يدوية**. تم إلغاء طبقات الدولار الست (كانت وهمية)؛ بقي نموذجان: مجاني (خفيف) + عميق بالدفع. السعر الافتراضي **25,000 د.ع** (قابل للتعديل من الإعدادات).
+
+**كان موجوداً أصلاً (~70%):** تسجيل عام، منظمات/خطط، تحقق دومين بـ TXT، طلبات ترقية بموافقة أدمن، حدود خطة بـ StartScan، والأدمن يتجاوز التحقق.
+
+**المُضاف:**
+- **تحقق بالملف:** `verification.go` صار يجرّب DNS TXT ثم يجيب `https://<domain>/.well-known/seku-verify.txt` (fallback http) ويطابق `vscan-verify=<key>`. حقل `Method` بالنموذج (dns_txt|file). واجهة `Targets.vue` فيها تبويبان (TXT / رفع ملف).
+- **نموذج `DeepScanOrder`** (pending→paid→used|rejected) + `orders.go`: إنشاء طلب، إرسال رقم الحوالة، قائمة طلباتي؛ وللأدمن قائمة الكل + تأكيد/رفض. مسارات `/orders*` و `/orders/all` (أدمن).
+- **قفل الربح في `StartScan`:** `isDeep = policy==deep || أي أداة نشطة`. غير الأدمن يحتاج **رصيد مدفوع لكل نطاق** (402 يتطلب دفع) ويُستهلك عند التشغيل. السقف الشهري المجاني يطبّق على الخفيف فقط.
+- **إعدادات دفع للأدمن** (Settings): `deep_scan_price_iqd`, `payment_method`, `payment_account`, `payment_instructions_ar/en` — لا أسرار بالكود. نقطة عامة `/pricing` (السعر فقط) لصفحة الأسعار.
+- **حدود الخطة المجانية رُفعت:** 25 نطاق · 100 فحص خفيف/شهر (بدل 1/5).
+- **واجهات:** `Orders.vue` (شراء+دفع للمستخدم)، `AdminOrders.vue` (تأكيد الحوالات)، شارة «مدفوع» على بطاقة الفحص العميق + معالجة 402 مع رابط للطلبات، `Pricing.vue` أُعيدت كطبقتين + «كيف يعمل» + FAQ، بند تنقّل `nav.orders` (يوجّه المستخدم لـ /orders والأدمن لـ /admin/orders).
+
+**تدفّق العميل:** تسجيل → إضافة نطاق → توثيق (TXT/ملف) → طلب فحص عميق → حوالة → إدخال رقم الإشعار → تأكيد الأدمن → تشغيل الفحص العميق.
+
+**قبله (نفس اليوم):** إصلاح الجلسة المنزلقة `/auth/refresh` (تجديد التوكن عند الفتح/كل 6 ساعات/عند الرجوع للتبويب) لإيقاف تسجيل الخروج المفاجئ.
+
+---
+
+## 🛡️ تحصين أمني وموثوقية عبر موجات (2026-08-15) — بعد تدقيق 5 وكلاء
+
+تدقيق متعدد الوكلاء (فحص/SaaS/بنية/أمان/UX) أنتج خارطة بأربع موجات. المُنفَّذ والمنشور:
+
+### الموجة 0 — أمان حرِج (✅ حيّ ومؤكّد)
+- **IDOR بين المنظمات**: كل نقاط `:id` (scans/results/pdf/sarif/csv/compliance/fix-priority/ai/compare/history/integrations) صارت مُقيّدة بالملكية عبر حرّاس `CanAccessJob/Result/Target/Check` في `middleware.go`. كان أي مستخدم يقرأ تقارير ثغرات أي منظمة.
+- **JWT**: `auth.go` يرفض الإقلاع بسرّ فارغ/افتراضي؛ `ws/hub.go` يفشل مغلقاً. ضُبط `JWT_SECRET` قوي في Coolify (أبطل التوكِنات القديمة).
+- **التفاف التحقق + SSRF**: `UpdateTarget` DTO بقائمة سماح (تغيير URL يُبطل التحقق)؛ `StartScan` يعيد مطابقة النطاق ويحظر العناوين الداخلية؛ `schedules.go` + `scheduler.go` بعزل تنظيمي وتحقّق؛ حزمة `internal/safehttp` (حظر loopback/private/link-local/metadata/CGNAT + rebinding + redirects) على تحقق الملف/webhooks/Jira.
+- **rate limiting**: `/auth/login`,`/auth/register` (10/د)، AI (20/د) — مؤكَّد حيّاً (429 بعد العاشرة).
+- **سباق الرصيد (TOCTOU)**: `consumeDeepScanCredits` معاملة ذرّية بتحديث شرطي — لا فحص عميق مجاني.
+- **SQLite WAL** + `busy_timeout` + اتصال كتابة واحد في `config/database.go`.
+
+### الموجة 1 — الثقة/الإيراد + الموثوقية (✅ حيّ)
+- **بريد معاملات** لأحداث الطلب (إنشاء/دفع/رفض) + تنبيه المشرف (`services.SendSimpleEmail`/`EmailShell`/`AdminNotifyEmail`).
+- **إصلاح الاستئناف**: حقول policy/tools على `ScanJob`؛ الاستئناف بنفس السياسة لا «deep» دائماً.
+- **إطفاء رشيق** في `cmd/main.go` (SIGTERM → ShutdownWithTimeout).
+- **سقف تزامن كلّي** `SEKU_MAX_CONCURRENT_SCANS=3` (semaphore في `RunScan`) لمنع OOM.
+- **رفع إثبات الحوالة** (`/orders/:id/proof`) + عرضه للمشرف.
+- مفاتيح API لكل المنظمات (أُزيل تعارض الطبقات)، تصحيح نصّ التسجيل.
+
+### الموجة 2 — قوة الفحص (✅ حيّ)
+- **GraphQLScanner** (`graphql_scanner.go`): كشف endpoints + علم introspection المفتوح.
+- **JWTScanner** (`jwt_scanner.go`): يلتقط JWT من الكوكيز/الرؤوس/الجسم؛ يكشف `alg:none` وHMAC ضعيف (crack بقائمة) وexp مفقود.
+- مُسجَّلان في deep (`graphql`, `jwt_security`).
+- ملاحظة: تفعيل nuclei أصلاً يشغّل كل القوالب (CVE/LFI/RCE...) بلا وسم؛ الفجوة المتبقية = fuzzing/DAST بالبارامترات المكتشفة (يعتمد على توصيل الزحف).
+
+### المتبقّي (كبير — يُنصَح به كأعمال لاحقة مركّزة)
+- **الفحص المُصادَق** (حقن جلسة) + **IDOR/BOLA تفاضلي** — L لكل منهما، أساس لتغطية ما خلف تسجيل الدخول.
+- **الموجة 3 (UX/نمو)**: توصيل i18n (2/31 صفحة تستعمل t())، إصلاح الوضع الداكن (27 صفحة)، نظام toast عام، onboarding، تقرير عام + شارة، فحص فوري على Landing، /docs عامة + GitHub Action، metrics/Postgres.
+
+### الموجة الكبيرة — الفحص المُصادَق + IDOR/BOLA (✅ منشورة، تحقّق حيّ قيد الإكمال)
+- **`ScanConfig`**: حقول `AuthCookie`/`AuthHeader`/`AuthCookieB` + `HasAuth`/`applyAuth`/`applyAuthB`/`authToolArgs`.
+- **حقن الجلسة** في katana (crawl) وnuclei عبر `-H` → الفحص يصل للصفحات خلف تسجيل الدخول.
+- **`AccessControlScanner`** (فئة `access_control`، ضمن deep): يزحف كالمستخدم أ ويجمع روابط الكائنات (مسارات فيها IDs)، ثم يعيد طلب كلٍّ كالمستخدم ب (أو مجهول) ويعلّم الاستجابات المتطابقة تقريباً كمرشّح IDOR/BOLA (ثقة متوسطة + «تحقّق يدوياً»). يخدم مباشرة متطلّب بوابات ERPNext الأربع.
+- الحقول تُمرَّر عبر `StartScanRequest → ScanConfig`، وتُحفظ على `ScanJob`، وتُستعاد عند الاستئناف.
+- واجهة `Scans.vue`: حقول الفحص المُصادَق (كوكي الجلسة، رأس إضافي، جلسة مستخدم ثانٍ لـ IDOR).
+
+**كيفية الاستخدام:** فحص عميق + الصق كوكي جلسة صالحة (من DevTools) في «فحص مُصادَق». لفحص IDOR: أضف كوكي حساب ثانٍ على نفس النظام.
+
+### المتبقّي (الموجة 3 — UX/نمو، لاحقاً بطلب المستخدم)
+توصيل i18n، الوضع الداكن، toast، onboarding، تقرير عام + شارة، فحص فوري على Landing، /docs عامة، metrics.
+
+### الموجة 3 — UX/نمو (دفعات، ✅ منشورة)
+**3.1 تقرير عام + شارة:**
+- `ScanResult.ShareToken` (اختياري)؛ `POST/DELETE /results/:id/share` (org-scoped).
+- عام `GET /public/report/:token` = ملخّص مُنقّى (درجة/تقدير/عدّ الخطورة/فئات pass-fail) بلا تفاصيل حسّاسة.
+- عام `GET /public/badge/:token` = شارة SVG قابلة للتضمين ملوّنة حسب التقدير.
+- واجهة: صفحة `/r/:token` عامة (بعلامة سيكو + CTA)، وزر «مشاركة عامة» في ResultDetail مع رابط ونسخ كود التضمين.
+
+**3.2 نظام toast عام + /docs عامة:**
+- `useToast` composable + `Toast.vue` مُركّب في App.vue (teleport، auto-dismiss، success/error/info).
+- رُبط بمشاركة/نسخ ResultDetail كأول متبنّي (بدل alert()).
+- `/docs` صارت عامة (تبنّي المطورين + SEO).
+
+**متبقٍّ من الموجة 3 (دفعات لاحقة):** توصيل i18n الكامل (تحويل نصوص 31 صفحة إلى t())، الوضع الداكن عبر كل الصفحات، onboarding/جولة أولى، فحص فوري + تقرير عيّنة على Landing، MS Teams، skeletons، الوصولية. — أعمال ميكانيكية كبيرة عبر ملفات كثيرة، تُنفَّذ تدريجياً.
+
+### الموجة 3 — دفعات UX/نمو عبر وكلاء متوازين (✅ منشورة) — الوضع الداكن مُستثنى بطلب المستخدم
+**الدفعة A — توصيل i18n (6 وكلاء متوازين):** حوّلت 10 صفحات مواجهة للعميل إلى `t()` (Login, Register, Dashboard, Scans, ScanDetail, Targets, Orders, AdminOrders, Profile, Leaderboard) — **337 مفتاح** بمساحات per-view. كل وكيل عدّل صفحاته + كتب ملف شذرة، ودُمجت مركزياً في ar.json/en.json (سكربت `merge_i18n.js`). زر اللغة الآن يبدّل هذه الصفحات فعلياً.
+**الدفعة B — 3 وكلاء:** (1) تنبيهات **MS Teams** (MessageCard عبر postJSON المحمي + validTypes + Webhooks.vue). (2) **onboarding**: `OnboardingChecklist.vue` (أضف نطاق ← وثّق ← افحص ← اطّلع) على الداشبورد، قابل للإخفاء ويختفي عند الاكتمال + حالات فارغة أفضل في Targets/Scans. (3) **إعادة فحص بنقرة** في ResultDetail.
+**الدفعة C — الفحص الفوري على Landing:** نقطة عامة `POST /public/quickscan` (بلا مصادقة، محمية SSRF، rate-limit 3/دقيقة، بلا حفظ) تشغّل فواحص سريعة وترجع درجة/تقدير/ملخّص؛ وصندوق «افحص موقعك الآن» في Landing يعرض بطاقة نتيجة تشويقية + دعوة تسجيل.
+
+**ملاحظة تقنية:** مفاتيح onboarding في ملف شذرة يستورده المكوّن مباشرة (index.js كان خارج نطاق الوكيل) — يعمل؛ يمكن لاحقاً دمجه في القواميس للتوحيد.
+
+### إصلاح واجهة + عطل نشر (2026-08-16)
+- **إعادة تنظيم التنقّل** في لوحة التحكم بمجموعات (الرئيسية/التحليل/الأتمتة/الإدارة/الحساب) + **شريط علوي موحّد** (عنوان من الراوتر + ثيم/لغة + قائمة مستخدم)، وإزالة العناوين المكرّرة من 23 صفحة (عبر 6 وكلاء).
+- **تصفّح وأنت مسجّل** مسموح (أُزيل تحويل landing→dashboard القسري) + زر «لوحتي».
+- **هيدر عام موحّد `PublicHeader`** لكل الصفحات العامة (Landing/Pricing/Methodology/Docs/Downloads) — أُزيلت قائمة Landing الخاصة فصار الجميع على قائمة واحدة.
+- 🔴 **عطل نشر مهم اكتُشف وحُلّ:** كان Cloudflare يخزّن **404 لأصل الـJS** إذا وصله طلب أثناء لحظة تبديل حاوية Coolify (cf-cache-status: HIT على 404) → الـSPA لا يُحمّل والموقع يبدو «قديم/بلا قائمة». الحل الفوري: تغيير بصمة الحزمة (build stamp في main.js) → اسم أصل جديد لا يوجد له 404 مخزّن. **درس دائم:** بعد كل نشر، إمّا تفريغ كاش Cloudflare أو قاعدة تمنع تخزين 4xx لملفات `/assets`، أو انتظار جاهزية الحاوية قبل توجيه الترافيك.

@@ -1,0 +1,127 @@
+﻿Category,Check Name,Status,Score,Severity,Confidence,OWASP,CWE,Details
+advanced_security,Cross-Origin-Embedder-Policy,warn,500,low,80,A01:2021,CWE-346,"Cross-Origin-Embedder-Policy header is missing (optional advanced header, not practical for sites using external resources)"
+advanced_security,Cross-Origin-Opener-Policy,warn,800,low,80,A01:2021,CWE-346,"COOP set to same-origin-allow-popups (good isolation, allows popups)"
+advanced_security,Cross-Origin-Resource-Policy,warn,850,low,80,A01:2021,CWE-346,CORP set to same-site (good restriction)
+advanced_security,OCSP Stapling,pass,1000,info,90,A02:2021,CWE-299,OCSP Stapling is enabled
+backup_files,Backup & Sensitive Files Exposure,pass,1000,info,80,A05,CWE-538,
+cms_cve,Wordpress unknown — Known CVEs,pass,950,info,80,,,
+content,Cache Headers,warn,550,medium,100,,CWE-16,Minimal caching: Cache-Control with max-age=600
+content,Compression Ratio,pass,1000,info,85,,CWE-16,"Compression ratio: 0.18 (82.2% savings, br encoding, compressed: 55756 bytes, uncompressed: 313753 bytes)"
+content,Page Size,warn,705,low,100,,CWE-16,Page size: 306.4 KB (score: 705/1000)
+cookies,Cookie Security,pass,1000,info,100,A01:2021,CWE-614,No cookies set on initial response
+cors,CORS Credentials,pass,1000,info,100,A01:2021,CWE-942,CORS credentials configuration is secure
+cors,CORS Wildcard Origin,pass,1000,info,100,A01:2021,CWE-942,No CORS header exposed to foreign origins
+ddos,CDN/DDoS Protection Service,pass,1000,info,85,A05:2021,CWE-770,DDoS protection detected: Cloudflare
+ddos,Rate Limiting,warn,250,high,70,A04:2021,CWE-770,No rate limiting headers detected (may still be configured server-side)
+ddos,Web Application Firewall (WAF),pass,1000,info,75,A05:2021,CWE-693,Web Application Firewall detected
+directory,Admin Panel Exposure,pass,850,info,80,A01:2021,CWE-425,"WordPress admin panel detected — this is standard CMS behavior, not a vulnerability. Protected by authentication."
+directory,Backup Directory Exposure,pass,1000,info,85,A05:2021,CWE-538,Path not found
+directory,Environment File Exposure,pass,900,info,85,A05:2021,CWE-538,Path blocked by WAF/CDN (403): /.env - well protected
+directory,Git Repository Exposure,pass,900,info,85,A01:2021,CWE-538,Path blocked by WAF/CDN (403): /.git/config - well protected
+directory,Htaccess File Exposure,pass,900,info,85,A05:2021,CWE-538,Path blocked by WAF/CDN (403): /.htaccess - well protected
+directory,PHP Info Exposure,pass,1000,info,90,A05:2021,CWE-538,Path not found
+directory,Robots.txt Exposure,pass,875,info,100,A05:2021,CWE-538,robots.txt found with disallow rules - review for sensitive path disclosure
+directory,Server Status Exposure,pass,1000,info,90,A05:2021,CWE-538,Path not found
+directory,WordPress Config Backup,pass,900,info,85,A05:2021,CWE-538,Path blocked by WAF/CDN (403): /wp-config.php.bak - well protected
+dns,CAA Record (Certificate Authority),pass,925,info,90,A02:2021,CWE-295,Domain uses Cloudflare DNS which provides automatic CAA management and certificate issuance control
+dns,DMARC Record (Email Security),pass,1000,info,100,A07:2021,CWE-290,DMARC record found
+dns,SPF Record (Email Security),pass,1000,info,100,A07:2021,CWE-290,SPF record found
+email_security,BIMI Record,warn,500,low,100,,,No BIMI record found
+email_security,DKIM Record,pass,1000,info,100,A05:2021,CWE-290,DKIM record found
+email_security,Email Security Score,warn,750,low,95,A05:2021,CWE-290,"Email security: 3/4 components configured (SPF, DKIM, DMARC, BIMI)"
+headers,Content Security Policy,pass,1000,info,100,A03:2021,CWE-79,CSP present with specific sources and no unsafe directives
+headers,HSTS,pass,1000,info,100,A05:2021,CWE-523,"HSTS fully configured with max-age >= 1 year, includeSubDomains, and preload"
+headers,Permissions-Policy,pass,1000,info,100,A01:2021,CWE-250,Permissions-Policy present with restrictive settings
+headers,Referrer-Policy,pass,1000,info,100,A01:2021,CWE-200,Referrer-Policy set to no-referrer (most restrictive)
+headers,X-Content-Type-Options,pass,1000,info,100,A05:2021,CWE-16,X-Content-Type-Options correctly set to nosniff
+headers,X-Frame-Options,pass,900,info,100,A01:2021,CWE-1021,X-Frame-Options set to SAMEORIGIN
+headers,X-XSS-Protection,pass,1000,info,100,A03:2021,CWE-79,X-XSS-Protection enabled with mode=block
+hosting,Brotli Compression,pass,1000,info,100,,CWE-16,Compression: brotli (score: 1000/1000)
+hosting,DNS Resolution Time,pass,1000,info,60,,CWE-16,DNS resolution: 6ms (score: 1000/1000)
+hosting,HTTP/2 Support,pass,1000,info,100,,CWE-16,Negotiated protocol: h2 (score: 1000/1000)
+hosting,HTTP/3 (QUIC) Support,pass,1000,info,95,,CWE-16,HTTP/3 (QUIC) supported: true (score: 1000/1000)
+hosting,IPv6 Support,pass,1000,info,100,,CWE-16,IPv6 supported: true (score: 1000/1000)
+hosting,Keep-Alive,pass,1000,info,95,,CWE-16,Keep-Alive: Connection: keep-alive header present (score: 1000/1000)
+http_methods,Dangerous HTTP Methods,pass,1000,info,95,A05:2021,CWE-749,"Dangerous HTTP methods (TRACE, DELETE, PUT, PATCH) are properly disabled"
+http_methods,OPTIONS Method Disclosure,pass,925,info,100,A05:2021,CWE-749,OPTIONS response lists only safe methods
+info_disclosure,Error Page Information Disclosure,pass,1000,info,80,A05:2021,CWE-209,Error pages do not reveal sensitive information
+info_disclosure,Sensitive HTML Comments,pass,1000,info,85,A05:2021,CWE-615,No sensitive information found in HTML comments
+info_disclosure,Technology Version Disclosure,warn,550,medium,75,A05:2021,CWE-200,Technology versions are exposed in page source
+js_libraries,Inline Script Analysis,warn,500,medium,70,A03:2021,CWE-79,23 inline scripts found with dangerous patterns: innerHTML =
+js_libraries,Known Vulnerable Libraries,pass,1000,info,75,A06:2021,CWE-1104,No known vulnerable JavaScript libraries detected
+js_libraries,Outdated jQuery Detection,pass,1000,info,85,A06:2021,CWE-1104,jQuery not detected - site does not appear to use jQuery
+js_secrets,JavaScript Secrets,pass,1000,info,80,,,
+malware,Cryptocurrency Miner Detection,pass,1000,info,90,A03:2021,CWE-506,No cryptocurrency miners detected
+malware,Hidden Iframe Detection,pass,1000,info,80,A03:2021,CWE-829,No hidden or suspicious iframes detected
+malware,Malicious External Links,warn,500,medium,60,A03:2021,CWE-829,Suspicious external links found: 1
+malware,Malicious JavaScript Detection,pass,1000,info,75,A03:2021,CWE-94,No malicious JavaScript patterns detected
+malware,Malware Signature Detection,pass,1000,info,65,A03:2021,CWE-506,No malware signatures detected
+malware,Suspicious Redirect Detection,pass,1000,info,70,A01:2021,CWE-601,No suspicious redirects detected
+mixed_content,Insecure Form Actions,pass,1000,info,95,A02:2021,CWE-319,No insecure form actions detected
+mixed_content,Mixed Active Content (Scripts/CSS),pass,1000,info,90,A02:2021,CWE-319,No mixed active content (scripts/CSS) detected
+mixed_content,Mixed Passive Content (Images/Media),pass,1000,info,90,A02:2021,CWE-319,No mixed passive content detected
+open_redirect,Open Redirect Test,pass,1000,info,75,A01:2021,CWE-601,No open redirect detected across 14 parameters
+performance,Response Time,pass,1000,info,60,A05:2021,CWE-400,Response time: 76ms (score: 1000/1000)
+performance,TLS Handshake Time,pass,1000,info,60,A05:2021,CWE-400,TLS handshake: 21ms (score: 1000/1000)
+performance,Time to First Byte (TTFB),pass,1000,info,60,A05:2021,CWE-400,TTFB: 75ms (score: 1000/1000)
+ports,Open Port Detection,warn,500,medium,95,A05:2021,CWE-200,8 ports open (6 need attention)
+secrets,API Key Exposure,pass,1000,info,90,A05:2021,CWE-798,No API keys detected in page source
+secrets,Database Connection String Exposure,pass,1000,info,85,A05:2021,CWE-200,No database connection strings detected in page source
+secrets,Email/Password Exposure,pass,1000,info,80,A05:2021,CWE-312,No hardcoded passwords or leaked .env content detected
+secrets,Private Key Exposure,pass,1000,info,95,A05:2021,CWE-312,No private keys or certificate material detected in page source
+seo,Meta Tags Quality,warn,500,medium,100,,,
+seo,Mobile Friendliness,pass,1000,info,85,,,
+seo,Open Graph Tags,pass,1000,info,100,,,
+seo,Robots.txt Quality,pass,1000,info,100,,,
+seo,Sitemap Accessibility,warn,700,low,100,,,Sitemap found but returns redirect
+seo,Structured Data,pass,1000,info,95,,,Multiple JSON-LD structured data blocks found
+server_info,CMS Detection,warn,625,medium,70,A05:2021,CWE-200,CMS detected: Moodle
+server_info,Server Header Exposure,pass,900,info,95,A05:2021,CWE-200,Server header shows CDN/WAF proxy (origin server is hidden)
+server_info,X-Powered-By Exposure,pass,1000,info,100,A05:2021,CWE-200,X-Powered-By header is not exposed
+sqli,Blind SQL Injection Test,pass,1000,info,60,A03:2021,CWE-89,No blind SQL injection detected across 9 tests on 3 parameters
+sqli,Database Error Disclosure,pass,1000,info,85,A05:2021,CWE-209,No database error disclosure detected
+sqli,SQL Injection Test,pass,1000,info,70,A03:2021,CWE-89,No SQL injection detected in 21 tests
+ssl,Certificate Validity,pass,750,low,100,A02:2021,CWE-295,Certificate expires in 55 days
+ssl,HTTP to HTTPS Redirect,pass,1000,info,100,A02:2021,CWE-319,HTTP correctly redirects to HTTPS with 301 (permanent)
+ssl,HTTPS Enabled,pass,1000,info,100,A02:2021,CWE-319,HTTPS is available (2378ms)
+ssl,TLS Version,pass,1000,info,100,A02:2021,CWE-326,Excellent - using latest TLS version
+ssrf,SSRF Detection,pass,1000,info,65,A10:2021,CWE-918,No SSRF indicators detected across 22 tests
+subdomains,Common Subdomain Enumeration,pass,1000,info,70,A05:2021,CWE-16,Small attack surface: 1 subdomains discovered
+subdomains,Dangling DNS / Subdomain Takeover Risk,pass,1000,info,75,A05:2021,CWE-16,No dangerous CNAME records detected
+subdomains,Subdomain Scan: www.uoturath.edu.iq,pass,750,low,80,,,www.uoturath.edu.iq: 1 minor issue(s) found
+subdomains,Subdomain Security Check,pass,1000,info,90,A05:2021,CWE-16,All checked subdomains support HTTPS
+tech_stack,JavaScript Library Inventory,pass,1000,info,85,,,"1 JS libraries detected, none appear outdated"
+tech_stack,Server Technology Detection,pass,1000,info,85,,CWE-200,2 server technologies detected
+tech_stack,Web Framework Detection,pass,1000,info,85,,,"Detected frameworks: WordPress, Elementor"
+third_party,External CSS Count,pass,1000,info,100,A08:2021,CWE-829,Found 0 external stylesheet(s)
+third_party,External Script Count,pass,1000,info,100,A08:2021,CWE-829,Found 2 external script(s) from 2 unique domain(s)
+third_party,Subresource Integrity (SRI),warn,600,medium,100,A08:2021,CWE-353,1/2 external scripts have SRI (50%)
+third_party,Trusted Sources,pass,1000,info,80,A08:2021,CWE-829,2/2 scripts from trusted sources (100%)
+threat_intel,Blacklist Check,pass,1000,info,80,A07:2021,CWE-290,Not listed on any of 8 checked blacklists
+threat_intel,C2 Server Communication,pass,1000,info,80,A03:2021,CWE-506,No C2 communication indicators detected
+threat_intel,Cryptojacking Detection,pass,1000,info,80,A03:2021,CWE-506,No cryptojacking indicators detected
+threat_intel,Domain Reputation & Age,warn,700,low,80,A07:2021,CWE-290,Domain reputation score: 700/1000
+waf,WAF Detection,pass,1000,info,80,A05:2021,CWE-693,WAF detected: Cloudflare
+wordpress,WP Debug Mode,pass,1000,info,80,A05:2021,CWE-209,No debug indicators found - debug mode appears to be disabled
+wordpress,WP Login Page Exposure,warn,600,medium,80,A07:2021,CWE-307,"Login page is publicly accessible. Consider adding brute-force protection (Wordfence, Limit Login Attempts, or reCAPTCHA)"
+wordpress,WP REST API User Enumeration,pass,1000,info,80,A01:2021,CWE-200,User enumeration via REST API is blocked
+wordpress,WP Readme/License Exposure,pass,1000,info,80,A05:2021,CWE-200,readme.html and license.txt are not accessible
+wordpress,WP XML-RPC Exposure,pass,1000,info,80,A05:2021,CWE-749,XML-RPC endpoint is blocked or disabled
+wordpress,WordPress Version,warn,600,medium,80,A06:2021,CWE-1104,WordPress detected but version could not be determined (good: version is hidden)
+wp_deep,Default Admin Username Check,pass,950,info,80,,,
+wp_deep,No Security Plugin Detected,warn,400,medium,80,A05,CWE-1188,
+wp_deep,"Plugin Enumeration (5 plugins, 0 known CVEs)",pass,900,info,80,,,
+wp_deep,"Theme Enumeration (2 themes, 0 CVEs)",pass,900,info,80,,,
+wp_deep,User Enumeration Protection,pass,1000,info,80,,,
+wp_deep,WP Sensitive Files Exposed (1),warn,600,low,80,A05,CWE-200,
+wp_deep,wp-cron.php Accessible (low risk),pass,900,info,80,,,
+xss,Content-Type & X-XSS-Protection Headers,pass,1000,info,100,A03:2021,CWE-79,
+xss,DOM-Based XSS Indicators,warn,500,medium,70,A03:2021,CWE-79,Found 3 dangerous DOM sink pattern(s)
+xss,Input Sanitization Check,pass,1000,info,75,A03:2021,CWE-79,Tested 3 XSS payloads against homepage
+xss,Reflected XSS Detection,fail,50,critical,80,A03:2021,CWE-79,Tested 2 parameter(s) across 1 form(s)
+xss,URL Parameter Reflection Analysis,fail,100,critical,75,A03:2021,CWE-79,URL parameter reflection detected in 5 parameter(s)
+zone_transfer,DNS Zone Transfer,warn,500,medium,100,A05:2021,CWE-200,2 nameserver(s) have TCP/53 open — potential zone transfer risk
+
+Overall Score,490/1000,,,,,,
+Website,uoturath.edu.iq,,,,,,
+Scan Date,2026-07-17 23:00:22,,,,,,

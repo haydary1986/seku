@@ -101,6 +101,58 @@ func TestComputeScores_HighFailsPreserveVariance(t *testing.T) {
 	}
 }
 
+// NormalizeSeverities makes displayed severity credible: a mapped security check
+// adopts its canonical CVSS rating (HSTS = Medium, not "critical" from a low
+// score), a confirmed injection stays Critical, and SEO/quality nits are capped
+// to Low. Because scoring reads Severity, this also de-inflates penalties.
+func TestNormalizeSeverities_CanonicalImpact(t *testing.T) {
+	checks := []models.CheckResult{
+		// score-derived severity would be "critical" for all three fails:
+		chk("headers", "HSTS", "fail", 0, 100),                 // CVSS map → Medium
+		chk("sqli", "SQL Injection Test", "fail", 0, 90),       // CVSS map → Critical
+		chk("seo", "Robots.txt Quality", "fail", 0, 100),       // quality → capped Low
+		chk("content", "Cache Headers", "warn", 300, 80),       // quality → capped Low
+	}
+	if got := checks[0].Severity; got != "critical" {
+		// sanity: the pipeline starts from the (inflated) score-derived value
+		t.Logf("pre-normalize HSTS severity = %q", got)
+	}
+	NormalizeSeverities(checks)
+	want := map[string]string{
+		"HSTS":               "medium",
+		"SQL Injection Test": "critical",
+		"Robots.txt Quality": "low",
+		"Cache Headers":      "low",
+	}
+	for _, c := range checks {
+		if w, ok := want[c.CheckName]; ok && c.Severity != w {
+			t.Errorf("%s: severity = %q, want %q", c.CheckName, c.Severity, w)
+		}
+	}
+	// HSTS must also carry its CVSS metrics after normalization.
+	if checks[0].CVSSScore == 0 || checks[0].CVSSVector == "" {
+		t.Errorf("HSTS should be CVSS-enriched, got score=%.1f vector=%q", checks[0].CVSSScore, checks[0].CVSSVector)
+	}
+}
+
+// De-inflating a missing HSTS from critical→medium must RAISE the score (penalty
+// drops from critical to medium), proving the fix flows into scoring.
+func TestNormalizeSeverities_DeinflatesScore(t *testing.T) {
+	mk := func() []models.CheckResult {
+		return []models.CheckResult{
+			chk("ssl", "TLS Version", "pass", 1000, 100),
+			chk("headers", "HSTS", "fail", 0, 100),
+		}
+	}
+	before := ComputeScores(mk()).Security
+	norm := mk()
+	NormalizeSeverities(norm)
+	after := ComputeScores(norm).Security
+	if !(after > before) {
+		t.Errorf("normalizing HSTS to medium should raise the score, got before=%.0f after=%.0f", before, after)
+	}
+}
+
 // A LOW-CONFIDENCE critical fail is advisory only — it must NOT cap the grade.
 func TestComputeScores_LowConfidenceDoesNotCap(t *testing.T) {
 	checks := []models.CheckResult{

@@ -661,14 +661,10 @@ func (e *Engine) scanTarget(result *models.ScanResult) {
 		allChecks[i].Confidence = GetConfidence(allChecks[i].CheckName)
 	}
 
-	// Populate CVSS v3.1 scores for failed checks
-	for i := range allChecks {
-		if m := GetCVSSMapping(allChecks[i].CheckName); m != nil && allChecks[i].Status == "fail" {
-			allChecks[i].CVSSScore = m.Score
-			allChecks[i].CVSSVector = m.Vector
-			allChecks[i].CVSSRating = m.Rating
-		}
-	}
+	// Populate CVSS v3.1 metrics AND align each finding's displayed severity with
+	// its canonical impact (a missing HSTS is Medium, not "critical"; SEO/quality
+	// nits never read as high). Scoring penalties follow Severity. See scoring.go.
+	NormalizeSeverities(allChecks)
 
 	// Save all checks
 	if len(allChecks) > 0 {
