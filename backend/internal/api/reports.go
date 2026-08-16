@@ -26,7 +26,20 @@ func GeneratePDFReport(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Scan result not found"})
 	}
 
-	pdfBytes, err := services.GenerateScanReport(&result, result.Checks)
+	// Enrich each finding with remediation guidance from the knowledge base so the
+	// exported report reads like a professional assessment (description + effort).
+	remediations := map[string]string{}
+	for _, ck := range result.Checks {
+		if g, ok := scanner.RemediationDB[ck.CheckName]; ok {
+			d := strings.TrimSpace(g.Description)
+			if g.TimeEstimate != "" {
+				d += " (Estimated effort: " + g.TimeEstimate + ".)"
+			}
+			remediations[ck.CheckName] = d
+		}
+	}
+
+	pdfBytes, err := services.GenerateScanReport(&result, result.Checks, remediations)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate PDF report"})
 	}
