@@ -1055,6 +1055,19 @@ func GetScoreHistory(c *fiber.Ctx) error {
 	return c.JSON(history)
 }
 
+// GetTargetChanges returns the continuous-monitoring change history for a target
+// (newest first): what changed between consecutive scans — new/fixed findings,
+// score movement, regressions. GET /targets/:id/changes
+func GetTargetChanges(c *fiber.Ctx) error {
+	targetID := c.Params("id")
+	if !CanAccessTarget(c, targetID) {
+		return c.Status(404).JSON(fiber.Map{"error": "Target not found"})
+	}
+	var changes []models.ScanChange
+	config.DB.Where("scan_target_id = ?", targetID).Order("created_at desc").Limit(100).Find(&changes)
+	return c.JSON(changes)
+}
+
 // --- Scan Comparison ---
 
 func CompareScanResults(c *fiber.Ctx) error {

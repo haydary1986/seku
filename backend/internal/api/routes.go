@@ -74,15 +74,15 @@ func SetupRoutes(app *fiber.App) {
 	authLimiter := rateLimit(10, time.Minute)
 	api.Post("/auth/login", authLimiter, Login)
 	api.Post("/auth/register", authLimiter, Register)
-	api.Get("/criteria", GetScanCriteria) // public page: scan criteria & scoring
-	api.Get("/plans", GetPlans)           // public: plan details with scan categories
-	api.Get("/pricing", GetPublicPricing) // public: deep-scan price (no account details)
+	api.Get("/criteria", GetScanCriteria)             // public page: scan criteria & scoring
+	api.Get("/plans", GetPlans)                       // public: plan details with scan categories
+	api.Get("/pricing", GetPublicPricing)             // public: deep-scan price (no account details)
 	api.Get("/public/report/:token", GetPublicReport) // public: shared scan summary
 	api.Get("/public/badge/:token", GetPublicBadge)   // public: embeddable SVG badge
 	// Landing-page teaser scan: unauthenticated, heavily rate-limited, no persistence.
 	api.Post("/public/quickscan", rateLimit(3, time.Minute), PublicQuickScan)
-	api.Get("/docs", GetAPIDocs)          // public: API documentation
-	api.Get("/seo/public", GetPublicSEO)  // public: SEO config (GA ID, verification tags)
+	api.Get("/docs", GetAPIDocs)         // public: API documentation
+	api.Get("/seo/public", GetPublicSEO) // public: SEO config (GA ID, verification tags)
 
 	// Protected routes
 	protected := api.Group("", AuthRequired())
@@ -118,6 +118,7 @@ func SetupRoutes(app *fiber.App) {
 	// Score History & Timeline
 	protected.Get("/targets/:id/history", GetScoreHistory)
 	protected.Get("/targets/:id/timeline", GetTimelineComparison)
+	protected.Get("/targets/:id/changes", GetTargetChanges)
 
 	// Domain Verification
 	protected.Post("/targets/:id/verify", InitiateVerification)

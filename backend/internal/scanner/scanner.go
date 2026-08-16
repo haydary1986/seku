@@ -559,6 +559,10 @@ scanDone:
 
 		// Send email notifications
 		services.SendScanCompletedEmail(job, completedResults)
+
+		// Continuous monitoring: diff each result against the target's previous
+		// scan, persist the change history, and alert on new findings / regressions.
+		services.DetectAndAlertChanges(job, completedResults)
 	}
 }
 

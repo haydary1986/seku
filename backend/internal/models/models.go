@@ -246,6 +246,26 @@ type ScheduledScan struct {
 	CreatedBy      uint       `json:"created_by"`
 }
 
+// ScanChange records the delta between a target's newest completed scan and its
+// previous one — the core of continuous monitoring. A row is written on every
+// re-scan that has a baseline, giving a durable change history (new/fixed
+// findings, score movement) and driving change alerts.
+type ScanChange struct {
+	gorm.Model
+	OrganizationID uint    `json:"organization_id" gorm:"index"`
+	ScanTargetID   uint    `json:"scan_target_id" gorm:"index"`
+	OldResultID    uint    `json:"old_result_id"`
+	NewResultID    uint    `json:"new_result_id"`
+	OldScore       float64 `json:"old_score"`
+	NewScore       float64 `json:"new_score"`
+	OldGrade       string  `json:"old_grade"`
+	NewGrade       string  `json:"new_grade"`
+	NewFindings    int     `json:"new_findings"`   // findings that appeared (regressions)
+	FixedFindings  int     `json:"fixed_findings"` // findings that were resolved
+	Regressed      bool    `json:"regressed"`      // score dropped past the threshold
+	Details        string  `json:"details"`        // JSON {new:[...], fixed:[...]}
+}
+
 type NotificationPreference struct {
 	gorm.Model
 	UserID            uint `json:"user_id" gorm:"not null"`
