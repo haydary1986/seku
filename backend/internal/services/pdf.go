@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -54,37 +53,147 @@ var categoryNames = map[string]string{
 	"sqli": "SQL Injection", "ports": "Port Scanner",
 	"open_redirect": "Open Redirect", "ssrf": "SSRF Detection",
 	"email_security": "Email Security", "waf": "WAF Detection", "zone_transfer": "DNS Zone Transfer",
-	"data_leak": "Data Leak Detection",
+	"data_leak": "Data Leak Detection", "graphql": "GraphQL Security", "jwt_security": "JWT Security",
+	"access_control": "Access Control (IDOR/BOLA)", "passive_urls": "Passive URL Discovery",
+	"dast": "Active Fuzzing (DAST)", "backup_files": "Backup Files", "cms_cve": "CMS Vulnerabilities",
+	"js_secrets": "JS Secrets", "wp_deep": "WordPress Deep Scan", "login": "Login Security",
+}
+
+// qualityCats are non-security (informational) domains, reported separately so a
+// security report never mixes "SEO" or "Performance" in with real risk.
+var qualityCats = map[string]bool{
+	"seo": true, "content": true, "performance": true, "hosting": true,
+	"tech_stack": true, "passive_urls": true, "third_party": true, "server_info": true,
+}
+
+// --- shared palette (emerald brand, matches the web app; no indigo/purple) ---
+var (
+	pdfWhite   = [3]int{255, 255, 255}
+	pdfDarkBg  = [3]int{15, 23, 41}   // slate-950-ish
+	pdfBrand   = [3]int{5, 150, 105}  // emerald-600
+	pdfGreen   = [3]int{16, 185, 129} // pass
+	pdfGray    = [3]int{107, 114, 128}
+	pdfLight   = [3]int{243, 244, 246}
+	pdfInk     = [3]int{17, 23, 41}
+	sevCrit    = [3]int{225, 29, 72}  // rose-600
+	sevHigh    = [3]int{234, 88, 12}  // orange-600
+	sevMed     = [3]int{217, 119, 6}  // amber-600
+	sevLow     = [3]int{2, 132, 199}  // sky-600
+	sevInfo    = [3]int{100, 116, 139}
+)
+
+func severityRankPDF(sev string) int {
+	switch strings.ToLower(strings.TrimSpace(sev)) {
+	case "critical":
+		return 5
+	case "high":
+		return 4
+	case "medium":
+		return 3
+	case "low":
+		return 2
+	case "info":
+		return 1
+	}
+	return 0
+}
+
+func severityColorPDF(sev string) [3]int {
+	switch strings.ToLower(strings.TrimSpace(sev)) {
+	case "critical":
+		return sevCrit
+	case "high":
+		return sevHigh
+	case "medium":
+		return sevMed
+	case "low":
+		return sevLow
+	}
+	return sevInfo
+}
+
+func scoreColorPDF(score float64) [3]int {
+	switch {
+	case score >= 800:
+		return pdfGreen
+	case score >= 600:
+		return sevMed
+	case score >= 500:
+		return sevHigh
+	default:
+		return sevCrit
+	}
+}
+
+// isFinding reports whether a check is a failing/warning finding worth listing.
+func isFinding(c models.CheckResult) bool {
+	switch strings.ToLower(c.Status) {
+	case "fail", "warn":
+		return true
+	case "pass", "info", "error", "pending", "running":
+		return false
+	}
+	return c.Score < 900 // fallback for legacy rows without a status
+}
+
+func statusLabelPDF(c models.CheckResult) string {
+	switch strings.ToLower(c.Status) {
+	case "fail":
+		return "FAIL"
+	case "warn":
+		return "WARN"
+	case "pass":
+		return "PASS"
+	}
+	if c.Score < 500 {
+		return "FAIL"
+	} else if c.Score < 900 {
+		return "WARN"
+	}
+	return "PASS"
+}
+
+func detailMessage(c models.CheckResult) string {
+	if c.Details == "" {
+		return ""
+	}
+	var d map[string]interface{}
+	if json.Unmarshal([]byte(c.Details), &d) != nil {
+		return ""
+	}
+	if m, ok := d["message"].(string); ok {
+		return strings.TrimSpace(m)
+	}
+	return ""
+}
+
+func trunc(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[:n-1]) + "…"
 }
 
 // findFontDir locates the fonts directory
 func findFontDir() string {
-	// Check relative to working directory
-	paths := []string{
-		"assets/fonts",
-		"backend/assets/fonts",
-		"../assets/fonts",
-		"/app/assets/fonts",
-	}
+	paths := []string{"assets/fonts", "backend/assets/fonts", "../assets/fonts", "/app/assets/fonts"}
 	for _, p := range paths {
 		if _, err := os.Stat(filepath.Join(p, "NotoSans.ttf")); err == nil {
 			return p
 		}
 	}
-	return "assets/fonts" // fallback
+	return "assets/fonts"
 }
 
 func GenerateScanReport(result *models.ScanResult, checks []models.CheckResult) ([]byte, error) {
 	pdf := fpdf.New("P", "mm", "A4", "")
-	pdf.SetAutoPageBreak(true, 20)
+	pdf.SetAutoPageBreak(true, 18)
 
-	// Try to load UTF-8 fonts for Arabic support
 	fontDir := findFontDir()
-	hasUTF8 := false
-	hasArabic := false
+	hasUTF8, hasArabic := false, false
 	notoPath := filepath.Join(fontDir, "NotoSans.ttf")
 	arabicPath := filepath.Join(fontDir, "NotoSansArabic.ttf")
-
 	if _, err := os.Stat(notoPath); err == nil {
 		pdf.AddUTF8Font("NotoSans", "", notoPath)
 		pdf.AddUTF8Font("NotoSans", "B", notoPath)
@@ -104,7 +213,6 @@ func GenerateScanReport(result *models.ScanResult, checks []models.CheckResult) 
 		}
 	}
 
-	// Helper to set font (with fallback to built-in Helvetica)
 	setFont := func(style string, size float64) {
 		if hasUTF8 {
 			pdf.SetFont("NotoSans", style, size)
@@ -116,7 +224,6 @@ func GenerateScanReport(result *models.ScanResult, checks []models.CheckResult) 
 			pdf.SetFont("Helvetica", style, size)
 		}
 	}
-
 	setArabicFont := func(style string, size float64) {
 		if hasArabic {
 			pdf.SetFont("NotoArabic", style, size)
@@ -129,444 +236,425 @@ func GenerateScanReport(result *models.ScanResult, checks []models.CheckResult) 
 		}
 	}
 
-	_ = setArabicFont // ensure used
-
-	// Colors
-	white := [3]int{255, 255, 255}
-	darkBg := [3]int{30, 41, 59}
-	indigo := [3]int{79, 70, 229}
-	green := [3]int{16, 185, 129}
-	orange := [3]int{245, 158, 11}
-	red := [3]int{239, 68, 68}
-	gray := [3]int{107, 114, 128}
-	lightGray := [3]int{243, 244, 246}
-
-	scoreColor := func(score float64) [3]int {
-		if score >= 800 {
-			return green
-		} else if score >= 500 {
-			return orange
-		}
-		return red
-	}
+	fill := func(c [3]int) { pdf.SetFillColor(c[0], c[1], c[2]) }
+	ink := func(c [3]int) { pdf.SetTextColor(c[0], c[1], c[2]) }
 
 	grade := scoreToGrade(result.OverallScore)
-	scanDate := ""
+	scanDate := time.Now().Format("2006-01-02 15:04")
 	if result.EndedAt != nil {
 		scanDate = result.EndedAt.Format("2006-01-02 15:04")
-	} else {
-		scanDate = time.Now().Format("2006-01-02 15:04")
 	}
-
 	siteName := result.ScanTarget.Name
 	if siteName == "" {
 		siteName = result.ScanTarget.URL
 	}
-	// Shape Arabic text for PDF rendering (joining + RTL)
 	siteNameShaped := ShapeArabic(siteName)
 
-	// ============================================
-	// PAGE 1: COVER
-	// ============================================
-	pdf.AddPage()
-
-	// Dark header background
-	pdf.SetFillColor(darkBg[0], darkBg[1], darkBg[2])
-	pdf.Rect(0, 0, 210, 120, "F")
-
-	// Seku logo text
-	pdf.SetTextColor(white[0], white[1], white[2])
-	setFont("B", 14)
-	pdf.SetXY(15, 15)
-	pdf.Cell(0, 8, "Seku")
-
-	setFont("", 9)
-	pdf.SetTextColor(180, 180, 200)
-	pdf.SetXY(15, 24)
-	pdf.Cell(0, 6, "Website Security Assessment Platform")
-
-	// Title
-	pdf.SetTextColor(white[0], white[1], white[2])
-	setFont("B", 28)
-	pdf.SetXY(15, 50)
-	pdf.Cell(0, 12, "Security Scan Report")
-
-	// Website name (Arabic support)
-	setArabicFont("B", 18)
-	pdf.SetXY(15, 68)
-	pdf.Cell(0, 10, siteNameShaped)
-
-	// URL
-	setFont("", 11)
-	pdf.SetTextColor(160, 170, 220)
-	pdf.SetXY(15, 82)
-	pdf.Cell(0, 7, result.ScanTarget.URL)
-
-	// Date
-	pdf.SetXY(15, 92)
-	pdf.Cell(0, 7, "Scan Date: "+scanDate)
-
-	// Score box on cover
-	sc := scoreColor(result.OverallScore)
-	pdf.SetFillColor(sc[0], sc[1], sc[2])
-	pdf.RoundedRect(140, 45, 55, 55, 5, "1234", "F")
-	pdf.SetTextColor(white[0], white[1], white[2])
-	setFont("B", 36)
-	scoreStr := fmt.Sprintf("%.0f", result.OverallScore)
-	pdf.SetXY(140, 52)
-	pdf.CellFormat(55, 18, scoreStr, "", 0, "C", false, 0, "")
-	setFont("", 10)
-	pdf.SetXY(140, 72)
-	pdf.CellFormat(55, 7, "/1000", "", 0, "C", false, 0, "")
-	setFont("B", 16)
-	pdf.SetXY(140, 82)
-	pdf.CellFormat(55, 10, grade+" - "+gradeLabel(grade), "", 0, "C", false, 0, "")
-
-	// Summary section below dark area
-	pdf.SetTextColor(0, 0, 0)
-
-	// Count results
-	passed, warned, failed := 0, 0, 0
+	// --- tally severities (findings only) + pass count ---
+	sevCounts := map[string]int{}
+	passed := 0
+	var findings []models.CheckResult
 	for _, c := range checks {
-		if c.Score >= 900 {
-			passed++
-		} else if c.Score >= 500 {
-			warned++
+		if strings.ToLower(c.Status) == "error" {
+			continue
+		}
+		if isFinding(c) {
+			sev := strings.ToLower(strings.TrimSpace(c.Severity))
+			if sev == "" || sev == "info" {
+				sev = "low"
+			}
+			sevCounts[sev]++
+			findings = append(findings, c)
 		} else {
-			failed++
+			passed++
 		}
 	}
+	// order findings: severity desc, then score asc (worst first)
+	sort.Slice(findings, func(i, j int) bool {
+		ri, rj := severityRankPDF(findings[i].Severity), severityRankPDF(findings[j].Severity)
+		if ri != rj {
+			return ri > rj
+		}
+		return findings[i].Score < findings[j].Score
+	})
 
-	// Summary boxes
-	y := 130.0
+	// ============================ PAGE 1: COVER ============================
+	pdf.AddPage()
+	fill(pdfDarkBg)
+	pdf.Rect(0, 0, 210, 118, "F")
+	// brand accent stripe
+	fill(pdfBrand)
+	pdf.Rect(0, 118, 210, 2, "F")
+
+	ink(pdfWhite)
+	setFont("B", 15)
+	pdf.SetXY(15, 14)
+	pdf.Cell(0, 8, "Seku")
+	setFont("", 9)
+	ink([3]int{148, 163, 184})
+	pdf.SetXY(15, 23)
+	pdf.Cell(0, 6, "Website Security Assessment")
+
+	ink(pdfWhite)
+	setFont("B", 26)
+	pdf.SetXY(15, 46)
+	pdf.Cell(0, 12, "Security Report")
+	setArabicFont("B", 17)
+	pdf.SetXY(15, 64)
+	pdf.Cell(120, 10, siteNameShaped)
+	setFont("", 10)
+	ink([3]int{148, 170, 200})
+	pdf.SetXY(15, 78)
+	pdf.Cell(0, 6, result.ScanTarget.URL)
+	pdf.SetXY(15, 86)
+	pdf.Cell(0, 6, "Scan date: "+scanDate)
+
+	// Score badge
+	sc := scoreColorPDF(result.OverallScore)
+	fill(sc)
+	pdf.RoundedRect(142, 40, 53, 53, 5, "1234", "F")
+	ink(pdfWhite)
+	setFont("B", 34)
+	pdf.SetXY(142, 47)
+	pdf.CellFormat(53, 17, fmt.Sprintf("%.0f", result.OverallScore), "", 0, "C", false, 0, "")
+	setFont("", 9)
+	pdf.SetXY(142, 65)
+	pdf.CellFormat(53, 6, "/ 1000", "", 0, "C", false, 0, "")
+	setFont("B", 15)
+	pdf.SetXY(142, 74)
+	pdf.CellFormat(53, 9, grade+" · "+gradeLabel(grade), "", 0, "C", false, 0, "")
+
+	// Executive summary — severity breakdown
+	ink(pdfInk)
 	setFont("B", 14)
-	pdf.SetXY(15, y)
+	pdf.SetXY(15, 132)
 	pdf.Cell(0, 8, "Executive Summary")
-	y += 12
 
-	// Three stat boxes
-	boxW := 56.0
-	for i, stat := range []struct {
+	y := 145.0
+	sevBoxes := []struct {
 		label string
-		value string
+		key   string
 		color [3]int
 	}{
-		{"Passed", fmt.Sprintf("%d", passed), green},
-		{"Warnings", fmt.Sprintf("%d", warned), orange},
-		{"Failed", fmt.Sprintf("%d", failed), red},
-	} {
-		x := 15 + float64(i)*(boxW+4)
-		pdf.SetFillColor(stat.color[0], stat.color[1], stat.color[2])
-		pdf.RoundedRect(x, y, boxW, 25, 3, "1234", "F")
-		pdf.SetTextColor(white[0], white[1], white[2])
-		setFont("B", 20)
+		{"Critical", "critical", sevCrit},
+		{"High", "high", sevHigh},
+		{"Medium", "medium", sevMed},
+		{"Low", "low", sevLow},
+		{"Passed", "passed", pdfGreen},
+	}
+	boxW, gap := 34.0, 2.5
+	for i, b := range sevBoxes {
+		x := 15 + float64(i)*(boxW+gap)
+		val := sevCounts[b.key]
+		if b.key == "passed" {
+			val = passed
+		}
+		fill(b.color)
+		pdf.RoundedRect(x, y, boxW, 24, 3, "1234", "F")
+		ink(pdfWhite)
+		setFont("B", 19)
 		pdf.SetXY(x, y+3)
-		pdf.CellFormat(boxW, 10, stat.value, "", 0, "C", false, 0, "")
-		setFont("", 9)
-		pdf.SetXY(x, y+14)
-		pdf.CellFormat(boxW, 7, stat.label, "", 0, "C", false, 0, "")
+		pdf.CellFormat(boxW, 10, fmt.Sprintf("%d", val), "", 0, "C", false, 0, "")
+		setFont("", 8)
+		pdf.SetXY(x, y+15)
+		pdf.CellFormat(boxW, 6, b.label, "", 0, "C", false, 0, "")
 	}
 
-	y += 35
+	y += 33
+	ink(pdfGray)
 	setFont("", 9)
-	pdf.SetTextColor(gray[0], gray[1], gray[2])
 	pdf.SetXY(15, y)
-	pdf.Cell(0, 6, fmt.Sprintf("Total Checks: %d  |  Categories: %d  |  Score: %.0f/1000  |  Grade: %s",
-		len(checks), countCategories(checks), result.OverallScore, grade))
+	pdf.Cell(0, 6, fmt.Sprintf("%d findings across %d checks  ·  %d categories  ·  Overall grade: %s",
+		len(findings), len(checks), countCategories(checks), grade))
+	y += 8
+	if result.GradeCapReason != "" {
+		ink(sevCrit)
+		setFont("B", 9)
+		pdf.SetXY(15, y)
+		pdf.MultiCell(180, 5, "Grade capped: "+trunc(result.GradeCapReason, 150), "", "L", false)
+		y = pdf.GetY()
+	}
+	// one-line posture statement
+	posture := "No failing or warning findings were detected — a clean result at scan time."
+	if len(findings) > 0 {
+		top := findings[0]
+		posture = fmt.Sprintf("Highest-priority issue: [%s] %s. Address findings in severity order (this report is sorted worst-first).",
+			strings.ToUpper(firstNonEmpty(top.Severity, "low")), trunc(top.CheckName, 70))
+	}
+	ink([3]int{80, 80, 90})
+	setFont("", 8.5)
+	pdf.SetXY(15, y+2)
+	pdf.MultiCell(180, 5, posture, "", "L", false)
 
-	// ============================================
-	// PAGE 2: CATEGORY BREAKDOWN
-	// ============================================
+	// ====================== PRIORITY FINDINGS ======================
 	pdf.AddPage()
-
-	// Header
-	pdf.SetFillColor(indigo[0], indigo[1], indigo[2])
-	pdf.Rect(0, 0, 210, 18, "F")
-	pdf.SetTextColor(white[0], white[1], white[2])
-	setFont("B", 11)
-	pdf.SetXY(15, 5)
-	pdf.Cell(0, 8, "Seku  |  Security Report  |  "+result.ScanTarget.URL)
-
-	y = 25.0
-	pdf.SetTextColor(0, 0, 0)
+	addReportHeader(pdf, setFont, result.ScanTarget.URL)
+	y = 26
+	ink(pdfInk)
 	setFont("B", 16)
 	pdf.SetXY(15, y)
-	pdf.Cell(0, 8, "Category Breakdown")
-	y += 14
+	pdf.Cell(0, 8, "Priority Findings")
+	ink(pdfGray)
+	setFont("", 8.5)
+	pdf.SetXY(15, y+9)
+	pdf.Cell(0, 5, "Failing and warning checks, ordered by severity (most critical first).")
+	y += 20
 
-	// Group checks by category
+	if len(findings) == 0 {
+		fill(pdfLight)
+		pdf.RoundedRect(15, y, 180, 20, 3, "1234", "F")
+		ink(pdfGreen)
+		setFont("B", 11)
+		pdf.SetXY(20, y+6)
+		pdf.Cell(0, 8, "No failing or warning findings at scan time.")
+	}
+
+	for _, ck := range findings {
+		if y > 258 {
+			pdf.AddPage()
+			addReportHeader(pdf, setFont, result.ScanTarget.URL)
+			y = 26
+		}
+		startY := y
+		sev := strings.ToLower(strings.TrimSpace(ck.Severity))
+		if sev == "" {
+			sev = "low"
+		}
+		col := severityColorPDF(sev)
+
+		// severity chip
+		fill(col)
+		pdf.RoundedRect(20, y, 22, 6, 1, "1234", "F")
+		ink(pdfWhite)
+		setFont("B", 6.5)
+		pdf.SetXY(20, y+0.7)
+		pdf.CellFormat(22, 5, strings.ToUpper(sev), "", 0, "C", false, 0, "")
+
+		// check name
+		ink(pdfInk)
+		setFont("B", 9.5)
+		pdf.SetXY(45, y)
+		pdf.Cell(105, 6, trunc(ck.CheckName, 58))
+
+		// score + status (right)
+		ink(col)
+		setFont("B", 8)
+		pdf.SetXY(150, y)
+		pdf.CellFormat(45, 6, fmt.Sprintf("%.0f · %s", ck.Score, statusLabelPDF(ck)), "", 0, "R", false, 0, "")
+
+		// meta line: category · CVSS · CWE
+		y += 6.5
+		catName := categoryNames[ck.Category]
+		if catName == "" {
+			catName = ck.Category
+		}
+		meta := catName
+		if ck.CVSSScore > 0 {
+			meta += fmt.Sprintf("   ·   CVSS %.1f", ck.CVSSScore)
+		}
+		if ck.CWE != "" {
+			meta += "   ·   " + ck.CWE
+		}
+		ink(pdfGray)
+		setFont("", 7)
+		pdf.SetXY(45, y)
+		pdf.Cell(150, 4, meta)
+		y += 5
+
+		// message
+		if msg := detailMessage(ck); msg != "" {
+			ink([3]int{90, 90, 98})
+			setFont("", 7.5)
+			pdf.SetXY(45, y)
+			pdf.MultiCell(150, 4, trunc(msg, 260), "", "L", false)
+			y = pdf.GetY()
+		}
+
+		// left severity stripe spanning the block
+		fill(col)
+		h := y - startY - 1
+		if h < 6 {
+			h = 6
+		}
+		pdf.RoundedRect(15, startY, 2.5, h, 1, "1234", "F")
+
+		// divider
+		y += 3
+		pdf.SetDrawColor(228, 230, 236)
+		pdf.Line(15, y, 195, y)
+		y += 4
+	}
+
+	// ====================== CATEGORY SCORES ======================
 	catGroups := map[string][]models.CheckResult{}
 	for _, c := range checks {
 		catGroups[c.Category] = append(catGroups[c.Category], c)
 	}
-
-	// Sort categories by score (worst first for attention)
 	type catScore struct {
 		cat   string
 		score float64
+		n     int
 	}
-	var sortedCats []catScore
+	var secCats, qualCats []catScore
 	for cat, cks := range catGroups {
 		ts, tw := 0.0, 0.0
 		for _, c := range cks {
 			ts += c.Score * c.Weight
 			tw += c.Weight
 		}
-		s := 0.0
+		s := 1000.0
 		if tw > 0 {
 			s = ts / tw
 		}
-		sortedCats = append(sortedCats, catScore{cat, s})
-	}
-	sort.Slice(sortedCats, func(i, j int) bool {
-		return sortedCats[i].score > sortedCats[j].score
-	})
-
-	// Table header
-	pdf.SetFillColor(lightGray[0], lightGray[1], lightGray[2])
-	pdf.RoundedRect(15, y, 180, 8, 1, "1234", "F")
-	setFont("B", 8)
-	pdf.SetTextColor(gray[0], gray[1], gray[2])
-	pdf.SetXY(17, y+1)
-	pdf.Cell(85, 6, "CATEGORY")
-	pdf.SetXY(105, y+1)
-	pdf.CellFormat(25, 6, "SCORE", "", 0, "C", false, 0, "")
-	pdf.SetXY(133, y+1)
-	pdf.CellFormat(20, 6, "GRADE", "", 0, "C", false, 0, "")
-	pdf.SetXY(155, y+1)
-	pdf.CellFormat(20, 6, "CHECKS", "", 0, "C", false, 0, "")
-	pdf.SetXY(175, y+1)
-	pdf.CellFormat(18, 6, "STATUS", "", 0, "C", false, 0, "")
-	y += 10
-
-	for _, cs := range sortedCats {
-		if y > 270 {
-			pdf.AddPage()
-			addReportHeader(pdf, setFont, indigo, white, result.ScanTarget.URL)
-			y = 25
-		}
-
-		name := categoryNames[cs.cat]
-		if name == "" {
-			name = cs.cat
-		}
-		g := scoreToGrade(cs.score)
-		cks := catGroups[cs.cat]
-
-		p, w, f := 0, 0, 0
-		for _, c := range cks {
-			if c.Score >= 900 {
-				p++
-			} else if c.Score >= 500 {
-				w++
-			} else {
-				f++
-			}
-		}
-
-		// Score bar background
-		pdf.SetFillColor(240, 240, 240)
-		pdf.Rect(15, y, 180, 9, "F")
-
-		// Score bar colored portion
-		barWidth := cs.score / 1000 * 180
-		sc := scoreColor(cs.score)
-		pdf.SetFillColor(sc[0], sc[1], sc[2])
-		pdf.Rect(15, y, barWidth, 9, "F")
-
-		// Text on bar
-		pdf.SetTextColor(0, 0, 0)
-		setFont("B", 8)
-		pdf.SetXY(17, y+1.5)
-		pdf.Cell(85, 6, name)
-
-		pdf.SetTextColor(50, 50, 50)
-		setFont("B", 9)
-		pdf.SetXY(105, y+1.5)
-		pdf.CellFormat(25, 6, fmt.Sprintf("%.0f", cs.score), "", 0, "C", false, 0, "")
-
-		setFont("B", 8)
-		pdf.SetXY(133, y+1.5)
-		pdf.CellFormat(20, 6, g, "", 0, "C", false, 0, "")
-
-		setFont("", 8)
-		pdf.SetXY(155, y+1.5)
-		pdf.CellFormat(20, 6, fmt.Sprintf("%d", len(cks)), "", 0, "C", false, 0, "")
-
-		status := fmt.Sprintf("%dP %dW %dF", p, w, f)
-		pdf.SetXY(175, y+1.5)
-		pdf.CellFormat(18, 6, status, "", 0, "C", false, 0, "")
-
-		y += 11
-	}
-
-	// ============================================
-	// DETAILED FINDINGS PAGES
-	// ============================================
-	for _, cs := range sortedCats {
-		pdf.AddPage()
-		addReportHeader(pdf, setFont, indigo, white, result.ScanTarget.URL)
-
-		name := categoryNames[cs.cat]
-		if name == "" {
-			name = cs.cat
-		}
-		g := scoreToGrade(cs.score)
-		sc := scoreColor(cs.score)
-
-		y = 25.0
-
-		// Category title with score badge
-		pdf.SetFillColor(sc[0], sc[1], sc[2])
-		pdf.RoundedRect(15, y, 180, 14, 3, "1234", "F")
-		pdf.SetTextColor(white[0], white[1], white[2])
-		setFont("B", 11)
-		pdf.SetXY(20, y+3)
-		pdf.Cell(120, 8, name)
-		setFont("B", 12)
-		pdf.SetXY(150, y+3)
-		pdf.CellFormat(40, 8, fmt.Sprintf("%.0f/1000 (%s)", cs.score, g), "", 0, "R", false, 0, "")
-		y += 20
-
-		cks := catGroups[cs.cat]
-		sort.Slice(cks, func(i, j int) bool {
-			return cks[i].Score < cks[j].Score // worst first
-		})
-
-		for _, check := range cks {
-			if y > 260 {
-				pdf.AddPage()
-				addReportHeader(pdf, setFont, indigo, white, result.ScanTarget.URL)
-				y = 25
-			}
-
-			// Check row
-			chkColor := scoreColor(check.Score)
-
-			// Status indicator
-			pdf.SetFillColor(chkColor[0], chkColor[1], chkColor[2])
-			pdf.RoundedRect(15, y, 3, 16, 1, "1234", "F")
-
-			// Check name
-			pdf.SetTextColor(0, 0, 0)
-			setFont("B", 9)
-			pdf.SetXY(22, y)
-			pdf.Cell(100, 6, check.CheckName)
-
-			// Score + status
-			setFont("B", 9)
-			pdf.SetTextColor(chkColor[0], chkColor[1], chkColor[2])
-			pdf.SetXY(140, y)
-			statusLabel := "PASS"
-			if check.Score < 500 {
-				statusLabel = "FAIL"
-			} else if check.Score < 900 {
-				statusLabel = "WARN"
-			}
-			pdf.CellFormat(55, 6, fmt.Sprintf("%.0f/1000  [%s]", check.Score, statusLabel), "", 0, "R", false, 0, "")
-
-			// Severity
-			pdf.SetTextColor(gray[0], gray[1], gray[2])
-			setFont("", 7)
-			pdf.SetXY(22, y+6)
-			pdf.Cell(30, 5, "Severity: "+strings.ToUpper(check.Severity))
-
-			// Details
-			if check.Details != "" {
-				var details map[string]interface{}
-				if json.Unmarshal([]byte(check.Details), &details) == nil {
-					if msg, ok := details["message"].(string); ok && msg != "" {
-						pdf.SetTextColor(80, 80, 80)
-						setFont("", 7)
-						pdf.SetXY(22, y+11)
-						if len(msg) > 120 {
-							msg = msg[:120] + "..."
-						}
-						pdf.Cell(170, 4, msg)
-					}
-				}
-			}
-
-			y += 20
+		cscore := catScore{cat, s, len(cks)}
+		if qualityCats[cat] {
+			qualCats = append(qualCats, cscore)
+		} else {
+			secCats = append(secCats, cscore)
 		}
 	}
+	worstFirst := func(a []catScore) { sort.Slice(a, func(i, j int) bool { return a[i].score < a[j].score }) }
+	worstFirst(secCats)
+	worstFirst(qualCats)
 
-	// ============================================
-	// FOOTER PAGE
-	// ============================================
 	pdf.AddPage()
-	addReportHeader(pdf, setFont, indigo, white, result.ScanTarget.URL)
-
-	y = 40.0
-	pdf.SetTextColor(0, 0, 0)
+	addReportHeader(pdf, setFont, result.ScanTarget.URL)
+	y = 26
+	ink(pdfInk)
 	setFont("B", 16)
 	pdf.SetXY(15, y)
-	pdf.Cell(0, 8, "Grading Scale")
+	pdf.Cell(0, 8, "Category Scores")
 	y += 14
 
-	grades := []struct {
-		grade, label, range_ string
-		color                [3]int
-	}{
-		{"A+", "Excellent", "900 - 1000", [3]int{16, 185, 129}},
-		{"A", "Very Good", "800 - 899", [3]int{34, 197, 94}},
-		{"B", "Good", "700 - 799", [3]int{59, 130, 246}},
-		{"C", "Average", "600 - 699", [3]int{245, 158, 11}},
-		{"D", "Below Average", "500 - 599", [3]int{249, 115, 22}},
-		{"F", "Failing", "0 - 499", [3]int{239, 68, 68}},
-	}
-
-	for _, g := range grades {
-		pdf.SetFillColor(g.color[0], g.color[1], g.color[2])
-		pdf.RoundedRect(15, y, 25, 10, 2, "1234", "F")
-		pdf.SetTextColor(white[0], white[1], white[2])
+	drawCatTable := func(title string, rows []catScore) {
+		if len(rows) == 0 {
+			return
+		}
+		if y > 250 {
+			pdf.AddPage()
+			addReportHeader(pdf, setFont, result.ScanTarget.URL)
+			y = 26
+		}
+		ink(pdfBrand)
 		setFont("B", 11)
-		pdf.SetXY(15, y+2)
-		pdf.CellFormat(25, 6, g.grade, "", 0, "C", false, 0, "")
+		pdf.SetXY(15, y)
+		pdf.Cell(0, 7, title)
+		y += 10
+		for _, cs := range rows {
+			if y > 275 {
+				pdf.AddPage()
+				addReportHeader(pdf, setFont, result.ScanTarget.URL)
+				y = 26
+			}
+			name := categoryNames[cs.cat]
+			if name == "" {
+				name = cs.cat
+			}
+			g := scoreToGrade(cs.score)
+			// track background
+			pdf.SetFillColor(238, 240, 244)
+			pdf.RoundedRect(15, y, 180, 8, 1, "1234", "F")
+			// colored proportion
+			bw := cs.score / 1000 * 180
+			if bw < 2 {
+				bw = 2
+			}
+			bc := scoreColorPDF(cs.score)
+			pdf.SetFillColor(bc[0], bc[1], bc[2])
+			pdf.RoundedRect(15, y, bw, 8, 1, "1234", "F")
+			ink(pdfInk)
+			setFont("B", 8)
+			pdf.SetXY(18, y+1.3)
+			pdf.Cell(110, 5, name)
+			setFont("B", 8)
+			pdf.SetXY(150, y+1.3)
+			pdf.CellFormat(20, 5, fmt.Sprintf("%.0f", cs.score), "", 0, "R", false, 0, "")
+			pdf.SetXY(172, y+1.3)
+			pdf.CellFormat(10, 5, g, "", 0, "C", false, 0, "")
+			pdf.SetXY(184, y+1.3)
+			pdf.CellFormat(9, 5, fmt.Sprintf("%d", cs.n), "", 0, "C", false, 0, "")
+			y += 10
+		}
+		y += 4
+	}
+	drawCatTable("Security", secCats)
+	drawCatTable("Quality & Performance (informational)", qualCats)
 
-		pdf.SetTextColor(0, 0, 0)
+	// ====================== GRADING SCALE + FOOTER ======================
+	if y > 210 {
+		pdf.AddPage()
+		addReportHeader(pdf, setFont, result.ScanTarget.URL)
+		y = 26
+	} else {
+		y += 6
+	}
+	ink(pdfInk)
+	setFont("B", 13)
+	pdf.SetXY(15, y)
+	pdf.Cell(0, 8, "Grading Scale")
+	y += 12
+	for _, g := range []struct {
+		grade, label, rng string
+		color             [3]int
+	}{
+		{"A+", "Excellent", "900 - 1000", pdfGreen},
+		{"A", "Very Good", "800 - 899", [3]int{34, 197, 94}},
+		{"B", "Good", "700 - 799", sevLow},
+		{"C", "Average", "600 - 699", sevMed},
+		{"D", "Below Average", "500 - 599", sevHigh},
+		{"F", "Failing", "0 - 499", sevCrit},
+	} {
+		fill(g.color)
+		pdf.RoundedRect(15, y, 22, 9, 2, "1234", "F")
+		ink(pdfWhite)
+		setFont("B", 10)
+		pdf.SetXY(15, y+1.6)
+		pdf.CellFormat(22, 6, g.grade, "", 0, "C", false, 0, "")
+		ink(pdfInk)
 		setFont("B", 9)
-		pdf.SetXY(45, y+2)
+		pdf.SetXY(42, y+1.6)
 		pdf.Cell(50, 6, g.label)
-
-		pdf.SetTextColor(gray[0], gray[1], gray[2])
+		ink(pdfGray)
 		setFont("", 9)
-		pdf.SetXY(100, y+2)
-		pdf.Cell(40, 6, g.range_)
-		y += 13
+		pdf.SetXY(95, y+1.6)
+		pdf.Cell(40, 6, g.rng)
+		y += 12
 	}
 
-	y += 15
-	pdf.SetTextColor(gray[0], gray[1], gray[2])
+	y += 8
+	ink(pdfGray)
 	setFont("", 8)
 	pdf.SetXY(15, y)
 	pdf.MultiCell(180, 5,
-		"This report was generated by Seku Security Assessment Platform. "+
-			"The scores reflect the security posture at the time of scanning and may change "+
-			"as the website configuration is updated. For the full scoring methodology, "+
-			"visit the public methodology page.", "", "L", false)
-
-	y += 20
+		"Generated by Seku Website Security Assessment. Scores reflect the security posture at scan time and "+
+			"change as configuration is updated. Severity ratings follow CVSS v3.1 bands. See the public methodology page for the full scoring model.",
+		"", "L", false)
+	y = pdf.GetY() + 6
 	setFont("", 7)
 	pdf.SetXY(15, y)
-	pdf.Cell(0, 5, fmt.Sprintf("Generated: %s  |  Seku v1.0  |  https://sec.erticaz.com", time.Now().Format("2006-01-02 15:04:05")))
+	pdf.Cell(0, 5, fmt.Sprintf("Generated: %s  ·  https://sec.erticaz.com", time.Now().Format("2006-01-02 15:04:05")))
 
-	// Output
 	var buf bytes.Buffer
 	if err := pdf.Output(&buf); err != nil {
 		return nil, fmt.Errorf("failed to generate PDF: %w", err)
 	}
-
 	return buf.Bytes(), nil
 }
 
-func addReportHeader(pdf *fpdf.Fpdf, setFont func(string, float64), indigo, white [3]int, url string) {
-	pdf.SetFillColor(indigo[0], indigo[1], indigo[2])
-	pdf.Rect(0, 0, 210, 18, "F")
-	pdf.SetTextColor(white[0], white[1], white[2])
-	setFont("B", 11)
-	pdf.SetXY(15, 5)
-	pdf.Cell(0, 8, "Seku  |  Security Report  |  "+url)
+func firstNonEmpty(a, b string) string {
+	if strings.TrimSpace(a) != "" {
+		return a
+	}
+	return b
+}
+
+func addReportHeader(pdf *fpdf.Fpdf, setFont func(string, float64), url string) {
+	pdf.SetFillColor(pdfBrand[0], pdfBrand[1], pdfBrand[2])
+	pdf.Rect(0, 0, 210, 16, "F")
+	pdf.SetTextColor(255, 255, 255)
+	setFont("B", 10)
+	pdf.SetXY(15, 4)
+	pdf.Cell(0, 8, "Seku  ·  Security Report  ·  "+trunc(url, 70))
 }
 
 func countCategories(checks []models.CheckResult) int {
@@ -576,6 +664,3 @@ func countCategories(checks []models.CheckResult) int {
 	}
 	return len(cats)
 }
-
-// Ensure math is used
-var _ = math.Round
