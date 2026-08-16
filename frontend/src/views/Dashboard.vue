@@ -237,64 +237,64 @@ function getGradeColor(grade) {
     <div v-else-if="stats">
       <!-- Stats Cards -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="card card-hover p-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-500">{{ t('vDashboard.totalTargets') }}</p>
-              <p class="text-3xl font-bold text-gray-900 mt-1">{{ stats.total_targets }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('vDashboard.totalTargets') }}</p>
+              <p class="text-3xl font-bold font-mono text-slate-900 dark:text-white mt-1">{{ stats.total_targets }}</p>
             </div>
-            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-12 h-12 bg-accent-grad glow-accent rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
               </svg>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="card card-hover p-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-500">{{ t('vDashboard.totalScans') }}</p>
-              <p class="text-3xl font-bold text-gray-900 mt-1">{{ stats.total_scans }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('vDashboard.totalScans') }}</p>
+              <p class="text-3xl font-bold font-mono text-slate-900 dark:text-white mt-1">{{ stats.total_scans }}</p>
             </div>
-            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-12 h-12 bg-emerald-500/15 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
               </svg>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="card card-hover p-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-500">{{ t('vDashboard.completedScans') }}</p>
-              <p class="text-3xl font-bold text-gray-900 mt-1">{{ stats.completed_scans }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('vDashboard.completedScans') }}</p>
+              <p class="text-3xl font-bold font-mono text-slate-900 dark:text-white mt-1">{{ stats.completed_scans }}</p>
             </div>
-            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-12 h-12 bg-sky-500/15 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
               </svg>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="card card-hover p-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-500">{{ t('vDashboard.averageScore') }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('vDashboard.averageScore') }}</p>
               <div class="flex items-center gap-3 mt-1">
-                <p :class="['text-3xl font-bold', getScoreColor(stats.average_score)]">
+                <p :class="['text-3xl font-bold font-mono', getScoreColor(stats.average_score)]">
                   {{ Math.round(stats.average_score) }}
                 </p>
                 <span :class="['inline-flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold', getGradeColor(getGrade(stats.average_score))]">
                   {{ getGrade(stats.average_score) }}
                 </span>
               </div>
-              <p class="text-xs text-gray-400 mt-1">{{ getScoreLabel(stats.average_score) }}</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ getScoreLabel(stats.average_score) }}</p>
             </div>
-            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-12 h-12 bg-amber-500/15 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
               </svg>
             </div>
@@ -303,9 +303,9 @@ function getGradeColor(grade) {
       </div>
 
       <!-- Category Average Scores Bar Chart -->
-      <div v-if="categoryChartData.labels.length" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('vDashboard.categoryAvgScores') }}</h3>
-        <p class="text-sm text-gray-400 mb-4">{{ t('vDashboard.categoryAvgDesc') }}</p>
+      <div v-if="categoryChartData.labels.length" class="card p-6 mb-8">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">{{ t('vDashboard.categoryAvgScores') }}</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">{{ t('vDashboard.categoryAvgDesc') }}</p>
         <div style="min-height: 320px;">
           <Bar :data="categoryChartData" :options="categoryChartOptions" />
         </div>
@@ -314,36 +314,36 @@ function getGradeColor(grade) {
       <!-- Top 5 / Bottom 5 Section -->
       <div v-if="topSites.length" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <!-- Top 5 Best -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="card p-6">
           <div class="flex items-center gap-2 mb-4">
-            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-              <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-8 h-8 bg-emerald-500/15 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
               </svg>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900">{{ t('vDashboard.top5Best') }}</h3>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">{{ t('vDashboard.top5Best') }}</h3>
           </div>
           <table class="w-full text-sm">
             <thead>
-              <tr class="border-b border-gray-200">
-                <th class="text-right py-2 px-2 text-gray-500 font-medium">#</th>
-                <th class="text-right py-2 px-2 text-gray-500 font-medium">{{ t('vDashboard.website') }}</th>
-                <th class="text-center py-2 px-2 text-gray-500 font-medium">{{ t('vDashboard.score') }}</th>
-                <th class="text-center py-2 px-2 text-gray-500 font-medium">{{ t('vDashboard.grade') }}</th>
+              <tr class="border-b border-gray-200 dark:border-slate-700/60">
+                <th class="text-right py-2 px-2 text-slate-500 dark:text-slate-400 font-medium">#</th>
+                <th class="text-right py-2 px-2 text-slate-500 dark:text-slate-400 font-medium">{{ t('vDashboard.website') }}</th>
+                <th class="text-center py-2 px-2 text-slate-500 dark:text-slate-400 font-medium">{{ t('vDashboard.score') }}</th>
+                <th class="text-center py-2 px-2 text-slate-500 dark:text-slate-400 font-medium">{{ t('vDashboard.grade') }}</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(site, i) in topSites" :key="site.ID" class="border-b border-gray-50 hover:bg-gray-50">
-                <td class="py-2.5 px-2 text-gray-400 font-mono">{{ i + 1 }}</td>
+              <tr v-for="(site, i) in topSites" :key="site.ID" class="border-b border-gray-100 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                <td class="py-2.5 px-2 text-slate-400 dark:text-slate-500 font-mono">{{ i + 1 }}</td>
                 <td class="py-2.5 px-2">
-                  <div class="font-medium text-gray-900 truncate max-w-[180px]">{{ site.scan_target?.name || 'N/A' }}</div>
-                  <div class="text-xs text-gray-400 truncate max-w-[180px]">{{ site.scan_target?.url }}</div>
+                  <div class="font-medium text-slate-900 dark:text-white truncate max-w-[180px]">{{ site.scan_target?.name || 'N/A' }}</div>
+                  <div class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[180px]">{{ site.scan_target?.url }}</div>
                 </td>
                 <td class="py-2.5 px-2 text-center">
-                  <span :class="['font-bold', getScoreColor(site.overall_score)]">
+                  <span :class="['font-bold font-mono', getScoreColor(site.overall_score)]">
                     {{ Math.round(site.overall_score) }}
                   </span>
-                  <span class="text-gray-400 text-xs">/1000</span>
+                  <span class="text-slate-400 dark:text-slate-500 text-xs">/1000</span>
                 </td>
                 <td class="py-2.5 px-2 text-center">
                   <span :class="['inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold', getGradeColor(getGrade(site.overall_score))]">
@@ -356,36 +356,36 @@ function getGradeColor(grade) {
         </div>
 
         <!-- Bottom 5 Worst -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="card p-6">
           <div class="flex items-center gap-2 mb-4">
-            <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-              <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-8 h-8 bg-rose-500/15 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
               </svg>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900">{{ t('vDashboard.bottom5Worst') }}</h3>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">{{ t('vDashboard.bottom5Worst') }}</h3>
           </div>
           <table class="w-full text-sm">
             <thead>
-              <tr class="border-b border-gray-200">
-                <th class="text-right py-2 px-2 text-gray-500 font-medium">#</th>
-                <th class="text-right py-2 px-2 text-gray-500 font-medium">{{ t('vDashboard.website') }}</th>
-                <th class="text-center py-2 px-2 text-gray-500 font-medium">{{ t('vDashboard.score') }}</th>
-                <th class="text-center py-2 px-2 text-gray-500 font-medium">{{ t('vDashboard.grade') }}</th>
+              <tr class="border-b border-gray-200 dark:border-slate-700/60">
+                <th class="text-right py-2 px-2 text-slate-500 dark:text-slate-400 font-medium">#</th>
+                <th class="text-right py-2 px-2 text-slate-500 dark:text-slate-400 font-medium">{{ t('vDashboard.website') }}</th>
+                <th class="text-center py-2 px-2 text-slate-500 dark:text-slate-400 font-medium">{{ t('vDashboard.score') }}</th>
+                <th class="text-center py-2 px-2 text-slate-500 dark:text-slate-400 font-medium">{{ t('vDashboard.grade') }}</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(site, i) in bottomSites" :key="site.ID" class="border-b border-gray-50 hover:bg-gray-50">
-                <td class="py-2.5 px-2 text-gray-400 font-mono">{{ i + 1 }}</td>
+              <tr v-for="(site, i) in bottomSites" :key="site.ID" class="border-b border-gray-100 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                <td class="py-2.5 px-2 text-slate-400 dark:text-slate-500 font-mono">{{ i + 1 }}</td>
                 <td class="py-2.5 px-2">
-                  <div class="font-medium text-gray-900 truncate max-w-[180px]">{{ site.scan_target?.name || 'N/A' }}</div>
-                  <div class="text-xs text-gray-400 truncate max-w-[180px]">{{ site.scan_target?.url }}</div>
+                  <div class="font-medium text-slate-900 dark:text-white truncate max-w-[180px]">{{ site.scan_target?.name || 'N/A' }}</div>
+                  <div class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[180px]">{{ site.scan_target?.url }}</div>
                 </td>
                 <td class="py-2.5 px-2 text-center">
-                  <span :class="['font-bold', getScoreColor(site.overall_score)]">
+                  <span :class="['font-bold font-mono', getScoreColor(site.overall_score)]">
                     {{ Math.round(site.overall_score) }}
                   </span>
-                  <span class="text-gray-400 text-xs">/1000</span>
+                  <span class="text-slate-400 dark:text-slate-500 text-xs">/1000</span>
                 </td>
                 <td class="py-2.5 px-2 text-center">
                   <span :class="['inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold', getGradeColor(getGrade(site.overall_score))]">
@@ -402,7 +402,7 @@ function getGradeColor(grade) {
       <div class="flex justify-center mb-8">
         <router-link
           to="/leaderboard"
-          class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm shadow-sm"
+          class="inline-flex items-center gap-2 px-6 py-3 bg-accent-grad glow-accent text-white rounded-lg hover:opacity-90 transition-opacity font-medium text-sm"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
@@ -414,39 +414,39 @@ function getGradeColor(grade) {
       <!-- Charts & Latest Results -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Score Distribution Chart -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('vDashboard.scoreDistribution') }}</h3>
+        <div class="card p-6">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">{{ t('vDashboard.scoreDistribution') }}</h3>
           <Doughnut v-if="scoreChartData.labels.length" :data="scoreChartData" :options="scoreChartOptions" />
-          <p v-else class="text-gray-400 text-center py-10">{{ t('vDashboard.noDataYet') }}</p>
+          <p v-else class="text-slate-500 dark:text-slate-400 text-center py-10">{{ t('vDashboard.noDataYet') }}</p>
         </div>
 
         <!-- Latest Scan Results -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:col-span-2">
+        <div class="card p-6 lg:col-span-2">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-gray-900">{{ t('vDashboard.latestResults') }}</h3>
-            <router-link to="/leaderboard" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">{{ t('vDashboard.latestResults') }}</h3>
+            <router-link to="/leaderboard" class="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium">
               {{ t('vDashboard.viewFullRankings') }} &rarr;
             </router-link>
           </div>
           <div v-if="stats.latest_results && stats.latest_results.length" class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
-                <tr class="border-b border-gray-200">
-                  <th class="text-right py-3 px-2 text-gray-500 font-medium">{{ t('vDashboard.website') }}</th>
-                  <th class="text-center py-3 px-2 text-gray-500 font-medium">{{ t('vDashboard.score') }}</th>
-                  <th class="text-center py-3 px-2 text-gray-500 font-medium">{{ t('vDashboard.grade') }}</th>
-                  <th class="text-center py-3 px-2 text-gray-500 font-medium">{{ t('vDashboard.status') }}</th>
-                  <th class="text-left py-3 px-2 text-gray-500 font-medium">{{ t('vDashboard.details') }}</th>
+                <tr class="border-b border-gray-200 dark:border-slate-700/60">
+                  <th class="text-right py-3 px-2 text-slate-500 dark:text-slate-400 font-medium">{{ t('vDashboard.website') }}</th>
+                  <th class="text-center py-3 px-2 text-slate-500 dark:text-slate-400 font-medium">{{ t('vDashboard.score') }}</th>
+                  <th class="text-center py-3 px-2 text-slate-500 dark:text-slate-400 font-medium">{{ t('vDashboard.grade') }}</th>
+                  <th class="text-center py-3 px-2 text-slate-500 dark:text-slate-400 font-medium">{{ t('vDashboard.status') }}</th>
+                  <th class="text-left py-3 px-2 text-slate-500 dark:text-slate-400 font-medium">{{ t('vDashboard.details') }}</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="result in stats.latest_results" :key="result.ID" class="border-b border-gray-100 hover:bg-gray-50">
+                <tr v-for="result in stats.latest_results" :key="result.ID" class="border-b border-gray-100 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                   <td class="py-3 px-2">
-                    <div class="font-medium text-gray-900">{{ result.scan_target?.name || 'N/A' }}</div>
-                    <div class="text-xs text-gray-400">{{ result.scan_target?.url }}</div>
+                    <div class="font-medium text-slate-900 dark:text-white">{{ result.scan_target?.name || 'N/A' }}</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">{{ result.scan_target?.url }}</div>
                   </td>
                   <td class="py-3 px-2 text-center">
-                    <span :class="['inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-bold', getScoreBg(result.overall_score)]">
+                    <span :class="['inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-bold font-mono', getScoreBg(result.overall_score)]">
                       {{ Math.round(result.overall_score) }}<span class="text-xs font-normal opacity-70">/1000</span>
                     </span>
                   </td>
@@ -458,16 +458,16 @@ function getGradeColor(grade) {
                   <td class="py-3 px-2 text-center">
                     <span :class="[
                       'px-2 py-1 rounded-full text-xs font-medium',
-                      result.status === 'completed' ? 'bg-green-100 text-green-700' :
-                      result.status === 'running' ? 'bg-blue-100 text-blue-700' :
-                      result.status === 'failed' ? 'bg-red-100 text-red-700' :
-                      'bg-gray-100 text-gray-700'
+                      result.status === 'completed' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' :
+                      result.status === 'running' ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400' :
+                      result.status === 'failed' ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400' :
+                      'bg-slate-500/15 text-slate-600 dark:text-slate-300'
                     ]">
                       {{ result.status }}
                     </span>
                   </td>
                   <td class="py-3 px-2">
-                    <router-link :to="`/results/${result.ID}`" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                    <router-link :to="`/results/${result.ID}`" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium">
                       {{ t('vDashboard.viewDetails') }}
                     </router-link>
                   </td>
@@ -475,7 +475,7 @@ function getGradeColor(grade) {
               </tbody>
             </table>
           </div>
-          <p v-else class="text-gray-400 text-center py-10">{{ t('vDashboard.noResults') }}</p>
+          <p v-else class="text-slate-500 dark:text-slate-400 text-center py-10">{{ t('vDashboard.noResults') }}</p>
         </div>
       </div>
     </div>
@@ -483,50 +483,49 @@ function getGradeColor(grade) {
     <!-- Enhanced Dashboard: Top Vulnerabilities & Severity Distribution -->
     <div v-if="enhanced" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
       <!-- Top Vulnerabilities -->
-      <div v-if="enhanced.top_vulnerabilities?.length" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('vDashboard.topVulnerabilities') }}</h3>
+      <div v-if="enhanced.top_vulnerabilities?.length" class="card p-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">{{ t('vDashboard.topVulnerabilities') }}</h3>
         <div class="space-y-2">
-          <div v-for="v in enhanced.top_vulnerabilities" :key="v.check_name" class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+          <div v-for="v in enhanced.top_vulnerabilities" :key="v.check_name" class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-slate-700/60 last:border-0">
             <div class="flex items-center gap-2 min-w-0">
-              <span :class="v.severity === 'critical' ? 'bg-red-500' : v.severity === 'high' ? 'bg-orange-500' : v.severity === 'medium' ? 'bg-yellow-500' : 'bg-gray-400'"
-                class="w-2 h-2 rounded-full flex-shrink-0"></span>
-              <span class="text-sm text-gray-800 truncate">{{ v.check_name }}</span>
+              <span class="sev flex-shrink-0" :class="'sev-' + (v.severity || 'info')">{{ v.severity || 'info' }}</span>
+              <span class="text-sm text-slate-700 dark:text-slate-300 truncate">{{ v.check_name }}</span>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
-              <span class="text-xs text-gray-500">{{ v.category }}</span>
-              <span class="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium">{{ v.count }}x</span>
+              <span class="text-xs text-slate-500 dark:text-slate-400">{{ v.category }}</span>
+              <span class="px-2 py-0.5 bg-rose-500/15 text-rose-600 dark:text-rose-400 rounded text-xs font-medium font-mono">{{ v.count }}x</span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Severity Distribution -->
-      <div v-if="enhanced.severity_distribution?.length" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('vDashboard.failedBySeverity') }}</h3>
+      <div v-if="enhanced.severity_distribution?.length" class="card p-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">{{ t('vDashboard.failedBySeverity') }}</h3>
         <div class="space-y-3">
           <div v-for="s in enhanced.severity_distribution" :key="s.severity" class="flex items-center gap-3">
-            <span class="text-sm font-medium w-16 capitalize" :class="s.severity === 'critical' ? 'text-red-600' : s.severity === 'high' ? 'text-orange-600' : s.severity === 'medium' ? 'text-yellow-600' : 'text-gray-600'">
+            <span class="sev w-20 justify-center" :class="'sev-' + (s.severity || 'info')">
               {{ s.severity }}
             </span>
-            <div class="flex-1 bg-gray-200 rounded-full h-4">
+            <div class="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-4">
               <div :style="{ width: Math.min(100, s.count) + '%' }" class="h-full rounded-full transition-all"
-                :class="s.severity === 'critical' ? 'bg-red-500' : s.severity === 'high' ? 'bg-orange-500' : s.severity === 'medium' ? 'bg-yellow-500' : 'bg-gray-400'"></div>
+                :class="s.severity === 'critical' ? 'bg-rose-500' : s.severity === 'high' ? 'bg-orange-500' : s.severity === 'medium' ? 'bg-amber-500' : 'bg-slate-400'"></div>
             </div>
-            <span class="text-sm font-bold text-gray-700 w-10 text-right">{{ s.count }}</span>
+            <span class="text-sm font-bold font-mono text-slate-700 dark:text-slate-300 w-10 text-right">{{ s.count }}</span>
           </div>
         </div>
       </div>
 
       <!-- Weakest Categories -->
-      <div v-if="enhanced.category_averages?.length" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:col-span-2">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('vDashboard.weakestCategories') }}</h3>
+      <div v-if="enhanced.category_averages?.length" class="card p-6 lg:col-span-2">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">{{ t('vDashboard.weakestCategories') }}</h3>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           <div v-for="cat in enhanced.category_averages.slice(0, 10)" :key="cat.category"
-            class="text-center p-3 border rounded-lg" :class="cat.avg_score < 500 ? 'border-red-200 bg-red-50' : cat.avg_score < 700 ? 'border-yellow-200 bg-yellow-50' : 'border-green-200 bg-green-50'">
-            <p class="text-lg font-bold" :class="cat.avg_score < 500 ? 'text-red-600' : cat.avg_score < 700 ? 'text-yellow-600' : 'text-green-600'">
+            class="text-center p-3 border rounded-lg" :class="cat.avg_score < 500 ? 'border-rose-200 bg-rose-50 dark:border-rose-500/30 dark:bg-rose-500/10' : cat.avg_score < 700 ? 'border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10'">
+            <p class="text-lg font-bold font-mono" :class="cat.avg_score < 500 ? 'text-rose-600 dark:text-rose-400' : cat.avg_score < 700 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'">
               {{ Math.round(cat.avg_score) }}
             </p>
-            <p class="text-xs text-gray-600 mt-1 truncate">{{ cat.category }}</p>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1 truncate">{{ cat.category }}</p>
           </div>
         </div>
       </div>

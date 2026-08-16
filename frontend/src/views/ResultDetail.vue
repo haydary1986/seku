@@ -678,7 +678,7 @@ onMounted(async () => {
 
 <template>
   <div>
-    <button @click="router.back()" class="text-indigo-600 hover:text-indigo-800 mb-4 flex items-center gap-1">
+    <button @click="router.back()" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 mb-4 flex items-center gap-1">
       <svg class="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
       </svg>
@@ -691,19 +691,19 @@ onMounted(async () => {
 
     <div v-else-if="result">
       <!-- Header -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div class="card p-6 mb-6">
         <div class="flex items-center justify-between">
           <div>
-            <h1 class="text-2xl font-bold text-gray-900">{{ result.scan_target?.name || 'Scan Result' }}</h1>
-            <a :href="'https://' + result.scan_target?.url" target="_blank" class="text-indigo-600 hover:underline text-sm">
+            <h1 class="text-2xl font-bold text-slate-900 dark:text-white">{{ result.scan_target?.name || 'Scan Result' }}</h1>
+            <a :href="'https://' + result.scan_target?.url" target="_blank" class="text-indigo-600 dark:text-indigo-400 hover:underline text-sm">
               {{ result.scan_target?.url }}
             </a>
           </div>
           <div class="text-center">
-            <div :class="['inline-flex items-center justify-center w-24 h-24 rounded-full text-3xl font-bold text-white', getScoreBg(result.overall_score)]">
+            <div :class="['inline-flex items-center justify-center w-24 h-24 rounded-full text-3xl font-bold font-mono text-white', getScoreBg(result.overall_score)]">
               {{ Math.round(result.overall_score) }}
             </div>
-            <p class="text-sm text-gray-500 mt-2">Overall Score</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">Overall Score</p>
           </div>
           <div class="mt-4 flex gap-2">
             <button @click="downloadPDF" :disabled="pdfLoading"
@@ -735,7 +735,7 @@ onMounted(async () => {
               {{ aiLoading ? 'Analyzing...' : 'AI Analysis' }}
             </button>
             <button v-if="aiAnalysis" @click="showAI = !showAI"
-              class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm">
+              class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 text-sm">
               {{ showAI ? 'Hide AI Report' : 'Show AI Report' }}
             </button>
             <button @click="shareThisReport" :disabled="shareLoading"
@@ -755,21 +755,21 @@ onMounted(async () => {
           </div>
 
           <!-- Share panel -->
-          <div v-if="shareInfo" class="mt-4 pt-4 border-t border-gray-100 space-y-3">
+          <div v-if="shareInfo" class="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700/60 space-y-3">
             <div>
-              <label class="block text-xs text-gray-500 mb-1">رابط عام للتقرير (ملخّص بلا تفاصيل حسّاسة)</label>
+              <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">رابط عام للتقرير (ملخّص بلا تفاصيل حسّاسة)</label>
               <div class="flex items-center gap-2">
                 <input :value="shareOrigin + shareInfo.share_url" readonly dir="ltr"
-                  class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono bg-gray-50" />
-                <button @click="copyText(shareOrigin + shareInfo.share_url)" class="px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded">نسخ</button>
+                  class="flex-1 border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-mono bg-slate-50 dark:bg-slate-900/60 dark:text-slate-100" />
+                <button @click="copyText(shareOrigin + shareInfo.share_url)" class="px-3 py-2 text-xs bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 rounded">نسخ</button>
                 <a :href="shareInfo.share_url" target="_blank" class="px-3 py-2 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700">فتح</a>
               </div>
             </div>
             <div>
-              <label class="block text-xs text-gray-500 mb-1">شارة «Scanned by Seku» للتضمين في موقعك</label>
+              <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">شارة «Scanned by Seku» للتضمين في موقعك</label>
               <div class="flex items-center gap-3">
                 <img :src="shareInfo.badge_url" alt="Scanned by Seku" class="h-5" />
-                <button @click="copyText(badgeSnippet)" class="px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded">نسخ كود التضمين</button>
+                <button @click="copyText(badgeSnippet)" class="px-3 py-2 text-xs bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 rounded">نسخ كود التضمين</button>
               </div>
             </div>
           </div>
@@ -777,31 +777,31 @@ onMounted(async () => {
       </div>
 
       <!-- AI Analysis Panel -->
-      <div v-if="showAI" class="bg-white rounded-xl shadow-sm border border-purple-200 p-6 mb-6">
+      <div v-if="showAI" class="card p-6 mb-6">
         <div class="flex items-center gap-2 mb-4">
-          <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
           </svg>
-          <h3 class="text-lg font-semibold text-purple-900">AI Security Analysis</h3>
-          <span v-if="aiAnalysis" class="text-xs text-purple-500">({{ aiAnalysis.provider }})</span>
+          <h3 class="text-lg font-semibold text-purple-900 dark:text-purple-300">AI Security Analysis</h3>
+          <span v-if="aiAnalysis" class="text-xs text-purple-500 dark:text-purple-400">({{ aiAnalysis.provider }})</span>
         </div>
         <div v-if="aiLoading" class="flex items-center justify-center py-10">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 ml-3"></div>
-          <span class="text-purple-600">AI is analyzing the scan results...</span>
+          <span class="text-purple-600 dark:text-purple-400">AI is analyzing the scan results...</span>
         </div>
-        <div v-else-if="aiAnalysis?.analysis" class="prose prose-sm max-w-none text-gray-800 whitespace-pre-wrap" dir="ltr" style="text-align: left;">
+        <div v-else-if="aiAnalysis?.analysis" class="prose prose-sm max-w-none text-slate-800 dark:text-slate-200 whitespace-pre-wrap" dir="ltr" style="text-align: left;">
           {{ aiAnalysis.analysis }}
         </div>
       </div>
 
       <!-- Score History -->
-      <div v-if="historyChartData" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div v-if="historyChartData" class="card p-6 mb-6">
         <div class="flex items-center gap-2 mb-4">
-          <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
           </svg>
-          <h3 class="text-lg font-semibold text-gray-900">Score History</h3>
-          <span class="text-xs text-gray-500">({{ scoreHistory.length }} scans)</span>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Score History</h3>
+          <span class="text-xs text-slate-500 dark:text-slate-400">({{ scoreHistory.length }} scans)</span>
         </div>
         <div style="height: 250px;">
           <Line :data="historyChartData" :options="historyChartOptions" />
@@ -809,14 +809,14 @@ onMounted(async () => {
       </div>
 
       <!-- OWASP Top 10 Compliance -->
-      <div v-if="compliance && compliance.owasp_categories && compliance.owasp_categories.length" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
+      <div v-if="compliance && compliance.owasp_categories && compliance.owasp_categories.length" class="card p-6 mb-6">
         <div class="flex items-center gap-3 mb-6">
-          <svg class="w-7 h-7 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-7 h-7 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
           </svg>
           <div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">OWASP Top 10 Compliance</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400">{{ compliance.total_passed }}/{{ compliance.total_checks }} checks passed</p>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">OWASP Top 10 Compliance</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ compliance.total_passed }}/{{ compliance.total_checks }} checks passed</p>
           </div>
           <!-- Circular Gauge -->
           <div class="ms-auto flex items-center gap-4">
@@ -861,12 +861,12 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-      <div v-else-if="complianceLoading" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6 flex justify-center">
+      <div v-else-if="complianceLoading" class="card p-6 mb-6 flex justify-center">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
       </div>
 
       <!-- Smart Upgrade Suggestions -->
-      <div v-if="upgradeSuggestions.length" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
+      <div v-if="upgradeSuggestions.length" class="card p-6 mb-6">
         <div class="flex items-center gap-3 mb-6">
           <div class="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
             <svg class="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -874,8 +874,8 @@ onMounted(async () => {
             </svg>
           </div>
           <div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Smart Upgrade Suggestions</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400">{{ upgradeSuggestions.length }} libraries need attention</p>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Smart Upgrade Suggestions</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ upgradeSuggestions.length }} libraries need attention</p>
           </div>
         </div>
 
@@ -884,9 +884,9 @@ onMounted(async () => {
             class="border border-gray-200 dark:border-slate-700 rounded-xl p-4 hover:shadow-md transition-shadow">
             <!-- Header: Library name + severity badge -->
             <div class="flex items-center justify-between mb-3">
-              <h4 class="font-semibold text-gray-900 dark:text-white text-base">{{ suggestion.library }}</h4>
-              <span :class="['px-2.5 py-0.5 rounded-full text-xs font-semibold border', getUpgradeSeverityColor(suggestion.severity)]">
-                {{ suggestion.severity.toUpperCase() }}
+              <h4 class="font-semibold text-slate-900 dark:text-white text-base">{{ suggestion.library }}</h4>
+              <span class="sev" :class="'sev-' + (suggestion.severity || 'info')">
+                {{ suggestion.severity }}
               </span>
             </div>
 
@@ -907,7 +907,7 @@ onMounted(async () => {
             </div>
 
             <!-- Description -->
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ suggestion.description }}</p>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">{{ suggestion.description }}</p>
 
             <!-- CVE badges -->
             <div v-if="suggestion.cves && suggestion.cves.length" class="flex flex-wrap gap-1.5 mb-3">
@@ -940,76 +940,76 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-      <div v-else-if="upgradesLoading" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6 flex justify-center">
+      <div v-else-if="upgradesLoading" class="card p-6 mb-6 flex justify-center">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
       </div>
 
       <!-- Fix Priority Recommendations -->
-      <div v-if="fixPriority && fixPriority.recommendations?.length" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div v-if="fixPriority && fixPriority.recommendations?.length" class="card p-6 mb-6">
         <div class="flex items-center gap-3 mb-4">
-          <div class="p-2 bg-red-100 rounded-lg">
-            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="p-2 bg-rose-500/15 rounded-lg">
+            <svg class="w-6 h-6 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
             </svg>
           </div>
           <div>
-            <h3 class="text-lg font-semibold text-gray-900">Fix Priority</h3>
-            <p class="text-sm text-gray-500">{{ fixPriority.total_issues }} issues | {{ fixPriority.quick_wins }} quick wins</p>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Fix Priority</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ fixPriority.total_issues }} issues | {{ fixPriority.quick_wins }} quick wins</p>
           </div>
         </div>
         <div class="space-y-2">
           <div v-for="rec in fixPriority.recommendations.slice(0, 10)" :key="rec.priority"
-            class="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:bg-gray-50">
-            <span class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-white text-xs font-bold"
-              :class="rec.priority <= 3 ? 'bg-red-500' : rec.priority <= 6 ? 'bg-orange-500' : 'bg-yellow-500'">
+            class="flex items-center gap-3 p-3 border border-gray-100 dark:border-slate-700/60 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50">
+            <span class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-white text-xs font-bold font-mono"
+              :class="rec.priority <= 3 ? 'bg-rose-500' : rec.priority <= 6 ? 'bg-orange-500' : 'bg-amber-500'">
               {{ rec.priority }}
             </span>
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-gray-900 truncate">{{ rec.check_name }}</p>
-              <p class="text-xs text-gray-500">{{ rec.recommendation }}</p>
+              <p class="text-sm font-medium text-slate-900 dark:text-white truncate">{{ rec.check_name }}</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400">{{ rec.recommendation }}</p>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
-              <span :class="rec.effort === 'easy' ? 'bg-green-100 text-green-700' : rec.effort === 'hard' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'"
+              <span :class="rec.effort === 'easy' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : rec.effort === 'hard' ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'"
                 class="px-2 py-0.5 rounded text-xs font-medium">{{ rec.effort }}</span>
-              <span class="text-xs text-gray-400">{{ rec.category }}</span>
+              <span class="text-xs text-slate-400 dark:text-slate-500">{{ rec.category }}</span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Timeline Comparison -->
-      <div v-if="timeline && timeline.timeline?.length > 1" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div v-if="timeline && timeline.timeline?.length > 1" class="card p-6 mb-6">
         <div class="flex items-center gap-3 mb-4">
-          <div class="p-2 bg-blue-100 rounded-lg">
-            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="p-2 bg-sky-500/15 rounded-lg">
+            <svg class="w-6 h-6 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
             </svg>
           </div>
           <div>
-            <h3 class="text-lg font-semibold text-gray-900">Score Timeline</h3>
-            <p class="text-sm text-gray-500">{{ timeline.total_scans }} scans over time</p>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Score Timeline</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ timeline.total_scans }} scans over time</p>
           </div>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           <div v-for="(entry, idx) in timeline.timeline" :key="idx"
-            class="text-center p-3 border rounded-lg" :class="idx === timeline.timeline.length - 1 ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200'">
-            <p class="text-2xl font-bold" :class="entry.score >= 800 ? 'text-green-600' : entry.score >= 500 ? 'text-yellow-600' : 'text-red-600'">{{ entry.grade }}</p>
-            <p class="text-sm font-medium text-gray-700">{{ Math.round(entry.score) }}</p>
-            <p class="text-xs text-gray-400 mt-1">{{ entry.scanned_at?.split(' ')[0] }}</p>
-            <div class="flex justify-center gap-1 mt-1">
-              <span class="text-xs text-red-500">{{ entry.fail_count }}F</span>
-              <span class="text-xs text-yellow-500">{{ entry.warn_count }}W</span>
-              <span class="text-xs text-green-500">{{ entry.pass_count }}P</span>
+            class="text-center p-3 border rounded-lg" :class="idx === timeline.timeline.length - 1 ? 'border-emerald-400/50 bg-emerald-500/10' : 'border-gray-200 dark:border-slate-700/60'">
+            <p class="text-2xl font-bold font-mono" :class="entry.score >= 800 ? 'text-emerald-600 dark:text-emerald-400' : entry.score >= 500 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'">{{ entry.grade }}</p>
+            <p class="text-sm font-medium font-mono text-slate-700 dark:text-slate-300">{{ Math.round(entry.score) }}</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">{{ entry.scanned_at?.split(' ')[0] }}</p>
+            <div class="flex justify-center gap-1 mt-1 font-mono">
+              <span class="text-xs text-rose-500">{{ entry.fail_count }}F</span>
+              <span class="text-xs text-amber-500">{{ entry.warn_count }}W</span>
+              <span class="text-xs text-emerald-500">{{ entry.pass_count }}P</span>
             </div>
           </div>
         </div>
         <!-- Category changes -->
-        <div v-if="timeline.category_comparison?.length" class="mt-4 border-t pt-4">
-          <h4 class="text-sm font-semibold text-gray-700 mb-2">Category Changes (First vs Last scan)</h4>
+        <div v-if="timeline.category_comparison?.length" class="mt-4 border-t border-gray-200 dark:border-slate-700/60 pt-4">
+          <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Category Changes (First vs Last scan)</h4>
           <div class="flex flex-wrap gap-2">
             <span v-for="cat in timeline.category_comparison" :key="cat.category"
-              :class="cat.status === 'improved' ? 'bg-green-100 text-green-700' : cat.status === 'declined' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'"
-              class="px-2 py-1 rounded text-xs">
+              :class="cat.status === 'improved' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : cat.status === 'declined' ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400' : 'bg-slate-500/15 text-slate-600 dark:text-slate-300'"
+              class="px-2 py-1 rounded text-xs font-mono">
               {{ cat.category }}: {{ cat.change > 0 ? '+' : '' }}{{ Math.round(cat.change) }}
             </span>
           </div>
@@ -1018,8 +1018,8 @@ onMounted(async () => {
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Radar Chart -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Category Scores</h3>
+        <div class="card p-6">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Category Scores</h3>
           <Radar v-if="radarData.labels.length" :data="radarData" :options="radarOptions" />
         </div>
 
@@ -1033,86 +1033,86 @@ onMounted(async () => {
               :class="[
                 'p-4 rounded-xl border text-right transition-all',
                 activeCategory === catKey
-                  ? 'border-indigo-500 bg-indigo-50 shadow-md'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
+                  ? 'border-emerald-500 bg-emerald-500/10 shadow-md'
+                  : 'border-gray-200 dark:border-slate-700/60 bg-white dark:bg-slate-900/40 hover:border-gray-300 dark:hover:border-slate-600'
               ]"
             >
               <div class="flex items-center gap-2 mb-2">
-                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="categoryIcons[catKey] || categoryIcons.headers"/>
                 </svg>
-                <span class="text-sm font-medium text-gray-700">{{ categoryLabels[catKey] || catKey }}</span>
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ categoryLabels[catKey] || catKey }}</span>
               </div>
-              <span :class="['text-2xl font-bold', getScoreColor(getCategoryScore(catKey))]">
+              <span :class="['text-2xl font-bold font-mono', getScoreColor(getCategoryScore(catKey))]">
                 {{ getCategoryScore(catKey) }}/1000
               </span>
             </button>
           </div>
 
           <!-- Category Description -->
-          <div v-if="activeCategory && categoryInfo[activeCategory]" class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-4">
-            <h4 class="font-semibold text-indigo-900 mb-1">{{ categoryInfo[activeCategory].title }}</h4>
-            <p class="text-sm text-indigo-800 mb-2">{{ categoryInfo[activeCategory].description }}</p>
-            <div class="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
-              <p class="text-xs font-semibold text-red-700 mb-1">Attack Scenario:</p>
-              <p class="text-sm text-red-800">{{ categoryInfo[activeCategory].attackScenario }}</p>
+          <div v-if="activeCategory && categoryInfo[activeCategory]" class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 mb-4">
+            <h4 class="font-semibold text-emerald-900 dark:text-emerald-300 mb-1">{{ categoryInfo[activeCategory].title }}</h4>
+            <p class="text-sm text-emerald-800 dark:text-emerald-200 mb-2">{{ categoryInfo[activeCategory].description }}</p>
+            <div class="bg-rose-500/10 border border-rose-500/30 rounded-lg p-3 mt-2">
+              <p class="text-xs font-semibold text-rose-700 dark:text-rose-400 mb-1">Attack Scenario:</p>
+              <p class="text-sm text-rose-800 dark:text-rose-300">{{ categoryInfo[activeCategory].attackScenario }}</p>
             </div>
           </div>
 
           <!-- Severity Filter -->
           <div class="flex flex-wrap gap-2 mb-4">
-            <button @click="severityFilter = 'all'" :class="severityFilter === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1.5 rounded-lg text-sm transition-colors">
+            <button @click="severityFilter = 'all'" :class="severityFilter === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-3 py-1.5 rounded-lg text-sm transition-colors">
               All ({{ allChecks.length }})
             </button>
-            <button @click="severityFilter = 'critical'" :class="severityFilter === 'critical' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1.5 rounded-lg text-sm transition-colors">
+            <button @click="severityFilter = 'critical'" :class="severityFilter === 'critical' ? 'bg-red-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-3 py-1.5 rounded-lg text-sm transition-colors">
               Critical ({{ criticalCount }})
             </button>
-            <button @click="severityFilter = 'high'" :class="severityFilter === 'high' ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1.5 rounded-lg text-sm transition-colors">
+            <button @click="severityFilter = 'high'" :class="severityFilter === 'high' ? 'bg-orange-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-3 py-1.5 rounded-lg text-sm transition-colors">
               High ({{ highCount }})
             </button>
-            <button @click="severityFilter = 'medium'" :class="severityFilter === 'medium' ? 'bg-yellow-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1.5 rounded-lg text-sm transition-colors">
+            <button @click="severityFilter = 'medium'" :class="severityFilter === 'medium' ? 'bg-yellow-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-3 py-1.5 rounded-lg text-sm transition-colors">
               Medium ({{ mediumCount }})
             </button>
-            <button @click="severityFilter = 'fail'" :class="severityFilter === 'fail' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1.5 rounded-lg text-sm transition-colors">
+            <button @click="severityFilter = 'fail'" :class="severityFilter === 'fail' ? 'bg-red-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-3 py-1.5 rounded-lg text-sm transition-colors">
               Failed Only
             </button>
           </div>
 
           <!-- Check Details -->
-          <div v-if="activeCategory && categories[activeCategory]" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="p-4 bg-gray-50 border-b border-gray-200">
-              <h3 class="text-lg font-semibold text-gray-900">
+          <div v-if="activeCategory && categories[activeCategory]" class="card overflow-hidden">
+            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700/60">
+              <h3 class="text-lg font-semibold text-slate-900 dark:text-white">
                 {{ categoryLabels[activeCategory] || activeCategory }} - Detailed Checks
               </h3>
             </div>
-            <div class="divide-y divide-gray-100">
+            <div class="divide-y divide-gray-100 dark:divide-slate-700/60">
               <div v-for="check in filterChecksBySeverity(categories[activeCategory])" :key="check.ID" class="p-4">
                 <div class="flex items-center justify-between mb-2">
                   <div class="flex items-center gap-2">
                     <span :class="['px-2 py-0.5 rounded text-xs font-medium', getStatusColor(check.status)]">
                       {{ check.status.toUpperCase() }}
                     </span>
-                    <span class="font-medium text-gray-900">{{ check.check_name }}</span>
+                    <span class="font-medium text-slate-900 dark:text-white">{{ check.check_name }}</span>
                   </div>
                   <div class="flex items-center gap-2">
-                    <span :class="['px-2 py-0.5 rounded text-xs', getSeverityColor(check.severity)]">
+                    <span class="sev" :class="'sev-' + (check.severity || 'info')">
                       {{ check.severity }}
                     </span>
-                    <span v-if="check.owasp" class="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-mono">{{ check.owasp }}</span>
-                    <span v-if="check.cwe" class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-mono">{{ check.cwe }}</span>
+                    <span v-if="check.owasp" class="px-2 py-0.5 bg-purple-500/15 text-purple-600 dark:text-purple-400 rounded text-xs font-mono">{{ check.owasp }}</span>
+                    <span v-if="check.cwe" class="px-2 py-0.5 bg-sky-500/15 text-sky-600 dark:text-sky-400 rounded text-xs font-mono">{{ check.cwe }}</span>
                     <span v-if="check.cvss_score > 0" :class="[getCVSSClass(check.cvss_rating), 'px-2 py-0.5 rounded text-xs font-mono']">
                       CVSS {{ check.cvss_score }}
                     </span>
-                    <span v-if="check.confidence" :class="[getConfidenceClass(check.confidence), 'px-2 py-0.5 rounded text-xs']">
+                    <span v-if="check.confidence" :class="[getConfidenceClass(check.confidence), 'px-2 py-0.5 rounded text-xs font-mono']">
                       {{ check.confidence }}% confidence
                     </span>
-                    <span :class="['font-bold', getScoreColor(check.score)]">{{ Math.round(check.score) }}/1000</span>
+                    <span :class="['font-bold font-mono', getScoreColor(check.score)]">{{ Math.round(check.score) }}/1000</span>
                   </div>
                 </div>
 
                 <!-- Triage -->
                 <div class="flex items-center gap-2 mb-2 text-xs">
-                  <span class="text-gray-400">Triage:</span>
+                  <span class="text-slate-400 dark:text-slate-500">Triage:</span>
                   <select
                     :value="check.triage_status || 'open'"
                     @change="saveTriage(check, $event.target.value)"
@@ -1127,32 +1127,32 @@ onMounted(async () => {
                 </div>
 
                 <!-- Explanation Box -->
-                <div v-if="getCheckExplanation(check.check_name)" class="mt-2 border border-gray-200 rounded-lg overflow-hidden">
-                  <div class="bg-blue-50 p-3 text-sm">
-                    <p class="font-medium text-blue-900 mb-1">What this checks:</p>
-                    <p class="text-blue-800">{{ getCheckExplanation(check.check_name).what }}</p>
+                <div v-if="getCheckExplanation(check.check_name)" class="mt-2 border border-gray-200 dark:border-slate-700/60 rounded-lg overflow-hidden">
+                  <div class="bg-sky-500/10 p-3 text-sm">
+                    <p class="font-medium text-sky-900 dark:text-sky-300 mb-1">What this checks:</p>
+                    <p class="text-sky-800 dark:text-sky-200">{{ getCheckExplanation(check.check_name).what }}</p>
                   </div>
-                  <div v-if="check.status === 'fail' || check.status === 'warning'" class="bg-red-50 p-3 text-sm border-t border-gray-200">
-                    <p class="font-medium text-red-900 mb-1">Risk:</p>
-                    <p class="text-red-800">{{ getCheckExplanation(check.check_name).risk }}</p>
-                    <p class="font-medium text-red-900 mt-2 mb-1">How attackers exploit this:</p>
-                    <p class="text-red-800">{{ getCheckExplanation(check.check_name).exploit }}</p>
-                    <p class="font-medium text-green-900 mt-2 mb-1">Recommended fix:</p>
-                    <p class="text-green-800">{{ getCheckExplanation(check.check_name).fix }}</p>
+                  <div v-if="check.status === 'fail' || check.status === 'warning'" class="bg-rose-500/10 p-3 text-sm border-t border-gray-200 dark:border-slate-700/60">
+                    <p class="font-medium text-rose-900 dark:text-rose-300 mb-1">Risk:</p>
+                    <p class="text-rose-800 dark:text-rose-200">{{ getCheckExplanation(check.check_name).risk }}</p>
+                    <p class="font-medium text-rose-900 dark:text-rose-300 mt-2 mb-1">How attackers exploit this:</p>
+                    <p class="text-rose-800 dark:text-rose-200">{{ getCheckExplanation(check.check_name).exploit }}</p>
+                    <p class="font-medium text-emerald-900 dark:text-emerald-300 mt-2 mb-1">Recommended fix:</p>
+                    <p class="text-emerald-800 dark:text-emerald-200">{{ getCheckExplanation(check.check_name).fix }}</p>
                   </div>
                 </div>
 
                 <!-- Subdomain Individual Scan Details -->
-                <div v-if="check.details && check.check_name.startsWith('Subdomain Scan:')" class="mt-2 bg-gray-50 rounded-lg p-3 text-sm">
+                <div v-if="check.details && check.check_name.startsWith('Subdomain Scan:')" class="mt-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 text-sm">
                   <div class="flex items-center gap-2 mb-2">
-                    <span class="font-semibold text-gray-800">{{ parseDetails(check.details).subdomain }}</span>
+                    <span class="font-semibold text-slate-800 dark:text-slate-200">{{ parseDetails(check.details).subdomain }}</span>
                     <span v-if="parseDetails(check.details).scheme" :class="parseDetails(check.details).scheme === 'https' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-0.5 rounded text-xs font-medium">
                       {{ parseDetails(check.details).scheme?.toUpperCase() }}
                     </span>
                     <span v-if="parseDetails(check.details).status_code" class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">
                       HTTP {{ parseDetails(check.details).status_code }}
                     </span>
-                    <span v-if="parseDetails(check.details).server" class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-xs">
+                    <span v-if="parseDetails(check.details).server" class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded text-xs">
                       {{ parseDetails(check.details).server }}
                     </span>
                     <span v-if="parseDetails(check.details).is_cloudflare" class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs font-medium">
@@ -1161,8 +1161,8 @@ onMounted(async () => {
                   </div>
                   <!-- IPs -->
                   <div v-if="parseDetails(check.details).ips" class="flex gap-1 mb-2 flex-wrap">
-                    <span class="text-xs text-gray-500">IPs:</span>
-                    <span v-for="ip in parseDetails(check.details).ips" :key="ip" class="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-mono">{{ ip }}</span>
+                    <span class="text-xs text-slate-500 dark:text-slate-400">IPs:</span>
+                    <span v-for="ip in parseDetails(check.details).ips" :key="ip" class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded text-xs font-mono">{{ ip }}</span>
                   </div>
                   <!-- TLS Info -->
                   <div v-if="parseDetails(check.details).tls_issuer" class="flex gap-2 mb-2 text-xs">
@@ -1170,7 +1170,7 @@ onMounted(async () => {
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="parseDetails(check.details).tls_valid ? 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' : 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'"/></svg>
                       TLS: {{ parseDetails(check.details).tls_issuer }}
                     </span>
-                    <span class="text-gray-500">Expires: {{ parseDetails(check.details).tls_expires }}</span>
+                    <span class="text-slate-500 dark:text-slate-400">Expires: {{ parseDetails(check.details).tls_expires }}</span>
                   </div>
                   <!-- Issues -->
                   <div v-if="parseDetails(check.details).issues?.length" class="mb-2">
@@ -1195,41 +1195,41 @@ onMounted(async () => {
                 </div>
 
                 <!-- Common Subdomain Enumeration — detailed table -->
-                <div v-else-if="check.details && check.check_name === 'Common Subdomain Enumeration'" class="mt-2 bg-gray-50 rounded-lg p-3 text-sm">
-                  <p class="font-semibold text-gray-800 mb-2">
+                <div v-else-if="check.details && check.check_name === 'Common Subdomain Enumeration'" class="mt-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 text-sm">
+                  <p class="font-semibold text-slate-800 dark:text-slate-200 mb-2">
                     {{ parseDetails(check.details).message }}
                   </p>
                   <div v-if="parseDetails(check.details).subdomains?.length" class="overflow-x-auto">
                     <table class="w-full text-xs border-collapse">
                       <thead>
-                        <tr class="bg-gray-100 border-b border-gray-200">
-                          <th class="text-right py-2 px-2 text-gray-600">#</th>
-                          <th class="text-right py-2 px-2 text-gray-600">Subdomain</th>
-                          <th class="text-center py-2 px-2 text-gray-600">HTTPS</th>
-                          <th class="text-center py-2 px-2 text-gray-600">Cloudflare</th>
-                          <th class="text-right py-2 px-2 text-gray-600">IP Addresses</th>
-                          <th class="text-right py-2 px-2 text-gray-600">CNAME</th>
+                        <tr class="bg-slate-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700/60">
+                          <th class="text-right py-2 px-2 text-slate-600 dark:text-slate-400">#</th>
+                          <th class="text-right py-2 px-2 text-slate-600 dark:text-slate-400">Subdomain</th>
+                          <th class="text-center py-2 px-2 text-slate-600 dark:text-slate-400">HTTPS</th>
+                          <th class="text-center py-2 px-2 text-slate-600 dark:text-slate-400">Cloudflare</th>
+                          <th class="text-right py-2 px-2 text-slate-600 dark:text-slate-400">IP Addresses</th>
+                          <th class="text-right py-2 px-2 text-slate-600 dark:text-slate-400">CNAME</th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr v-for="(sub, i) in parseDetails(check.details).subdomains" :key="sub.subdomain" class="border-b border-gray-100 hover:bg-white">
-                          <td class="py-2 px-2 text-gray-400">{{ i + 1 }}</td>
-                          <td class="py-2 px-2 font-mono text-gray-800" dir="ltr">{{ sub.subdomain }}</td>
+                        <tr v-for="(sub, i) in parseDetails(check.details).subdomains" :key="sub.subdomain" class="border-b border-gray-100 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                          <td class="py-2 px-2 text-slate-400 dark:text-slate-500 font-mono">{{ i + 1 }}</td>
+                          <td class="py-2 px-2 font-mono text-slate-800 dark:text-slate-200" dir="ltr">{{ sub.subdomain }}</td>
                           <td class="py-2 px-2 text-center">
                             <span v-if="sub.has_https" class="inline-block px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-bold">HTTPS ✓</span>
                             <span v-else class="inline-block px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold">HTTP ✗</span>
                           </td>
                           <td class="py-2 px-2 text-center">
                             <span v-if="sub.is_cloudflare" class="inline-block px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px] font-medium">CF</span>
-                            <span v-else class="text-gray-300">—</span>
+                            <span v-else class="text-slate-300 dark:text-slate-600">—</span>
                           </td>
-                          <td class="py-2 px-2 font-mono text-[10px] text-gray-600" dir="ltr">
+                          <td class="py-2 px-2 font-mono text-[10px] text-slate-600 dark:text-slate-400" dir="ltr">
                             <div v-if="sub.ips && sub.ips.length">
-                              <span v-for="(ip, idx) in sub.ips.slice(0, 2)" :key="ip" class="inline-block mr-1 px-1 bg-gray-200 rounded">{{ ip }}</span>
-                              <span v-if="sub.ips.length > 2" class="text-gray-400">+{{ sub.ips.length - 2 }}</span>
+                              <span v-for="(ip, idx) in sub.ips.slice(0, 2)" :key="ip" class="inline-block mr-1 px-1 bg-slate-200 dark:bg-slate-700 rounded">{{ ip }}</span>
+                              <span v-if="sub.ips.length > 2" class="text-slate-400 dark:text-slate-500">+{{ sub.ips.length - 2 }}</span>
                             </div>
                           </td>
-                          <td class="py-2 px-2 font-mono text-[10px] text-purple-700" dir="ltr">{{ sub.cname || '—' }}</td>
+                          <td class="py-2 px-2 font-mono text-[10px] text-purple-700 dark:text-purple-400" dir="ltr">{{ sub.cname || '—' }}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1237,8 +1237,8 @@ onMounted(async () => {
                 </div>
 
                 <!-- Subdomain Security Check — show with/without HTTPS lists -->
-                <div v-else-if="check.details && check.check_name === 'Subdomain Security Check'" class="mt-2 bg-gray-50 rounded-lg p-3 text-sm">
-                  <p class="font-semibold text-gray-800 mb-2">{{ parseDetails(check.details).message }}</p>
+                <div v-else-if="check.details && check.check_name === 'Subdomain Security Check'" class="mt-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 text-sm">
+                  <p class="font-semibold text-slate-800 dark:text-slate-200 mb-2">{{ parseDetails(check.details).message }}</p>
                   <div class="grid grid-cols-2 gap-3 mb-2 text-xs">
                     <div class="bg-green-50 rounded p-2 border border-green-200">
                       <p class="font-semibold text-green-700 mb-1">✓ HTTPS enabled ({{ parseDetails(check.details).https_count }})</p>
@@ -1256,8 +1256,8 @@ onMounted(async () => {
                 </div>
 
                 <!-- Dangling DNS / Takeover — highlight risks -->
-                <div v-else-if="check.details && check.check_name === 'Dangling DNS / Subdomain Takeover Risk'" class="mt-2 bg-gray-50 rounded-lg p-3 text-sm">
-                  <p class="font-semibold text-gray-800 mb-2">{{ parseDetails(check.details).message }}</p>
+                <div v-else-if="check.details && check.check_name === 'Dangling DNS / Subdomain Takeover Risk'" class="mt-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 text-sm">
+                  <p class="font-semibold text-slate-800 dark:text-slate-200 mb-2">{{ parseDetails(check.details).message }}</p>
                   <div v-if="parseDetails(check.details).potential_takeovers?.length" class="space-y-1 mb-2">
                     <p class="text-xs font-semibold text-red-700">⚠️ Potential Takeovers:</p>
                     <div v-for="t in parseDetails(check.details).potential_takeovers" :key="t.subdomain"
@@ -1266,7 +1266,7 @@ onMounted(async () => {
                       <div class="text-red-600">CNAME → {{ t.cname }}</div>
                     </div>
                   </div>
-                  <div v-if="parseDetails(check.details).cnames?.length" class="text-xs text-gray-600" dir="ltr">
+                  <div v-if="parseDetails(check.details).cnames?.length" class="text-xs text-slate-600 dark:text-slate-400" dir="ltr">
                     <p class="font-semibold mb-1">External CNAMEs:</p>
                     <ul class="space-y-0.5">
                       <li v-for="c in parseDetails(check.details).cnames" :key="c" class="font-mono">{{ c }}</li>
@@ -1275,11 +1275,11 @@ onMounted(async () => {
                 </div>
 
                 <!-- Raw Details (non-subdomain checks) -->
-                <div v-else-if="check.details" class="mt-2 bg-gray-50 rounded-lg p-3 text-sm">
-                  <p class="text-xs text-gray-400 mb-1">Technical Details:</p>
+                <div v-else-if="check.details" class="mt-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 text-sm">
+                  <p class="text-xs text-slate-400 dark:text-slate-500 mb-1">Technical Details:</p>
                   <div v-for="(value, key) in parseDetails(check.details)" :key="key" class="flex gap-2 py-0.5">
-                    <span class="text-gray-500 min-w-[100px]">{{ key }}:</span>
-                    <span class="text-gray-700">{{ typeof value === 'object' ? JSON.stringify(value) : value }}</span>
+                    <span class="text-slate-500 dark:text-slate-400 min-w-[100px]">{{ key }}:</span>
+                    <span class="text-slate-700 dark:text-slate-300">{{ typeof value === 'object' ? JSON.stringify(value) : value }}</span>
                   </div>
                 </div>
 
@@ -1302,12 +1302,12 @@ onMounted(async () => {
                       Create Issue
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
-                    <div class="absolute left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20">
-                      <button @click="openIssueModal('github', check)" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg flex items-center gap-2">
+                    <div class="absolute left-0 mt-1 w-48 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20">
+                      <button @click="openIssueModal('github', check)" class="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-t-lg flex items-center gap-2">
                         <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
                         GitHub Issue
                       </button>
-                      <button @click="openIssueModal('jira', check)" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-b-lg flex items-center gap-2">
+                      <button @click="openIssueModal('jira', check)" class="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-b-lg flex items-center gap-2">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 11.513H0a5.218 5.218 0 005.232 5.215h2.13v2.057A5.215 5.215 0 0012.575 24V12.518a1.005 1.005 0 00-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 005.215 5.214h2.129v2.058a5.218 5.218 0 005.215 5.214V6.758a1.001 1.001 0 00-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 005.215 5.215h2.129v2.057A5.215 5.215 0 0024 12.483V1.005A1.005 1.005 0 0023.013 0z"/></svg>
                         Jira Ticket
                       </button>
@@ -1325,52 +1325,52 @@ onMounted(async () => {
     <Teleport to="body">
       <div v-if="showIssueModal" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/50" @click="closeIssueModal"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 mx-4">
+        <div class="relative card w-full max-w-md p-6 mx-4">
           <div class="flex items-center justify-between mb-5">
             <div class="flex items-center gap-3">
               <!-- GitHub icon -->
               <svg v-if="issueType === 'github'" class="w-6 h-6" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
               <!-- Jira icon -->
               <svg v-else class="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 11.513H0a5.218 5.218 0 005.232 5.215h2.13v2.057A5.215 5.215 0 0012.575 24V12.518a1.005 1.005 0 00-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 005.215 5.214h2.129v2.058a5.218 5.218 0 005.215 5.214V6.758a1.001 1.001 0 00-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 005.215 5.215h2.129v2.057A5.215 5.215 0 0024 12.483V1.005A1.005 1.005 0 0023.013 0z"/></svg>
-              <h3 class="text-lg font-bold text-gray-900">
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 {{ issueType === 'github' ? 'Create GitHub Issue' : 'Create Jira Ticket' }}
               </h3>
             </div>
-            <button @click="closeIssueModal" class="p-1 text-gray-400 hover:text-gray-600 rounded">
+            <button @click="closeIssueModal" class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
 
-          <p class="text-sm text-gray-500 mb-4">Creating issue for: <strong>{{ issueCheckName }}</strong></p>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Creating issue for: <strong>{{ issueCheckName }}</strong></p>
 
           <!-- Success -->
-          <div v-if="issueSuccess" class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-            <p class="text-sm text-green-700 font-medium mb-1">Issue created successfully!</p>
-            <a :href="issueSuccess" target="_blank" class="text-sm text-indigo-600 hover:underline break-all">{{ issueSuccess }}</a>
+          <div v-if="issueSuccess" class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+            <p class="text-sm text-emerald-700 dark:text-emerald-400 font-medium mb-1">Issue created successfully!</p>
+            <a :href="issueSuccess" target="_blank" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline break-all">{{ issueSuccess }}</a>
           </div>
 
           <!-- Error -->
-          <div v-if="issueError" class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-            <p class="text-sm text-red-700">{{ issueError }}</p>
+          <div v-if="issueError" class="bg-rose-500/10 border border-rose-500/30 rounded-lg p-3 mb-4">
+            <p class="text-sm text-rose-700 dark:text-rose-400">{{ issueError }}</p>
           </div>
 
           <!-- GitHub Form -->
           <form v-if="issueType === 'github' && !issueSuccess" @submit.prevent="submitIssue" class="space-y-3">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Repository Owner</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Repository Owner</label>
               <input v-model="issueForm.repo_owner" type="text" required placeholder="e.g., octocat"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
+                class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Repository Name</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Repository Name</label>
               <input v-model="issueForm.repo_name" type="text" required placeholder="e.g., my-project"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
+                class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Personal Access Token</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Personal Access Token</label>
               <PasswordInput v-model="issueForm.token" :required="true" placeholder="ghp_..."
-                input-class="w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
-              <p class="text-xs text-gray-400 mt-1">Needs "repo" scope</p>
+                input-class="w-full px-3 py-2 pl-10 border border-gray-300 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
+              <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Needs "repo" scope</p>
             </div>
             <button type="submit" :disabled="issueLoading"
               class="w-full px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center gap-2 text-sm font-medium">
@@ -1382,24 +1382,24 @@ onMounted(async () => {
           <!-- Jira Form -->
           <form v-if="issueType === 'jira' && !issueSuccess" @submit.prevent="submitIssue" class="space-y-3">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Jira URL</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Jira URL</label>
               <input v-model="issueForm.jira_url" type="url" required placeholder="https://company.atlassian.net"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
+                class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Project Key</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Project Key</label>
               <input v-model="issueForm.project_key" type="text" required placeholder="e.g., SEC"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
+                class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
               <input v-model="issueForm.email" type="email" required placeholder="user@company.com"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
+                class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">API Token</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">API Token</label>
               <PasswordInput v-model="issueForm.token" :required="true" placeholder="Jira API token"
-                input-class="w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
+                input-class="w-full px-3 py-2 pl-10 border border-gray-300 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" />
             </div>
             <button type="submit" :disabled="issueLoading"
               class="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2 text-sm font-medium">
@@ -1410,7 +1410,7 @@ onMounted(async () => {
 
           <!-- Close button when success -->
           <button v-if="issueSuccess" @click="closeIssueModal"
-            class="w-full mt-3 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">
+            class="w-full mt-3 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-sm font-medium">
             Close
           </button>
         </div>
@@ -1424,23 +1424,23 @@ onMounted(async () => {
         <div class="absolute inset-0 bg-black/50" @click="closeRemediation"></div>
 
         <!-- Panel -->
-        <div class="relative w-full max-w-2xl bg-white shadow-2xl overflow-y-auto animate-slide-in-right">
+        <div class="relative w-full max-w-2xl bg-white dark:bg-slate-900 shadow-2xl overflow-y-auto animate-slide-in-right">
           <!-- Header -->
-          <div class="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
+          <div class="sticky top-0 glass border-b border-gray-200 dark:border-slate-700/60 p-6 z-10">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <div class="p-2 bg-emerald-100 rounded-lg">
-                  <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="p-2 bg-emerald-500/15 rounded-lg">
+                  <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                   </svg>
                 </div>
                 <div>
-                  <h2 class="text-lg font-bold text-gray-900">Remediation Guide</h2>
-                  <p class="text-sm text-gray-500">{{ remediationCheckName }}</p>
+                  <h2 class="text-lg font-bold text-slate-900 dark:text-white">Remediation Guide</h2>
+                  <p class="text-sm text-slate-500 dark:text-slate-400">{{ remediationCheckName }}</p>
                 </div>
               </div>
-              <button @click="closeRemediation" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+              <button @click="closeRemediation" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -1452,7 +1452,7 @@ onMounted(async () => {
               <span :class="['px-3 py-1 rounded-full text-xs font-semibold border', getPriorityColor(remediationGuide.priority)]">
                 {{ remediationGuide.priority?.toUpperCase() }} PRIORITY
               </span>
-              <span class="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 border border-indigo-200">
+              <span class="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
                 ~ {{ remediationGuide.time_estimate }}
               </span>
             </div>
@@ -1465,24 +1465,24 @@ onMounted(async () => {
 
           <!-- No Guide Found -->
           <div v-else-if="!remediationGuide" class="p-6 text-center">
-            <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <p class="text-gray-500 text-lg">No remediation guide available for this check yet.</p>
-            <p class="text-gray-400 text-sm mt-2">Use the AI Analysis feature for custom recommendations.</p>
+            <p class="text-slate-500 dark:text-slate-400 text-lg">No remediation guide available for this check yet.</p>
+            <p class="text-slate-400 dark:text-slate-500 text-sm mt-2">Use the AI Analysis feature for custom recommendations.</p>
           </div>
 
           <!-- Guide Content -->
           <div v-else class="p-6">
             <!-- Description -->
             <div class="mb-6">
-              <h3 class="font-semibold text-gray-900 mb-2">{{ remediationGuide.title }}</h3>
-              <p class="text-sm text-gray-600">{{ remediationGuide.description }}</p>
+              <h3 class="font-semibold text-slate-900 dark:text-white mb-2">{{ remediationGuide.title }}</h3>
+              <p class="text-sm text-slate-600 dark:text-slate-300">{{ remediationGuide.description }}</p>
             </div>
 
             <!-- Server Type Tabs -->
             <div class="mb-6">
-              <p class="text-sm font-medium text-gray-700 mb-2">Select your server type:</p>
+              <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Select your server type:</p>
               <div class="flex flex-wrap gap-2">
                 <button
                   v-for="st in serverTypes.filter(s => remediationGuide.guides && remediationGuide.guides[s.key])"
@@ -1492,7 +1492,7 @@ onMounted(async () => {
                     'px-4 py-2 rounded-lg text-sm font-medium transition-all border',
                     activeServerType === st.key
                       ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                      : 'bg-white text-gray-700 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-gray-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-500/50 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'
                   ]"
                 >
                   {{ st.label }}
@@ -1502,7 +1502,7 @@ onMounted(async () => {
 
             <!-- Instructions -->
             <div v-if="remediationGuide.guides && remediationGuide.guides[activeServerType]" class="prose prose-sm max-w-none">
-              <div class="bg-gray-50 rounded-xl border border-gray-200 p-5">
+              <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-slate-700/60 p-5">
                 <div v-for="(block, idx) in remediationGuide.guides[activeServerType].split('```')" :key="idx">
                   <!-- Code block (odd indices after split on ```) -->
                   <div v-if="idx % 2 === 1" class="my-3">
@@ -1519,12 +1519,12 @@ onMounted(async () => {
                     <pre class="bg-gray-900 text-gray-100 p-4 rounded-b-lg overflow-x-auto text-xs leading-relaxed"><code>{{ block.split('\n').slice(1).join('\n').trim() }}</code></pre>
                   </div>
                   <!-- Regular text (even indices) -->
-                  <div v-else class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ block }}</div>
+                  <div v-else class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{{ block }}</div>
                 </div>
               </div>
             </div>
 
-            <div v-else class="text-center py-10 text-gray-500">
+            <div v-else class="text-center py-10 text-slate-500 dark:text-slate-400">
               <p>Select a server type above to see the remediation guide.</p>
             </div>
           </div>

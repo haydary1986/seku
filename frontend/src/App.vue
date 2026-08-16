@@ -189,7 +189,7 @@ function logout() {
   </div>
 
   <!-- Main layout with sidebar (authenticated pages) -->
-  <div v-else class="min-h-screen bg-gray-50 dark:bg-slate-800" :dir="dir">
+  <div v-else class="min-h-screen bg-transparent" :dir="dir">
     <!-- Mobile sidebar toggle -->
     <button
       @click="sidebarOpen = !sidebarOpen"
@@ -208,14 +208,14 @@ function logout() {
       <!-- Logo -->
       <div class="p-5 border-b border-slate-700 flex-shrink-0">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 bg-indigo-500 rounded-lg flex items-center justify-center">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="w-9 h-9 bg-accent-grad glow-accent rounded-xl flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
             </svg>
           </div>
           <div>
-            <h1 class="text-lg font-bold">Seku</h1>
-            <p class="text-xs text-slate-400">Web Security</p>
+            <h1 class="text-lg font-bold tracking-tight text-gradient">Seku</h1>
+            <p class="text-[11px] text-slate-400 font-mono tracking-wide">web security console</p>
           </div>
         </div>
       </div>
@@ -226,8 +226,8 @@ function logout() {
           <p class="px-3 mb-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{{ group.label }}</p>
           <div class="space-y-0.5">
             <router-link v-for="item in group.items" :key="item.path" :to="item.path" @click="sidebarOpen = false"
-              :class="[route.path === item.path ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-700/60 hover:text-white']"
-              class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm">
+              :class="[route.path === item.path ? 'bg-accent-grad text-white glow-accent' : 'text-slate-300 hover:bg-slate-700/60 hover:text-white']"
+              class="flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm">
               <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon"/>
               </svg>
@@ -246,7 +246,7 @@ function logout() {
     <!-- Main content -->
     <main class="lg:mr-64 min-h-screen dark:text-gray-200 flex flex-col">
       <!-- Unified top header (consistent across every page) -->
-      <header class="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-gray-200 dark:border-slate-700">
+      <header class="sticky top-0 z-30 glass border-x-0 border-t-0">
         <div class="flex items-center gap-3 px-4 lg:px-8 h-16">
           <div class="min-w-0">
             <h1 class="text-lg font-bold text-gray-900 dark:text-white truncate">{{ pageTitle }}</h1>

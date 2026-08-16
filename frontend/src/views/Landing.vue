@@ -139,7 +139,7 @@ const steps = computed(() => [
 </script>
 
 <template>
-  <div class="min-h-screen bg-white" :dir="isRTL ? 'rtl' : 'ltr'">
+  <div class="min-h-screen" :dir="isRTL ? 'rtl' : 'ltr'">
 
     <!-- Signup Info Modal -->
     <Teleport to="body">
@@ -148,50 +148,50 @@ const steps = computed(() => [
           <!-- Backdrop -->
           <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeSignup"></div>
           <!-- Modal -->
-          <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 z-10 transform transition-all">
+          <div class="relative card max-w-md w-full p-8 z-10 transform transition-all">
             <!-- Close button -->
-            <button @click="closeSignup" :class="['absolute top-4 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600', isRTL ? 'left-4' : 'right-4']">
+            <button @click="closeSignup" :class="['absolute top-4 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-200', isRTL ? 'left-4' : 'right-4']">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
 
             <!-- Icon -->
-            <div class="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-              <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-16 h-16 bg-accent-grad glow-accent rounded-2xl flex items-center justify-center mx-auto mb-5">
+              <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
               </svg>
             </div>
 
-            <h3 class="text-2xl font-bold text-gray-900 text-center mb-2">{{ t('مرحباً بك في Seku', 'Welcome to Seku') }}</h3>
-            <p class="text-gray-600 text-center mb-5">{{ t('ستبدأ بالخطة المجانية التي تشمل:', 'You will start with the free plan that includes:') }}</p>
+            <h3 class="text-2xl font-bold text-slate-900 dark:text-white text-center mb-2">{{ t('مرحباً بك في Seku', 'Welcome to Seku') }}</h3>
+            <p class="text-slate-600 dark:text-slate-300 text-center mb-5">{{ t('ستبدأ بالخطة المجانية التي تشمل:', 'You will start with the free plan that includes:') }}</p>
 
-            <div class="bg-indigo-50 rounded-xl p-5 mb-5 space-y-3">
+            <div class="bg-emerald-500/10 dark:bg-emerald-500/5 rounded-xl p-5 mb-5 space-y-3">
               <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/></svg>
+                <div class="w-8 h-8 bg-emerald-500/15 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/></svg>
                 </div>
-                <span class="text-sm font-medium text-gray-800">{{ t('5 مواقع', '5 Websites') }}</span>
+                <span class="text-sm font-medium text-slate-800 dark:text-slate-200">{{ t('5 مواقع', '5 Websites') }}</span>
               </div>
               <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                <div class="w-8 h-8 bg-emerald-500/15 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                 </div>
-                <span class="text-sm font-medium text-gray-800">{{ t('10 فحوصات شهرياً', '10 Scans per Month') }}</span>
+                <span class="text-sm font-medium text-slate-800 dark:text-slate-200">{{ t('10 فحوصات شهرياً', '10 Scans per Month') }}</span>
               </div>
               <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                <div class="w-8 h-8 bg-emerald-500/15 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                 </div>
-                <span class="text-sm font-medium text-gray-800">{{ t('5 فئات فحص', '5 Scan Categories') }}</span>
+                <span class="text-sm font-medium text-slate-800 dark:text-slate-200">{{ t('5 فئات فحص', '5 Scan Categories') }}</span>
               </div>
             </div>
 
-            <p class="text-sm text-gray-500 text-center mb-6">{{ t('يمكنك الترقية في أي وقت للحصول على المزيد من الميزات', 'You can upgrade anytime for more features') }}</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 text-center mb-6">{{ t('يمكنك الترقية في أي وقت للحصول على المزيد من الميزات', 'You can upgrade anytime for more features') }}</p>
 
             <div class="flex flex-col gap-3">
-              <button @click="goRegister" class="w-full px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">
+              <button @click="goRegister" class="w-full px-6 py-3 bg-accent-grad glow-accent text-white font-semibold rounded-xl hover:opacity-90 transition-opacity">
                 {{ t('متابعة التسجيل', 'Continue Registration') }}
               </button>
-              <button @click="goPricing" class="w-full px-6 py-3 bg-white text-indigo-600 font-semibold rounded-xl border-2 border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 transition-colors">
+              <button @click="goPricing" class="w-full px-6 py-3 bg-white dark:bg-slate-900/60 text-indigo-600 dark:text-emerald-400 font-semibold rounded-xl border-2 border-indigo-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-emerald-500/50 hover:bg-indigo-50 dark:hover:bg-emerald-500/10 transition-colors">
                 {{ t('تعرّف على الخطط', 'View Plans') }}
               </button>
             </div>
@@ -204,92 +204,92 @@ const steps = computed(() => [
 
     <!-- Hero Section -->
     <section class="relative overflow-hidden">
-      <div class="absolute inset-0 bg-gradient-to-br from-indigo-50 via-white to-blue-50"></div>
-      <div class="absolute top-0 left-0 w-96 h-96 bg-indigo-200/30 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-      <div class="absolute bottom-0 right-0 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+      <div class="absolute inset-0 ring-grid opacity-60"></div>
+      <div class="absolute top-0 left-0 w-96 h-96 bg-emerald-400/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+      <div class="absolute bottom-0 right-0 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
 
       <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36">
         <div class="text-center max-w-4xl mx-auto">
-          <div class="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-full px-4 py-1.5 text-sm font-medium text-indigo-700 mb-8">
-            <span class="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
+          <div class="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-4 py-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-300 mb-8">
+            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
             {{ t('منصة فحص أمان المواقع الإلكترونية', 'Web Security Assessment Platform') }}
           </div>
 
-          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight">
+          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-white leading-tight tracking-tight">
             {{ t('افحص أمان موقعك', 'Scan Your Website Security') }}
             <br/>
-            <span :class="['bg-clip-text text-transparent', isRTL ? 'bg-gradient-to-l from-indigo-600 to-blue-600' : 'bg-gradient-to-r from-indigo-600 to-blue-600']">{{ t('بدقة 1000 نقطة', 'With 1000-Point Precision') }}</span>
+            <span class="text-gradient">{{ t('بدقة 1000 نقطة', 'With 1000-Point Precision') }}</span>
           </h1>
 
-          <p class="mt-6 text-lg sm:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
+          <p class="mt-6 text-lg sm:text-xl text-slate-700 dark:text-slate-300 leading-relaxed max-w-2xl mx-auto">
             {{ t('أول منصة عربية متخصصة لفحص أمان المواقع الإلكترونية للمؤسسات التعليمية والحكومية.', 'The first specialized Arabic platform for web security assessment for educational and governmental institutions.') }}
-            {{ t('نفحص موقعك عبر', 'We scan your site across') }} <strong class="text-gray-900">{{ t('20 معياراً شاملاً', '20 comprehensive criteria') }}</strong> {{ t('و', 'and') }} <strong class="text-gray-900">{{ t('أكثر من 75 فحصاً تفصيلياً', 'over 75 detailed checks') }}</strong>
+            {{ t('نفحص موقعك عبر', 'We scan your site across') }} <strong class="text-slate-900 dark:text-white">{{ t('20 معياراً شاملاً', '20 comprehensive criteria') }}</strong> {{ t('و', 'and') }} <strong class="text-slate-900 dark:text-white">{{ t('أكثر من 75 فحصاً تفصيلياً', 'over 75 detailed checks') }}</strong>
             {{ t('ونقدم تقريراً شاملاً مع توصيات الإصلاح.', 'and provide a comprehensive report with fix recommendations.') }}
           </p>
 
           <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <button @click="openSignup" class="px-8 py-3.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300">
+            <button @click="openSignup" class="px-8 py-3.5 bg-accent-grad glow-accent text-white font-semibold rounded-xl hover:opacity-90 transition-opacity">
               {{ t('ابدأ الفحص مجاناً', 'Start Scanning Free') }}
             </button>
-            <router-link :to="isRTL ? '/methodology-ar' : '/methodology'" class="px-8 py-3.5 bg-white text-gray-700 font-semibold rounded-xl border border-gray-300 hover:border-indigo-300 hover:text-indigo-600 transition-all">
+            <router-link :to="isRTL ? '/methodology-ar' : '/methodology'" class="px-8 py-3.5 bg-white dark:bg-slate-900/60 text-slate-700 dark:text-slate-200 font-semibold rounded-xl border border-gray-300 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-emerald-500/50 hover:text-indigo-600 dark:hover:text-emerald-400 transition-all">
               {{ t('تعرّف على معايير التقييم', 'View Assessment Criteria') }}
             </router-link>
           </div>
 
           <!-- Instant teaser scan -->
           <div class="mt-10 max-w-xl mx-auto">
-            <div class="flex flex-col sm:flex-row gap-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-2">
+            <div class="flex flex-col sm:flex-row gap-2 card p-2">
               <input v-model="scanUrl" @keyup.enter="runQuickScan" type="text" dir="ltr"
                 :placeholder="t('example.edu.iq', 'example.com')"
-                class="flex-1 px-4 py-3 rounded-xl border-0 focus:ring-0 text-sm text-gray-900" />
+                class="flex-1 px-4 py-3 rounded-xl border-0 bg-transparent focus:ring-0 text-sm text-slate-900 dark:text-slate-100" />
               <button @click="runQuickScan" :disabled="scanning"
-                class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap">
+                class="px-6 py-3 bg-accent-grad text-white font-semibold rounded-xl hover:opacity-90 disabled:opacity-50 whitespace-nowrap">
                 {{ scanning ? t('جارٍ الفحص…', 'Scanning…') : t('افحص موقعك الآن', 'Scan your site now') }}
               </button>
             </div>
-            <p class="text-xs text-gray-400 mt-2">{{ t('فحص خفيف فوري ومجاني — سجّل لعرض التقرير الكامل.', 'Instant free light scan — sign up for the full report.') }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">{{ t('فحص خفيف فوري ومجاني — سجّل لعرض التقرير الكامل.', 'Instant free light scan — sign up for the full report.') }}</p>
 
-            <div v-if="scanErr" class="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{{ scanErr }}</div>
+            <div v-if="scanErr" class="mt-3 text-sm text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg p-3">{{ scanErr }}</div>
 
-            <div v-if="scanResult" class="mt-4 bg-white rounded-2xl border border-gray-200 shadow-md p-5" :class="isRTL ? 'text-right' : 'text-left'">
+            <div v-if="scanResult" class="mt-4 card p-5" :class="isRTL ? 'text-right' : 'text-left'">
               <div class="flex items-center justify-between gap-3 flex-wrap">
                 <div>
-                  <p class="text-xs text-gray-500 break-all">{{ scanResult.domain }}</p>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 break-all">{{ scanResult.domain }}</p>
                   <div class="flex items-baseline gap-1">
-                    <span class="text-3xl font-extrabold" :style="{ color: gradeColor(scanResult.grade) }">{{ Math.round(scanResult.score) }}</span>
-                    <span class="text-gray-400">/1000</span>
-                    <span class="text-xl font-bold mx-2" :style="{ color: gradeColor(scanResult.grade) }">{{ scanResult.grade }}</span>
+                    <span class="text-3xl font-extrabold font-mono" :style="{ color: gradeColor(scanResult.grade) }">{{ Math.round(scanResult.score) }}</span>
+                    <span class="text-slate-400 dark:text-slate-500">/1000</span>
+                    <span class="text-xl font-bold font-mono mx-2" :style="{ color: gradeColor(scanResult.grade) }">{{ scanResult.grade }}</span>
                   </div>
                 </div>
-                <div class="flex gap-2 text-xs">
-                  <span class="px-2 py-1 rounded bg-red-50 text-red-600">{{ t('حرِجة', 'Crit') }}: {{ scanResult.summary.critical || 0 }}</span>
-                  <span class="px-2 py-1 rounded bg-orange-50 text-orange-600">{{ t('عالية', 'High') }}: {{ scanResult.summary.high || 0 }}</span>
-                  <span class="px-2 py-1 rounded bg-yellow-50 text-yellow-700">{{ t('متوسطة', 'Med') }}: {{ scanResult.summary.medium || 0 }}</span>
+                <div class="flex gap-2">
+                  <span class="sev sev-critical">{{ t('حرِجة', 'Crit') }}: {{ scanResult.summary.critical || 0 }}</span>
+                  <span class="sev sev-high">{{ t('عالية', 'High') }}: {{ scanResult.summary.high || 0 }}</span>
+                  <span class="sev sev-medium">{{ t('متوسطة', 'Med') }}: {{ scanResult.summary.medium || 0 }}</span>
                 </div>
               </div>
-              <ul v-if="scanResult.top_findings?.length" class="mt-3 space-y-1 text-sm text-gray-600">
+              <ul v-if="scanResult.top_findings?.length" class="mt-3 space-y-1 text-sm text-slate-600 dark:text-slate-300">
                 <li v-for="(f, i) in scanResult.top_findings" :key="i" class="flex items-center gap-2">
-                  <span class="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0"></span>{{ f.name }}
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0"></span>{{ f.name }}
                 </li>
               </ul>
-              <button @click="openSignup" class="mt-4 w-full px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700">
+              <button @click="openSignup" class="mt-4 w-full px-5 py-2.5 bg-accent-grad glow-accent text-white font-semibold rounded-xl hover:opacity-90">
                 {{ t('سجّل لعرض التقرير الكامل مجاناً', 'Sign up for the full report — free') }}
               </button>
             </div>
           </div>
 
           <!-- Trust badges -->
-          <div class="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-500">
+          <div class="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500 dark:text-slate-400">
             <div class="flex items-center gap-2">
-              <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
               <span>{{ t('100+ جامعة عراقية', '100+ Iraqi Universities') }}</span>
             </div>
             <div class="flex items-center gap-2">
-              <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
               <span>{{ t('20 معيار تقييم', '20 Assessment Criteria') }}</span>
             </div>
             <div class="flex items-center gap-2">
-              <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
               <span>{{ t('تحليل بالذكاء الاصطناعي', 'AI-Powered Analysis') }}</span>
             </div>
           </div>
@@ -298,24 +298,24 @@ const steps = computed(() => [
     </section>
 
     <!-- Features Grid -->
-    <section class="py-20 bg-white">
+    <section class="py-20">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
-          <h2 class="text-3xl sm:text-4xl font-bold text-gray-900">{{ t('ماذا نفحص؟', 'What We Scan') }}</h2>
-          <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">{{ t('20 فئة تقييم شاملة تغطي الأمان والأداء وجودة الاستضافة وفحص الفايروسات', '20 comprehensive assessment categories covering security, performance, hosting quality, and malware scanning') }}</p>
+          <h2 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">{{ t('ماذا نفحص؟', 'What We Scan') }}</h2>
+          <p class="mt-4 text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">{{ t('20 فئة تقييم شاملة تغطي الأمان والأداء وجودة الاستضافة وفحص الفايروسات', '20 comprehensive assessment categories covering security, performance, hosting quality, and malware scanning') }}</p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <div v-for="feature in features" :key="feature.title"
-            class="bg-white rounded-2xl border border-gray-200 p-6 hover:border-indigo-300 hover:shadow-lg transition-all group">
+            class="card card-hover p-6 group">
             <div :class="['w-12 h-12 rounded-xl flex items-center justify-center mb-4', feature.bg]">
               <svg class="w-6 h-6" :class="feature.icon_color" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="feature.icon"/>
               </svg>
             </div>
-            <h3 class="text-lg font-bold text-gray-900 mb-2">{{ feature.title }}</h3>
-            <p class="text-sm text-gray-600 leading-relaxed">{{ feature.desc }}</p>
-            <div class="mt-3 text-xs font-medium text-indigo-600">{{ t('الوزن:', 'Weight:') }} {{ feature.weight }}%</div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">{{ feature.title }}</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{{ feature.desc }}</p>
+            <div class="mt-3 text-xs font-medium font-mono text-indigo-600 dark:text-emerald-400">{{ t('الوزن:', 'Weight:') }} {{ feature.weight }}%</div>
           </div>
         </div>
       </div>
@@ -348,35 +348,35 @@ const steps = computed(() => [
     </section>
 
     <!-- How it works -->
-    <section class="py-20 bg-white">
+    <section class="py-20">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
-          <h2 class="text-3xl sm:text-4xl font-bold text-gray-900">{{ t('كيف يعمل؟', 'How It Works') }}</h2>
+          <h2 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">{{ t('كيف يعمل؟', 'How It Works') }}</h2>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div v-for="(step, i) in steps" :key="i" class="text-center relative">
             <!-- Connector line (hidden on last item and on mobile) -->
-            <div v-if="i < steps.length - 1" :class="['hidden md:block absolute top-7 w-full h-0.5 bg-indigo-100', isRTL ? '-translate-x-1/2 left-0' : 'translate-x-1/2 right-0']"></div>
-            <div class="relative z-10 w-14 h-14 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl font-black text-indigo-600">
+            <div v-if="i < steps.length - 1" :class="['hidden md:block absolute top-7 w-full h-0.5 bg-emerald-500/20', isRTL ? '-translate-x-1/2 left-0' : 'translate-x-1/2 right-0']"></div>
+            <div class="relative z-10 w-14 h-14 bg-emerald-500/15 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl font-black font-mono text-emerald-600 dark:text-emerald-400">
               {{ i + 1 }}
             </div>
-            <h3 class="text-lg font-bold text-gray-900 mb-2">{{ step.title }}</h3>
-            <p class="text-sm text-gray-600">{{ step.desc }}</p>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">{{ step.title }}</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-300">{{ step.desc }}</p>
           </div>
         </div>
       </div>
     </section>
 
     <!-- CTA -->
-    <section class="py-20 bg-indigo-600">
+    <section class="py-20 bg-accent-grad">
       <div class="max-w-4xl mx-auto px-4 text-center">
         <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">{{ t('جاهز لفحص أمان مواقعك؟', 'Ready to Scan Your Website Security?') }}</h2>
-        <p class="text-lg text-indigo-100 mb-8">{{ t('سجّل الآن واحصل على فحص أمني مجاني لموقعك', 'Sign up now and get a free security scan for your website') }}</p>
-        <button @click="openSignup" class="inline-block px-8 py-4 bg-white text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-lg text-lg">
+        <p class="text-lg text-white/90 mb-8">{{ t('سجّل الآن واحصل على فحص أمني مجاني لموقعك', 'Sign up now and get a free security scan for your website') }}</p>
+        <button @click="openSignup" class="inline-block px-8 py-4 bg-white text-emerald-700 font-bold rounded-xl hover:bg-emerald-50 transition-colors shadow-lg text-lg">
           {{ t('سجّل مجاناً - بدون بطاقة ائتمان', 'Sign Up Free - No Credit Card Required') }}
         </button>
-        <p class="mt-6 text-sm text-indigo-200">{{ t('الخطة المجانية تشمل: 5 مواقع | 10 فحوصات | 5 فئات أمنية', 'Free plan includes: 5 websites | 10 scans | 5 security categories') }}</p>
+        <p class="mt-6 text-sm text-white/80">{{ t('الخطة المجانية تشمل: 5 مواقع | 10 فحوصات | 5 فئات أمنية', 'Free plan includes: 5 websites | 10 scans | 5 security categories') }}</p>
       </div>
     </section>
 

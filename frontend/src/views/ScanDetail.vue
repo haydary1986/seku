@@ -123,7 +123,7 @@ onMounted(async () => {
 
 <template>
   <div>
-    <button @click="router.push('/scans')" class="text-indigo-600 hover:text-indigo-800 mb-4 flex items-center gap-1">
+    <button @click="router.push('/scans')" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 mb-4 flex items-center gap-1">
       <svg class="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
       </svg>
@@ -136,77 +136,77 @@ onMounted(async () => {
 
     <div v-else-if="job">
       <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">{{ job.name || t('vScanDetail.scanDetailsTitle') }}</h1>
+        <h1 class="text-3xl font-bold text-slate-900 dark:text-white">{{ job.name || t('vScanDetail.scanDetailsTitle') }}</h1>
         <div class="flex items-center gap-3 mt-2">
           <span :class="[
             'px-3 py-1 rounded-full text-sm font-medium',
-            job.status === 'completed' ? 'bg-green-100 text-green-700' :
-            job.status === 'running' ? 'bg-blue-100 text-blue-700 animate-pulse' :
-            job.status === 'failed' ? 'bg-red-100 text-red-700' :
-            'bg-gray-100 text-gray-700'
+            job.status === 'completed' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' :
+            job.status === 'running' ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400 animate-pulse' :
+            job.status === 'failed' ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400' :
+            'bg-slate-500/15 text-slate-600 dark:text-slate-300'
           ]">
             {{ job.status }}
           </span>
-          <span class="text-sm text-gray-500">{{ job.results?.length || 0 }} {{ t('vScanDetail.websitesScanned') }}</span>
+          <span class="text-sm text-slate-500 dark:text-slate-400">{{ job.results?.length || 0 }} {{ t('vScanDetail.websitesScanned') }}</span>
         </div>
       </div>
 
       <!-- Comparison Chart -->
-      <div v-if="chartData.labels.length" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('vScanDetail.scoreComparison') }}</h3>
+      <div v-if="chartData.labels.length" class="card p-6 mb-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">{{ t('vScanDetail.scoreComparison') }}</h3>
         <Bar :data="chartData" :options="chartOptions" />
       </div>
 
       <!-- Results Table -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="card overflow-hidden">
         <table class="w-full text-sm">
-          <thead class="bg-gray-50">
+          <thead class="bg-slate-50 dark:bg-slate-800/50">
             <tr>
-              <th class="text-right py-3 px-4 text-gray-600 font-medium">#</th>
-              <th class="text-right py-3 px-4 text-gray-600 font-medium">{{ t('vScanDetail.colWebsite') }}</th>
-              <th class="text-center py-3 px-4 text-gray-600 font-medium">{{ t('vScanDetail.colScore') }}</th>
-              <th class="text-center py-3 px-4 text-gray-600 font-medium">{{ t('vScanDetail.colStatus') }}</th>
-              <th class="text-center py-3 px-4 text-gray-600 font-medium">{{ t('vScanDetail.colDetails') }}</th>
+              <th class="text-right py-3 px-4 text-slate-500 dark:text-slate-400 font-medium">#</th>
+              <th class="text-right py-3 px-4 text-slate-500 dark:text-slate-400 font-medium">{{ t('vScanDetail.colWebsite') }}</th>
+              <th class="text-center py-3 px-4 text-slate-500 dark:text-slate-400 font-medium">{{ t('vScanDetail.colScore') }}</th>
+              <th class="text-center py-3 px-4 text-slate-500 dark:text-slate-400 font-medium">{{ t('vScanDetail.colStatus') }}</th>
+              <th class="text-center py-3 px-4 text-slate-500 dark:text-slate-400 font-medium">{{ t('vScanDetail.colDetails') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(result, i) in job.results" :key="result.ID" class="border-t border-gray-100 hover:bg-gray-50">
-              <td class="py-4 px-4 text-gray-400">{{ i + 1 }}</td>
+            <tr v-for="(result, i) in job.results" :key="result.ID" class="border-t border-gray-100 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+              <td class="py-4 px-4 text-slate-400 dark:text-slate-500 font-mono">{{ i + 1 }}</td>
               <td class="py-4 px-4">
-                <div class="font-medium text-gray-900">{{ result.scan_target?.name || t('vScanDetail.na') }}</div>
-                <div class="text-xs text-gray-400">{{ result.scan_target?.url }}</div>
+                <div class="font-medium text-slate-900 dark:text-white">{{ result.scan_target?.name || t('vScanDetail.na') }}</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">{{ result.scan_target?.url }}</div>
               </td>
               <td class="py-4 px-4 text-center">
-                <div :class="['inline-flex items-center justify-center w-14 h-14 rounded-full font-bold text-lg', getScoreBg(result.overall_score), getScoreColor(result.overall_score)]">
+                <div :class="['inline-flex items-center justify-center w-14 h-14 rounded-full font-bold font-mono text-lg', getScoreBg(result.overall_score), getScoreColor(result.overall_score)]">
                   {{ Math.round(result.overall_score) }}
                 </div>
               </td>
               <td class="py-4 px-4 text-center">
                 <span :class="[
                   'px-2 py-1 rounded-full text-xs font-medium',
-                  result.status === 'completed' ? 'bg-green-100 text-green-700' :
-                  result.status === 'running' ? 'bg-blue-100 text-blue-700 animate-pulse' :
-                  result.status === 'failed' ? 'bg-red-100 text-red-700' :
-                  'bg-gray-100 text-gray-700'
+                  result.status === 'completed' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' :
+                  result.status === 'running' ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400 animate-pulse' :
+                  result.status === 'failed' ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400' :
+                  'bg-slate-500/15 text-slate-600 dark:text-slate-300'
                 ]">
                   {{ result.status }}
                 </span>
                 <!-- Live sub-progress for running targets -->
                 <div v-if="targetProgress[result.scan_target_id]" class="mt-2 text-right">
-                  <div class="w-full bg-gray-200 rounded-full h-1.5 mb-1">
-                    <div class="h-full rounded-full bg-blue-500 transition-all duration-500"
+                  <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 mb-1">
+                    <div class="h-full rounded-full bg-sky-500 transition-all duration-500"
                       :style="{ width: Math.round(targetProgress[result.scan_target_id].target_percent) + '%' }"></div>
                   </div>
-                  <p class="text-[11px] text-blue-600 font-medium truncate">
+                  <p class="text-[11px] text-sky-600 dark:text-sky-400 font-medium truncate">
                     {{ targetProgress[result.scan_target_id].scanner_name }}
-                    <span class="text-gray-400">({{ targetProgress[result.scan_target_id].scanner_index }}/{{ targetProgress[result.scan_target_id].total_scanners }})</span>
+                    <span class="text-slate-400 dark:text-slate-500">({{ targetProgress[result.scan_target_id].scanner_index }}/{{ targetProgress[result.scan_target_id].total_scanners }})</span>
                   </p>
                 </div>
               </td>
               <td class="py-4 px-4 text-center">
                 <button
                   @click="router.push(`/results/${result.ID}`)"
-                  class="px-3 py-1 text-sm text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50"
+                  class="px-3 py-1 text-sm text-indigo-600 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-500/40 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
                 >
                   {{ t('vScanDetail.viewReport') }}
                 </button>
