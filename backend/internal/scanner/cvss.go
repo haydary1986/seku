@@ -25,6 +25,9 @@ var CheckCVSSMap = map[string]CVSSMapping{
 	"Reflected XSS Detection":  {6.1, "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N", "Medium"},
 	"DOM-Based XSS Indicators": {6.1, "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N", "Medium"},
 	"Input Sanitization Check": {6.1, "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N", "Medium"},
+	// Missing X-Content-Type-Options / X-XSS-Protection (deprecated) headers are a
+	// hardening gap, NOT a confirmed XSS exploit — Low, so it can never floor a grade.
+	"Content-Type & X-XSS-Protection Headers": {3.1, "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:N/A:N", "Low"},
 
 	// Secrets
 	"API Key Exposure":                    {9.8, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", "Critical"},
@@ -83,7 +86,7 @@ var CheckCVSSMap = map[string]CVSSMapping{
 	"DNS Zone Transfer": {7.5, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N", "High"},
 
 	// Data Leak
-	"Domain Breach History": {9.1, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N", "Critical"},
+	"Domain Breach History":  {9.1, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N", "Critical"},
 	"Email Breach Detection": {7.5, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N", "High"},
 	"Paste Site Exposure":    {7.5, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N", "High"},
 }

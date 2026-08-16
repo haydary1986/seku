@@ -470,7 +470,7 @@ func (s *XSSScanner) checkXSSHeaders(resp *http.Response) models.CheckResult {
 	if resp == nil {
 		check.Score = 0
 		check.Status = "error"
-		check.Severity = "critical"
+		check.Severity = "low" // a missing hardening header is never critical
 		check.Details = toJSON(map[string]string{"error": "No HTTP response available"})
 		return check
 	}

@@ -153,6 +153,23 @@ func TestNormalizeSeverities_DeinflatesScore(t *testing.T) {
 	}
 }
 
+// A missing X-Content-Type-Options / X-XSS-Protection header (an "xss"-category
+// hardening check) must normalize to Low and must NEVER floor the grade to F —
+// the false positive that wrongly F-graded 19 sites.
+func TestNormalizeSeverities_HardeningHeaderNeverCaps(t *testing.T) {
+	checks := []models.CheckResult{
+		chk("ssl", "TLS Version", "pass", 1000, 100),
+		chk("xss", "Content-Type & X-XSS-Protection Headers", "fail", 0, 100),
+	}
+	NormalizeSeverities(checks)
+	if checks[1].Severity != "low" {
+		t.Errorf("hardening header must normalize to low, got %q", checks[1].Severity)
+	}
+	if r := ComputeScores(checks); r.CapReason != "" {
+		t.Errorf("a missing hardening header must not floor the grade, got cap %q", r.CapReason)
+	}
+}
+
 // A LOW-CONFIDENCE critical fail is advisory only — it must NOT cap the grade.
 func TestComputeScores_LowConfidenceDoesNotCap(t *testing.T) {
 	checks := []models.CheckResult{
