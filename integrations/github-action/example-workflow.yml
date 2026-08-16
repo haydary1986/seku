@@ -1,0 +1,38 @@
+# Example: copy this into .github/workflows/seku.yml in your app repo.
+# Runs a Seku scan on every push/PR and uploads findings to GitHub Code Scanning.
+name: Seku Security Scan
+on:
+  push: { branches: [main] }
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write   # required to upload SARIF to the Security tab
+
+jobs:
+  seku:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Seku scan
+        id: seku
+        uses: ./integrations/github-action     # or: your-org/seku-action@v1 once published
+        with:
+          api-key: ${{ secrets.SEKU_API_KEY }}
+          target: https://app.example.com
+          policy: standard        # standard/light are free; deep is pay-per-scan
+          fail-on: high           # fail the build on high/critical findings
+
+      - name: Upload SARIF to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.seku.outputs.sarif }}
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Seku: grade ${{ steps.seku.outputs.grade }} (score ${{ steps.seku.outputs.score }})" >> $GITHUB_STEP_SUMMARY
+          echo "Critical=${{ steps.seku.outputs.critical }} High=${{ steps.seku.outputs.high }} Medium=${{ steps.seku.outputs.medium }} Low=${{ steps.seku.outputs.low }}" >> $GITHUB_STEP_SUMMARY

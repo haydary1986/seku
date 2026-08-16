@@ -1,0 +1,65 @@
+name: "Seku Security Scan"
+description: "Run a Seku web security scan in CI, export SARIF, and fail the build on findings at/above a severity threshold."
+author: "Seku (sec.erticaz.com)"
+branding:
+  icon: "shield"
+  color: "blue"
+
+inputs:
+  api-key:
+    description: "Seku API key (starts with vsk_). Store as a repository secret."
+    required: true
+  target:
+    description: "Full URL to scan, e.g. https://app.example.com. The domain must be verified for non-admin keys."
+    required: true
+  api-url:
+    description: "Seku API base URL."
+    required: false
+    default: "https://sec.erticaz.com/api"
+  policy:
+    description: "Scan policy: light | standard | deep. Deep is pay-per-scan."
+    required: false
+    default: "standard"
+  fail-on:
+    description: "Fail the build if any FAILING finding is at/above this severity: none | low | medium | high | critical."
+    required: false
+    default: "high"
+  count-warn:
+    description: "Set to '1' to also count 'warn' findings toward the gate."
+    required: false
+    default: "0"
+  sarif-file:
+    description: "Path to write the SARIF report."
+    required: false
+    default: "seku-results.sarif"
+  timeout:
+    description: "Max seconds to wait for the scan to complete."
+    required: false
+    default: "900"
+
+outputs:
+  grade:      { description: "Security grade (A+..F)",     value: "${{ steps.scan.outputs.grade }}" }
+  score:      { description: "Security score (0-1000)",    value: "${{ steps.scan.outputs.score }}" }
+  critical:   { description: "Count of critical findings", value: "${{ steps.scan.outputs.critical }}" }
+  high:       { description: "Count of high findings",      value: "${{ steps.scan.outputs.high }}" }
+  medium:     { description: "Count of medium findings",    value: "${{ steps.scan.outputs.medium }}" }
+  low:        { description: "Count of low findings",       value: "${{ steps.scan.outputs.low }}" }
+  sarif:      { description: "Path to the SARIF file",      value: "${{ steps.scan.outputs.sarif }}" }
+  result-id:  { description: "Seku result id",              value: "${{ steps.scan.outputs.result_id }}" }
+
+runs:
+  using: "composite"
+  steps:
+    - id: scan
+      shell: bash
+      env:
+        SEKU_API_KEY: ${{ inputs.api-key }}
+        SEKU_TARGET:  ${{ inputs.target }}
+        SEKU_API_URL: ${{ inputs.api-url }}
+        SEKU_POLICY:  ${{ inputs.policy }}
+        SEKU_FAIL_ON: ${{ inputs.fail-on }}
+        SEKU_COUNT_WARN: ${{ inputs.count-warn }}
+        SEKU_SARIF_OUT:  ${{ inputs.sarif-file }}
+        SEKU_TIMEOUT:    ${{ inputs.timeout }}
+      run: |
+        sh "${{ github.action_path }}/../ci/seku-scan.sh"
