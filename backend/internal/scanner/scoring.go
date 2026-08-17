@@ -295,15 +295,12 @@ func CoverageNote(checks []models.CheckResult) string {
 func severityRiskMult(d domainSeverity) float64 {
 	switch d {
 	case sevCritical:
-		return 1.35
+		return 1.5 // injection/exploit/exposure findings hurt more
 	case sevHigh:
-		return 1.0
-	case sevMedium:
-		return 0.85
-	case sevLow:
-		return 0.65
+		return 1.1 // transport/access/sensitive-exposure slightly heavier
+	default:
+		return 1.0 // medium/low unchanged — never LOOSEN hardening penalties
 	}
-	return 1.0
 }
 
 // ComputeScores applies the scientific methodology to a set of checks. It is a
