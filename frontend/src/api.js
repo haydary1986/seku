@@ -220,4 +220,7 @@ export const searchCVEs = (keyword) => api.get(`/cve/search?keyword=${encodeURIC
 // Domain Discovery (internet search via Certificate Transparency)
 export const discoverDomains = (domain) => api.get(`/discover/domain?domain=${encodeURIComponent(domain)}`)
 
+// Passive OSINT reconnaissance (DNS/WHOIS/IPs/subdomains/certs/email/breaches)
+export const getOSINT = (domain) => api.get(`/osint?domain=${encodeURIComponent(domain)}`)
+
 export default api

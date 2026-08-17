@@ -109,6 +109,10 @@ type ScanTarget struct {
 	URL            string `json:"url" gorm:"not null"`
 	Name           string `json:"name"`
 	Institution    string `json:"institution"`
+	// Adhoc marks a target created by an instant "scan a domain" run. Adhoc
+	// targets are hidden from the main targets list and don't count toward the
+	// plan's target quota, so a quick one-off scan never clutters the workspace.
+	Adhoc bool `json:"adhoc" gorm:"default:false;index"`
 }
 
 type ScanJob struct {

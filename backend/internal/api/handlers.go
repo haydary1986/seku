@@ -36,7 +36,7 @@ func GetTargets(c *fiber.Ctx) error {
 	}
 	offset := (page - 1) * limit
 
-	db := ScopedDB(c)
+	db := ScopedDB(c).Where("adhoc = ?", false) // hide instant/quick-scan targets
 	if search != "" {
 		like := "%" + search + "%"
 		db = db.Where("url LIKE ? OR name LIKE ? OR institution LIKE ?", like, like, like)

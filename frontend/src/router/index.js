@@ -25,6 +25,8 @@ import Docs from '../views/Docs.vue'
 import Discovery from '../views/Discovery.vue'
 import Directives from '../views/Directives.vue'
 import DataLeak from '../views/DataLeak.vue'
+import OSINT from '../views/OSINT.vue'
+import QuickScan from '../views/QuickScan.vue'
 import SEOSettings from '../views/SEOSettings.vue'
 import NucleiTool from '../views/NucleiTool.vue'
 import Downloads from '../views/Downloads.vue'
@@ -49,6 +51,7 @@ const routes = [
   { path: '/dashboard', name: 'Dashboard', component: Dashboard },
   { path: '/correlations', name: 'Correlations', component: Correlations },
   { path: '/targets', name: 'Targets', component: Targets },
+  { path: '/quick-scan', name: 'QuickScan', component: QuickScan },
   { path: '/scans', name: 'Scans', component: Scans },
   { path: '/orders', name: 'Orders', component: Orders },
   { path: '/scans/:id', name: 'ScanDetail', component: ScanDetail },
@@ -65,6 +68,7 @@ const routes = [
   { path: '/discovery', name: 'Discovery', component: Discovery },
   { path: '/directives', name: 'Directives', component: Directives },
   { path: '/data-leak', name: 'DataLeak', component: DataLeak },
+  { path: '/osint', name: 'OSINT', component: OSINT },
   { path: '/users', name: 'Users', component: Users, meta: { admin: true } },
   { path: '/settings', name: 'Settings', component: Settings, meta: { admin: true } },
   { path: '/seo', name: 'SEOSettings', component: SEOSettings, meta: { admin: true } },

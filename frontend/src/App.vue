@@ -61,6 +61,8 @@ const ic = {
   correlations: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z',
   discovery: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7',
   dataLeak: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z',
+  osint: 'M21 21l-4.35-4.35M11 6a5 5 0 015 5m2 0a7 7 0 11-14 0 7 7 0 0114 0z',
+  quickScan: 'M13 10V3L4 14h7v7l9-11h-7z',
   schedules: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
   webhooks: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9',
   aiChat: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z',
@@ -87,6 +89,7 @@ const navGroups = computed(() => {
       items: [
         { name: t('nav.dashboard'), path: '/dashboard', icon: ic.dashboard },
         { name: t('nav.targets'), path: '/targets', icon: ic.targets },
+        { name: t('nav.quickScan'), path: '/quick-scan', icon: ic.quickScan },
         { name: t('nav.scans'), path: '/scans', icon: ic.scans },
         { name: t('nav.orders'), path: '/orders', icon: ic.orders },
         { name: t('nav.leaderboard'), path: '/leaderboard', icon: ic.leaderboard },
@@ -99,6 +102,7 @@ const navGroups = computed(() => {
         { name: t('nav.correlations'), path: '/correlations', icon: ic.correlations },
         { name: t('nav.discovery'), path: '/discovery', icon: ic.discovery },
         { name: t('nav.dataLeak'), path: '/data-leak', icon: ic.dataLeak },
+        { name: t('nav.osint'), path: '/osint', icon: ic.osint },
       ],
     },
     {
@@ -140,6 +144,7 @@ const navGroups = computed(() => {
 const pageTitles = computed(() => ({
   Dashboard: [t('nav.dashboard'), t('dashboard.subtitle')],
   Targets: [t('nav.targets'), t('targets.subtitle')],
+  QuickScan: [t('nav.quickScan'), t('vQuickScan.subtitle')],
   Scans: [t('nav.scans'), t('scans.subtitle')],
   Orders: [t('nav.orders'), ''],
   AdminOrders: [t('nav.orderQueue'), ''],
@@ -148,6 +153,7 @@ const pageTitles = computed(() => ({
   Correlations: [t('nav.correlations'), ''],
   Discovery: [t('nav.discovery'), ''],
   DataLeak: [t('nav.dataLeak'), ''],
+  OSINT: [t('nav.osint'), t('vOSINT.subtitle')],
   Schedules: [t('nav.schedules'), ''],
   Webhooks: [t('nav.webhooks'), ''],
   AIChat: [t('nav.aiChat'), ''],
