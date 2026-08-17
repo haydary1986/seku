@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -77,7 +78,7 @@ func (s *DataLeakScanner) checkDomainBreaches(domain string) models.CheckResult 
 		check.Status = "pass"
 		check.Score = MaxScore
 		check.Severity = "info"
-		details["message"] = "No known data breaches found for this domain"
+		details["message"] = "No breach OF this domain was found in HaveIBeenPwned. Note: this checks whether the domain itself was breached (a known incident) — it does NOT check whether the domain's user emails appear in other breaches (that requires an API key; see Email Breach Detection)."
 		details["breaches_found"] = 0
 	} else {
 		totalPwned := 0
@@ -146,6 +147,21 @@ func (s *DataLeakScanner) checkEmailBreaches(domain string) models.CheckResult {
 		Category:  s.Category(),
 		CheckName: "Email Breach Detection",
 		Weight:    5.0,
+	}
+
+	// Account-level breach lookup (HIBP breachedaccount) REQUIRES a paid API key.
+	// Without it, the previous code silently reported "no breaches = clean", which
+	// is a false negative. Be honest: report UNKNOWN, not clean.
+	if strings.TrimSpace(os.Getenv("HIBP_API_KEY")) == "" {
+		check.Status = "info"
+		check.Score = MaxScore
+		check.Severity = "info"
+		check.Details = toJSON(map[string]interface{}{
+			"domain":     domain,
+			"configured": false,
+			"message":    "Email/credential breach detection was NOT performed — it requires a HaveIBeenPwned API key. Set HIBP_API_KEY to enable it. This result is UNKNOWN, not a confirmation that no emails are exposed.",
+		})
+		return check
 	}
 
 	var (
@@ -241,6 +257,20 @@ func (s *DataLeakScanner) checkPasteExposure(domain string) models.CheckResult {
 		Weight:    2.0,
 	}
 
+	// Paste lookup (HIBP pasteaccount) also requires an API key. Without it, report
+	// UNKNOWN rather than a false "clean".
+	if strings.TrimSpace(os.Getenv("HIBP_API_KEY")) == "" {
+		check.Status = "info"
+		check.Score = MaxScore
+		check.Severity = "info"
+		check.Details = toJSON(map[string]interface{}{
+			"domain":     domain,
+			"configured": false,
+			"message":    "Paste-site exposure was NOT checked — it requires a HaveIBeenPwned API key (HIBP_API_KEY). This result is UNKNOWN, not a clean confirmation.",
+		})
+		return check
+	}
+
 	// Check a few key emails for paste exposure
 	keyEmails := []string{"admin@" + domain, "info@" + domain, "it@" + domain}
 	var exposedPastes []map[string]interface{}
@@ -310,14 +340,12 @@ func (s *DataLeakScanner) searchHIBPDomain(domain string) []breachInfo {
 }
 
 func (s *DataLeakScanner) searchHIBPEmail(email string) []breachInfo {
-	// HIBP v3 API (public, no key needed for breach check via alternative)
-	// Use breach directory search as fallback
+	// Callers gate on HIBP_API_KEY, so a key is present here. Authenticate with it.
 	client := &http.Client{Timeout: 10 * time.Second}
-
-	// Try the free breach search API
 	url := "https://haveibeenpwned.com/api/v3/breachedaccount/" + email + "?truncateResponse=false"
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("User-Agent", "Seku-Scanner")
+	req.Header.Set("hibp-api-key", strings.TrimSpace(os.Getenv("HIBP_API_KEY")))
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -325,83 +353,13 @@ func (s *DataLeakScanner) searchHIBPEmail(email string) []breachInfo {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 404 {
-		return nil // Not found = not breached
-	}
-	if resp.StatusCode == 401 {
-		// API key required — use alternative: check breachdirectory.org
-		return s.searchBreachDirectory(email)
-	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != 200 { // 404 = not breached; 401/429/etc = no usable data
 		return nil
 	}
-
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1*1024*1024))
 	var breaches []breachInfo
 	json.Unmarshal(body, &breaches)
 	return breaches
-}
-
-func (s *DataLeakScanner) searchBreachDirectory(email string) []breachInfo {
-	// Alternative free API: breachdirectory.org (no key needed)
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, _ := http.NewRequest("GET", "https://breachdirectory.org/api/search?email="+email, nil)
-	req.Header.Set("User-Agent", "Seku-Scanner")
-
-	resp, err := client.Do(req)
-	if err != nil || resp.StatusCode != 200 {
-		return nil
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1*1024*1024))
-
-	var result struct {
-		Success bool `json:"success"`
-		Result  []struct {
-			Sources  []string `json:"sources"`
-			Password string   `json:"password"`
-			Sha1     string   `json:"sha1"`
-		} `json:"result"`
-	}
-
-	if json.Unmarshal(body, &result) != nil || !result.Success {
-		return nil
-	}
-
-	if len(result.Result) == 0 {
-		return nil
-	}
-
-	// Convert to breachInfo format
-	sourceSet := map[string]bool{}
-	var sources []string
-	hasPassword := false
-	for _, r := range result.Result {
-		for _, src := range r.Sources {
-			if !sourceSet[src] {
-				sourceSet[src] = true
-				sources = append(sources, src)
-			}
-		}
-		if r.Password != "" || r.Sha1 != "" {
-			hasPassword = true
-		}
-	}
-
-	dataClasses := []string{"Email addresses"}
-	if hasPassword {
-		dataClasses = append(dataClasses, "Passwords")
-	}
-
-	return []breachInfo{{
-		Name:        strings.Join(sources, ", "),
-		Title:       fmt.Sprintf("Found in %d breach source(s)", len(sources)),
-		BreachDate:  "Unknown",
-		PwnCount:    len(result.Result),
-		DataClasses: dataClasses,
-		IsVerified:  true,
-	}}
 }
 
 func (s *DataLeakScanner) searchHIBPPastes(email string) []pasteInfo {
@@ -409,6 +367,7 @@ func (s *DataLeakScanner) searchHIBPPastes(email string) []pasteInfo {
 	url := "https://haveibeenpwned.com/api/v3/pasteaccount/" + email
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("User-Agent", "Seku-Scanner")
+	req.Header.Set("hibp-api-key", strings.TrimSpace(os.Getenv("HIBP_API_KEY")))
 
 	resp, err := client.Do(req)
 	if err != nil || resp.StatusCode != 200 {
