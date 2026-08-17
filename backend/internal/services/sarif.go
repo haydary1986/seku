@@ -3,6 +3,8 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"seku/internal/models"
 )
 
@@ -45,10 +47,11 @@ type SARIFProperties struct {
 type SARIFSecurity = string
 
 type SARIFResult struct {
-	RuleID    string          `json:"ruleId"`
-	Level     string          `json:"level"` // error, warning, note, none
-	Message   SARIFMessage    `json:"message"`
-	Locations []SARIFLocation `json:"locations,omitempty"`
+	RuleID              string            `json:"ruleId"`
+	Level               string            `json:"level"` // error, warning, note, none
+	Message             SARIFMessage      `json:"message"`
+	PartialFingerprints map[string]string `json:"partialFingerprints,omitempty"`
+	Locations           []SARIFLocation   `json:"locations,omitempty"`
 }
 
 type SARIFMessage struct {
@@ -80,11 +83,21 @@ func GenerateSARIF(result *models.ScanResult, checks []models.CheckResult) ([]by
 		Version: "2.1.0",
 	}
 
-	// Build rules from unique check names
-	ruleMap := map[string]SARIFRule{}
+	// SARIF `results` are FINDINGS — only failing/warning checks. Emitting passing
+	// checks as `note` results floods GitHub code-scanning / DefectDojo with
+	// non-findings. Rules are built only for the findings actually emitted.
+	relURI := sarifRelURI(result.ScanTarget.URL)
+	ruleMap := map[string]bool{}
+	rules := []SARIFRule{}
+	results := []SARIFResult{}
+
 	for _, ch := range checks {
-		ruleID := fmt.Sprintf("vscan/%s/%s", ch.Category, sanitizeRuleID(ch.CheckName))
-		if _, exists := ruleMap[ruleID]; !exists {
+		if !sarifIsFinding(ch.Status, ch.Score) {
+			continue
+		}
+		ruleID := fmt.Sprintf("seku/%s/%s", ch.Category, sanitizeRuleID(ch.CheckName))
+		if !ruleMap[ruleID] {
+			ruleMap[ruleID] = true
 			tags := []string{ch.Category}
 			if ch.OWASP != "" {
 				tags = append(tags, ch.OWASP)
@@ -92,9 +105,8 @@ func GenerateSARIF(result *models.ScanResult, checks []models.CheckResult) ([]by
 			if ch.CWE != "" {
 				tags = append(tags, ch.CWE)
 			}
-
-			secSeverity := "5.0" // medium default
-			switch ch.Severity {
+			secSeverity := "5.0"
+			switch strings.ToLower(ch.Severity) {
 			case "critical":
 				secSeverity = "9.5"
 			case "high":
@@ -106,66 +118,45 @@ func GenerateSARIF(result *models.ScanResult, checks []models.CheckResult) ([]by
 			case "info":
 				secSeverity = "1.0"
 			}
-
-			ruleMap[ruleID] = SARIFRule{
+			rules = append(rules, SARIFRule{
 				ID:               ruleID,
 				Name:             ch.CheckName,
 				ShortDescription: SARIFMessage{Text: ch.CheckName},
+				HelpURI:          "https://sec.erticaz.com/methodology",
 				Properties:       SARIFProperties{Tags: tags, Security: secSeverity},
-			}
-		}
-	}
-
-	var rules []SARIFRule
-	for _, r := range ruleMap {
-		rules = append(rules, r)
-	}
-
-	// Build results
-	var results []SARIFResult
-	for _, ch := range checks {
-		ruleID := fmt.Sprintf("vscan/%s/%s", ch.Category, sanitizeRuleID(ch.CheckName))
-
-		level := "none"
-		switch ch.Status {
-		case "fail":
-			level = "error"
-		case "warn", "warning":
-			level = "warning"
-		case "pass":
-			level = "note"
-		case "info":
-			level = "note"
+			})
 		}
 
-		// Parse details for message
 		msg := ch.CheckName
 		if ch.Details != "" {
 			var details map[string]interface{}
 			if json.Unmarshal([]byte(ch.Details), &details) == nil {
-				if m, ok := details["message"].(string); ok {
+				if m, ok := details["message"].(string); ok && m != "" {
 					msg = m
 				}
 			}
 		}
 
-		sarifResult := SARIFResult{
+		results = append(results, SARIFResult{
 			RuleID:  ruleID,
-			Level:   level,
+			Level:   sarifLevel(ch.Severity), // level from SEVERITY, not status
 			Message: SARIFMessage{Text: msg},
+			// Stable dedup key so re-scans don't churn alerts.
+			PartialFingerprints: map[string]string{
+				"sekuFindingV1": sanitizeRuleID(ch.Category) + "-" + sanitizeRuleID(ch.CheckName),
+			},
 			Locations: []SARIFLocation{{
+				// A web target has no repo file; use a relative synthetic path
+				// (host+path) so ingestors anchor the alert, plus a logical location.
 				PhysicalLocation: SARIFPhysicalLocation{
-					ArtifactLocation: SARIFArtifactLocation{
-						URI: result.ScanTarget.URL,
-					},
+					ArtifactLocation: SARIFArtifactLocation{URI: relURI},
 				},
 				LogicalLocations: []SARIFLogicalLocation{{
-					Name: ch.Category,
-					Kind: "module",
+					Name: firstNonEmpty(categoryNames[ch.Category], ch.Category),
+					Kind: "namespace",
 				}},
 			}},
-		}
-		results = append(results, sarifResult)
+		})
 	}
 
 	report.Runs = []SARIFRun{{
@@ -181,6 +172,42 @@ func GenerateSARIF(result *models.ScanResult, checks []models.CheckResult) ([]by
 	}}
 
 	return json.MarshalIndent(report, "", "  ")
+}
+
+// sarifIsFinding reports whether a check is a failing/warning finding.
+func sarifIsFinding(status string, score float64) bool {
+	switch strings.ToLower(status) {
+	case "fail", "warn", "warning":
+		return true
+	case "pass", "info", "error", "pending", "running":
+		return false
+	}
+	return score < 900
+}
+
+// sarifLevel maps a finding severity to a SARIF level.
+func sarifLevel(sev string) string {
+	switch strings.ToLower(sev) {
+	case "critical", "high":
+		return "error"
+	case "medium":
+		return "warning"
+	default:
+		return "note"
+	}
+}
+
+// sarifRelURI turns a target URL into a stable relative path so ingestors can
+// anchor the result (an absolute https:// URI matches no repo file and GitHub
+// silently drops such alerts).
+func sarifRelURI(rawURL string) string {
+	u := strings.TrimPrefix(rawURL, "https://")
+	u = strings.TrimPrefix(u, "http://")
+	u = strings.TrimSuffix(u, "/")
+	if u == "" {
+		return "target"
+	}
+	return u
 }
 
 func sanitizeRuleID(name string) string {

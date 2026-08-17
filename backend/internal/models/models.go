@@ -146,6 +146,7 @@ type ScanResult struct {
 	RawScore       float64       `json:"raw_score"`        // security score before severity caps (transparency)
 	SecurityGrade  string        `json:"security_grade"`   // A+..F derived from OverallScore
 	GradeCapReason string        `json:"grade_cap_reason"` // finding that capped the grade, "" if uncapped
+	CoverageNote   string        `json:"coverage_note"`    // caveat when active vuln testing didn't run ("" if it did)
 	Status         string        `json:"status" gorm:"default:pending"`
 	StartedAt      *time.Time    `json:"started_at"`
 	EndedAt        *time.Time    `json:"ended_at"`

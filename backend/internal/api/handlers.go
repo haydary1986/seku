@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -744,6 +745,7 @@ func RecomputeAllScores(c *fiber.Ctx) error {
 			"raw_score":        sr.RawSecurity,
 			"security_grade":   grade,
 			"grade_cap_reason": sr.CapReason,
+			"coverage_note":    scanner.CoverageNote(checks),
 		})
 		dist[grade]++
 		updated++
@@ -1279,7 +1281,9 @@ func GetComplianceReport(c *fiber.Ctx) error {
 		})
 	}
 
-	// Calculate compliance percentages
+	// Pass-rate per OWASP category. NOTE: this is the share of automated checks
+	// that passed — it is NOT a certified compliance assessment. Deterministic
+	// order so the report doesn't reshuffle on every load.
 	var results []OWASPCompliance
 	totalCompliant := 0
 	totalChecks := 0
@@ -1288,10 +1292,13 @@ func GetComplianceReport(c *fiber.Ctx) error {
 		if entry.TotalChecks > 0 {
 			entry.Compliance = float64(entry.PassedChecks) / float64(entry.TotalChecks) * 100
 		}
+		if entry.WarnChecks > 0 && entry.Severity == "" {
+			entry.Severity = "medium"
+		}
 		if entry.FailedChecks > 0 {
 			entry.Severity = "high"
 		}
-		if entry.PassedChecks == entry.TotalChecks {
+		if entry.FailedChecks == 0 && entry.WarnChecks == 0 {
 			entry.Severity = "low"
 		}
 
@@ -1299,6 +1306,7 @@ func GetComplianceReport(c *fiber.Ctx) error {
 		totalChecks += entry.TotalChecks
 		results = append(results, *entry)
 	}
+	sort.Slice(results, func(i, j int) bool { return results[i].ID < results[j].ID })
 
 	overallCompliance := 0.0
 	if totalChecks > 0 {
@@ -1306,10 +1314,13 @@ func GetComplianceReport(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"overall_compliance": overallCompliance,
+		"overall_pass_rate":  overallCompliance,
+		"overall_compliance": overallCompliance, // deprecated alias (kept for the UI)
 		"total_checks":       totalChecks,
 		"total_passed":       totalCompliant,
 		"owasp_categories":   results,
+		"disclaimer": "Automated OWASP-tagged check pass-rate — an indicative coverage signal, " +
+			"NOT a certified compliance assessment or an audit of OWASP Top 10 conformance.",
 	})
 }
 

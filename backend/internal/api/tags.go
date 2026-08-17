@@ -101,6 +101,9 @@ func TagTarget(c *fiber.Ctx) error {
 func UntagTarget(c *fiber.Ctx) error {
 	targetID := c.Params("target_id")
 	tagID := c.Params("tag_id")
+	if !CanAccessTarget(c, targetID) {
+		return c.Status(404).JSON(fiber.Map{"error": "Target not found"})
+	}
 
 	var tt models.TargetTag
 	if err := config.DB.Where("scan_target_id = ? AND scan_tag_id = ?", targetID, tagID).First(&tt).Error; err != nil {
@@ -144,6 +147,9 @@ func GetTargetsByTag(c *fiber.Ctx) error {
 // GetTargetTags returns all tags for a specific target
 func GetTargetTags(c *fiber.Ctx) error {
 	targetID := c.Params("id")
+	if !CanAccessTarget(c, targetID) {
+		return c.Status(404).JSON(fiber.Map{"error": "Target not found"})
+	}
 
 	var targetTags []models.TargetTag
 	config.DB.Where("scan_target_id = ?", targetID).Preload("ScanTag").Find(&targetTags)

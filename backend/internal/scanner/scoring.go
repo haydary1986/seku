@@ -254,6 +254,40 @@ func normalizeSeverity(c *models.CheckResult) {
 	}
 }
 
+// injectionCats are the ACTIVE vulnerability-testing domains. If none of them
+// ran, the scan only measured passive hardening and a passing grade must not be
+// read as "tested and free of injection flaws".
+var injectionCats = map[string]bool{
+	"sqli": true, "xss": true, "ssrf": true, "open_redirect": true,
+	"cms_cve": true, "dast": true, "secrets": true, "backup_files": true,
+}
+
+// CoverageNote returns a plain-language caveat when a scan did NOT perform active
+// vulnerability testing — so "not tested" is never silently rendered as "safe".
+// Returns "" when active testing did run.
+func CoverageNote(checks []models.CheckResult) string {
+	securityRan, injectionRan := 0, 0
+	for _, c := range checks {
+		st := strings.ToLower(c.Status)
+		if st != "pass" && st != "fail" && st != "warn" {
+			continue // skipped/info/error/absent → didn't really run
+		}
+		if sev, ok := categorySeverity[c.Category]; ok && sev != sevNone {
+			securityRan++
+		}
+		if injectionCats[c.Category] {
+			injectionRan++
+		}
+	}
+	if securityRan == 0 {
+		return "No security checks ran in this scan — the result is not a security assessment."
+	}
+	if injectionRan == 0 {
+		return "Limited coverage: active vulnerability testing (SQL injection, XSS, SSRF, exposed secrets) was NOT performed in this scan. This grade reflects transport and configuration hardening only and does not confirm the site is free of injection or exposure flaws. Run a Deep scan for active testing."
+	}
+	return ""
+}
+
 // ComputeScores applies the scientific methodology to a set of checks. It is a
 // pure function (no I/O) so it is fully unit-testable.
 func ComputeScores(checks []models.CheckResult) ScoreResult {

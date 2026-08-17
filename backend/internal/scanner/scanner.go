@@ -685,6 +685,7 @@ func (e *Engine) scanTarget(result *models.ScanResult) {
 	result.RawScore = scores.RawSecurity
 	result.SecurityGrade = SecurityGrade(scores.Security)
 	result.GradeCapReason = scores.CapReason
+	result.CoverageNote = CoverageNote(allChecks)
 
 	ended := time.Now()
 	result.Status = "completed"

@@ -457,7 +457,28 @@ func GenerateScanReport(result *models.ScanResult, checks []models.CheckResult, 
 		narrative += " No failing or warning findings were detected at scan time."
 	}
 	pdf.MultiCell(180, 5, narrative, "", "L", false)
-	y = pdf.GetY() + 6
+	y = pdf.GetY() + 4
+
+	// Coverage caveat — never let a shallow scan read as "fully secure".
+	if strings.TrimSpace(result.CoverageNote) != "" {
+		fill([3]int{254, 243, 199}) // amber wash
+		startY := y
+		pdf.SetXY(19, y+2)
+		ink([3]int{146, 64, 14})
+		setFont("B", 8.5)
+		pdf.MultiCell(172, 4.6, "LIMITED COVERAGE — "+result.CoverageNote, "", "L", false)
+		endY := pdf.GetY() + 2
+		// draw the wash behind the text we just wrote
+		pdf.SetFillColor(254, 243, 199)
+		pdf.RoundedRect(15, startY, 180, endY-startY, 2, "1234", "F")
+		pdf.SetXY(19, startY+2)
+		ink([3]int{146, 64, 14})
+		setFont("B", 8.5)
+		pdf.MultiCell(172, 4.6, "LIMITED COVERAGE — "+result.CoverageNote, "", "L", false)
+		y = pdf.GetY() + 4
+	} else {
+		y += 2
+	}
 
 	// risk-summary table
 	y = subTitle(pdf, setFont, ink, "Risk Summary", y)

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -19,17 +20,24 @@ var dataLeakStore = &dataLeakResults{
 
 type dataLeakResults struct {
 	mu      sync.RWMutex
-	results map[string]*DataLeakResult // keyed by domain
+	results map[string]*DataLeakResult // keyed by "<orgID>:<domain>" for tenant isolation
 }
 
 type DataLeakResult struct {
-	Domain    string                   `json:"domain"`
-	Name      string                   `json:"name"`
-	Status    string                   `json:"status"` // pending, running, completed, failed
-	StartedAt *time.Time               `json:"started_at"`
-	EndedAt   *time.Time               `json:"ended_at"`
-	Checks    []models.CheckResult     `json:"checks"`
-	Summary   map[string]interface{}   `json:"summary"`
+	OrganizationID uint                   `json:"-"` // tenant owner; never serialized
+	Domain         string                 `json:"domain"`
+	Name           string                 `json:"name"`
+	Status         string                 `json:"status"` // pending, running, completed, failed
+	StartedAt      *time.Time             `json:"started_at"`
+	EndedAt        *time.Time             `json:"ended_at"`
+	Checks         []models.CheckResult   `json:"checks"`
+	Summary        map[string]interface{} `json:"summary"`
+}
+
+// leakKey scopes an in-memory data-leak result to its owning organization so one
+// tenant can never read or overwrite another tenant's results.
+func leakKey(orgID uint, domain string) string {
+	return strconv.FormatUint(uint64(orgID), 10) + ":" + domain
 }
 
 // RunDataLeakScan starts data leak scans for selected targets
@@ -53,16 +61,19 @@ func RunDataLeakScan(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "No targets found"})
 	}
 
+	orgID := GetUserOrgID(c)
+
 	// Mark all as pending
 	for _, t := range targets {
 		domain := extractLeakDomain(t.URL)
 		now := time.Now()
 		dataLeakStore.mu.Lock()
-		dataLeakStore.results[domain] = &DataLeakResult{
-			Domain:    domain,
-			Name:      t.Name,
-			Status:    "pending",
-			StartedAt: &now,
+		dataLeakStore.results[leakKey(orgID, domain)] = &DataLeakResult{
+			OrganizationID: orgID,
+			Domain:         domain,
+			Name:           t.Name,
+			Status:         "pending",
+			StartedAt:      &now,
 		}
 		dataLeakStore.mu.Unlock()
 	}
@@ -81,9 +92,10 @@ func RunDataLeakScan(c *fiber.Ctx) error {
 				defer func() { <-sem }()
 
 				domain := extractLeakDomain(target.URL)
+				key := leakKey(orgID, domain)
 
 				dataLeakStore.mu.Lock()
-				if r, ok := dataLeakStore.results[domain]; ok {
+				if r, ok := dataLeakStore.results[key]; ok {
 					r.Status = "running"
 				}
 				dataLeakStore.mu.Unlock()
@@ -96,7 +108,7 @@ func RunDataLeakScan(c *fiber.Ctx) error {
 
 				ended := time.Now()
 				dataLeakStore.mu.Lock()
-				if r, ok := dataLeakStore.results[domain]; ok {
+				if r, ok := dataLeakStore.results[key]; ok {
 					r.Status = "completed"
 					r.EndedAt = &ended
 					r.Checks = checks
@@ -117,18 +129,19 @@ func RunDataLeakScan(c *fiber.Ctx) error {
 // GetDataLeakResults returns all data leak scan results
 func GetDataLeakResults(c *fiber.Ctx) error {
 	domain := c.Query("domain", "")
+	orgID := GetUserOrgID(c)
 
 	dataLeakStore.mu.RLock()
 	defer dataLeakStore.mu.RUnlock()
 
 	if domain != "" {
-		if r, ok := dataLeakStore.results[domain]; ok {
+		if r, ok := dataLeakStore.results[leakKey(orgID, domain)]; ok {
 			return c.JSON(r)
 		}
 		return c.Status(404).JSON(fiber.Map{"error": "No results for this domain"})
 	}
 
-	// Return all results
+	// Return all results — scoped to the caller's organization only.
 	var results []*DataLeakResult
 	totalBreaches := 0
 	totalExposed := 0
@@ -136,6 +149,9 @@ func GetDataLeakResults(c *fiber.Ctx) error {
 	runningCount := 0
 
 	for _, r := range dataLeakStore.results {
+		if r.OrganizationID != orgID {
+			continue
+		}
 		results = append(results, r)
 		if r.Status == "completed" {
 			completedCount++

@@ -133,20 +133,18 @@ func InitDatabase() {
 			admin.IsActive = true
 			needsUpdate = true
 		}
-		// Force-rotate off the compromised shipped password (auto-remediation).
-		// A password the operator already changed in-app is left untouched.
+		// Rotate off the compromised shipped password ONLY when the operator has
+		// supplied a replacement (SEKU_ADMIN_PASSWORD) — never silently rotate to a
+		// random value, which would lock the operator out of a live deployment.
+		// A password already changed in-app is left untouched.
 		if bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(compromisedDefault)) == nil {
-			pw, generated := envPassword, false
-			if pw == "" {
-				pw, generated = newRandomPassword(), true
-			}
-			hashed, _ := bcrypt.GenerateFromPassword([]byte(pw), bcrypt.DefaultCost)
-			admin.Password = string(hashed)
-			needsUpdate = true
-			if generated {
-				log.Printf("SECURITY: admin %q used the compromised built-in password; rotated to a GENERATED password: %s — store it and set SEKU_ADMIN_PASSWORD.", username, pw)
-			} else {
+			if envPassword != "" {
+				hashed, _ := bcrypt.GenerateFromPassword([]byte(envPassword), bcrypt.DefaultCost)
+				admin.Password = string(hashed)
+				needsUpdate = true
 				log.Printf("SECURITY: admin %q rotated off the compromised built-in password using SEKU_ADMIN_PASSWORD.", username)
+			} else {
+				log.Printf("SECURITY WARNING: admin %q STILL uses the compromised built-in password. Set SEKU_ADMIN_PASSWORD in the environment and redeploy to rotate it.", username)
 			}
 		}
 		if needsUpdate {
