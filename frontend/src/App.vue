@@ -63,6 +63,7 @@ const ic = {
   dataLeak: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z',
   osint: 'M21 21l-4.35-4.35M11 6a5 5 0 015 5m2 0a7 7 0 11-14 0 7 7 0 0114 0z',
   quickScan: 'M13 10V3L4 14h7v7l9-11h-7z',
+  activity: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
   schedules: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
   webhooks: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9',
   aiChat: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z',
@@ -120,6 +121,7 @@ const navGroups = computed(() => {
       label: t('navGroup.admin'),
       items: [
         { name: t('nav.orderQueue'), path: '/admin/orders', icon: ic.orders },
+        { name: t('nav.scanActivity'), path: '/admin/activity', icon: ic.activity },
         { name: t('nav.nuclei'), path: '/tools/nuclei', icon: ic.nuclei },
         { name: t('nav.agents'), path: '/agents', icon: ic.agents },
         { name: t('nav.directives'), path: '/directives', icon: ic.directives },
@@ -145,6 +147,7 @@ const pageTitles = computed(() => ({
   Dashboard: [t('nav.dashboard'), t('dashboard.subtitle')],
   Targets: [t('nav.targets'), t('targets.subtitle')],
   QuickScan: [t('nav.quickScan'), t('vQuickScan.subtitle')],
+  ScanActivity: [t('nav.scanActivity'), t('vActivity.subtitle')],
   Scans: [t('nav.scans'), t('scans.subtitle')],
   Orders: [t('nav.orders'), ''],
   AdminOrders: [t('nav.orderQueue'), ''],

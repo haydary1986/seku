@@ -75,7 +75,8 @@
     "downloads": "Agent Download",
     "seo": "SEO",
     "osint": "OSINT",
-    "quickScan": "Quick Scan"
+    "quickScan": "Quick Scan",
+    "scanActivity": "Scan Activity"
   },
   "landing": {
     "badge": "Website Security Scanning Platform",
@@ -798,5 +799,16 @@
     "paymentNeeded": "Deep scan requires payment. Choose light/standard or buy a credit.",
     "notVerified": "Domain ownership is not verified.",
     "failed": "Could not start the scan."
+  },
+  "vActivity": {
+    "subtitle": "What users scanned and when",
+    "byUser": "By user",
+    "lastScan": "Last scan",
+    "user": "User",
+    "targets": "Targets",
+    "policy": "Policy",
+    "results": "Results",
+    "none": "No activity yet",
+    "failed": "Could not load activity"
   }
 }

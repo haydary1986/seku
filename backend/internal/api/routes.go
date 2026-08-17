@@ -226,6 +226,9 @@ func SetupRoutes(app *fiber.App) {
 	// Admin-only routes
 	admin := protected.Group("", AdminRequired())
 
+	// Scan activity — who scanned what (admin)
+	admin.Get("/scan-activity", GetScanActivity)
+
 	// Single-target tools (admin only)
 	admin.Post("/tools/nuclei", RunNucleiTool)
 	admin.Get("/tools/nuclei/runs", ListNucleiRuns)

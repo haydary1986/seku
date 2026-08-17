@@ -223,4 +223,7 @@ export const discoverDomains = (domain) => api.get(`/discover/domain?domain=${en
 // Passive OSINT reconnaissance (DNS/WHOIS/IPs/subdomains/certs/email/breaches)
 export const getOSINT = (domain) => api.get(`/osint?domain=${encodeURIComponent(domain)}`)
 
+// Admin: scan activity log (who scanned what)
+export const getScanActivity = (params) => api.get('/scan-activity', { params })
+
 export default api
