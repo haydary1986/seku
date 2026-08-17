@@ -76,6 +76,7 @@ var categorySeverity = map[string]domainSeverity{
 
 	// High — transport security, access control, sensitive exposure
 	"ssl":             sevHigh,
+	"tls_deep":        sevHigh, // deep TLS: weak protocol/cipher, expired/self-signed cert
 	"headers":         sevHigh,
 	"cookies":         sevHigh,
 	"http_methods":    sevHigh,

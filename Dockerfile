@@ -37,6 +37,14 @@ RUN go install github.com/lc/gau/v2/cmd/gau@latest
 RUN go install github.com/tomnomnom/waybackurls@latest
 # Broad passive subdomain enumeration (30+ sources)
 RUN go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+# Additional ProjectDiscovery toolkit (pure-Go, CGO-free): deep TLS grabbing,
+# DNS toolkit, ASN mapping, HTTP probing, exposed-host discovery, CIDR ops.
+RUN go install github.com/projectdiscovery/tlsx/cmd/tlsx@latest
+RUN go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest
+RUN go install github.com/projectdiscovery/asnmap/cmd/asnmap@latest
+RUN go install github.com/projectdiscovery/httpx/cmd/httpx@latest
+RUN go install github.com/projectdiscovery/uncover/cmd/uncover@latest
+RUN go install github.com/projectdiscovery/mapcidr/cmd/mapcidr@latest
 # Clone nuclei-templates directly — `nuclei -update-templates` printed the banner
 # and exited without downloading, leaving an empty templates dir (0 matches).
 RUN git clone --depth 1 https://github.com/projectdiscovery/nuclei-templates.git /root/nuclei-templates \
@@ -75,6 +83,12 @@ COPY --from=nuclei-builder /go/bin/ffuf /usr/local/bin/ffuf
 COPY --from=nuclei-builder /go/bin/gau /usr/local/bin/gau
 COPY --from=nuclei-builder /go/bin/waybackurls /usr/local/bin/waybackurls
 COPY --from=nuclei-builder /go/bin/subfinder /usr/local/bin/subfinder
+COPY --from=nuclei-builder /go/bin/tlsx /usr/local/bin/tlsx
+COPY --from=nuclei-builder /go/bin/dnsx /usr/local/bin/dnsx
+COPY --from=nuclei-builder /go/bin/asnmap /usr/local/bin/asnmap
+COPY --from=nuclei-builder /go/bin/httpx /usr/local/bin/httpx
+COPY --from=nuclei-builder /go/bin/uncover /usr/local/bin/uncover
+COPY --from=nuclei-builder /go/bin/mapcidr /usr/local/bin/mapcidr
 COPY --from=nuclei-builder /root/nuclei-templates /root/nuclei-templates
 COPY --from=nuclei-builder /wordlists /app/wordlists
 # Scanners default to the comprehensive baked wordlists (fall back to embedded if absent)
