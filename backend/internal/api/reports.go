@@ -236,7 +236,16 @@ func ExportLeaderboardCSV(c *fiber.Ctx) error {
 }
 
 func csvEscape(s string) string {
-	if strings.ContainsAny(s, ",\"\n") {
+	// Neutralise CSV/formula injection: a target-controlled cell (server banners,
+	// page titles, headers) that begins with = + - @ or a leading TAB/CR is
+	// treated by Excel/LibreOffice/Sheets as a formula. Prefix such cells with a
+	// single quote so they render as inert text.
+	if s != "" && strings.ContainsRune("=+-@\t\r", rune(s[0])) {
+		s = "'" + s
+	}
+	// Quote when the value contains a delimiter, quote, or any newline (incl. a
+	// lone CR, which would otherwise split a row).
+	if strings.ContainsAny(s, ",\"\n\r") {
 		return "\"" + strings.ReplaceAll(s, "\"", "\"\"") + "\""
 	}
 	return s
