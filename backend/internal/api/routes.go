@@ -175,6 +175,9 @@ func SetupRoutes(app *fiber.App) {
 	protected.Post("/data-leak/scan", RunDataLeakScan)
 	protected.Get("/data-leak/results", GetDataLeakResults)
 
+	// OSINT — passive reconnaissance (rate-limited: makes outbound lookups)
+	protected.Get("/osint", rateLimit(20, time.Minute), RunOSINTReport)
+
 	// Remediation Guides
 	protected.Get("/remediation", GetRemediationGuide)
 

@@ -1,6 +1,8 @@
 package api
 
 import (
+	crand "crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -160,7 +162,14 @@ func UploadPaymentProof(c *fiber.Ctx) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create upload directory"})
 	}
-	saved := fmt.Sprintf("proof-%d-%d%s", order.ID, time.Now().Unix(), ext)
+	// Unguessable filename: payment receipts are served from a public path, so a
+	// sequential order-id + second timestamp (the old scheme) let anyone enumerate
+	// other tenants' receipts. A random token makes URLs unguessable.
+	rb := make([]byte, 16)
+	if _, err := crand.Read(rb); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate file name"})
+	}
+	saved := "proof-" + hex.EncodeToString(rb) + ext
 	if err := c.SaveFile(file, filepath.Join(dir, saved)); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to save file"})
 	}

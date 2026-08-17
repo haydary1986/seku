@@ -82,10 +82,21 @@ func (s *JWTScanner) Scan(rawURL string) []models.CheckResult {
 		}
 		alg, _ := jwtHeaderAlg(parts[0])
 
-		// 1) alg:none — signature not verified → trivial forgery.
+		// 1) alg:none — OBSERVED only. We saw a token declaring 'alg:none' but did
+		// NOT actively confirm the server accepts a forged unsigned token, so this
+		// is a high-severity red flag (unconfirmed), not a confirmed critical bypass.
 		if strings.EqualFold(alg, "none") {
-			return []models.CheckResult{s.critical("JWT 'alg:none' Accepted",
-				"A JWT using the unsigned 'alg:none' algorithm was observed. If the server accepts it, anyone can forge tokens and impersonate any user. Reject 'none' and pin the expected algorithm.")}
+			return []models.CheckResult{{
+				Category:   s.Category(),
+				CheckName:  "JWT 'alg:none' Observed",
+				Weight:     9.0,
+				Status:     "warn",
+				Score:      250,
+				Severity:   "high",
+				Confidence: 55,
+				OWASP:      "A02:2021 - Cryptographic Failures",
+				Details:    toJSON(map[string]string{"message": "A JWT declaring the unsigned 'alg:none' algorithm was observed. This is a strong red flag but was NOT actively confirmed to be accepted by the server. Verify the server rejects forged unsigned tokens and pins the expected algorithm — if it accepts them, this becomes a critical authentication bypass."}),
+			}}
 		}
 
 		// 2) weak HMAC secret — forge tokens by re-signing.

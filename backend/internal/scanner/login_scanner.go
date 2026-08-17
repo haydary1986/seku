@@ -65,7 +65,7 @@ func (s *LoginScanner) Category() string { return "login" }
 func (s *LoginScanner) Weight() float64  { return 12.0 }
 
 const (
-	loginLockoutMax  = 6
+	loginLockoutMax  = 10 // apps commonly lock/slow only after ~10; 6 caused false "no lockout"
 	loginWeakCredMax = 30
 	loginReqTimeout  = 12 * time.Second
 	loginBodyCap     = 256 * 1024
@@ -96,7 +96,7 @@ var mfaKeywords = []string{
 // (kept here so cvss.go / owasp.go / confidence.go stay untouched).
 func init() {
 	CheckCVSSMap["Weak or Default Credentials"] = CVSSMapping{9.8, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", "Critical"}
-	CheckCVSSMap["Account Lockout Protection"] = CVSSMapping{7.5, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H", "High"}
+	CheckCVSSMap["Account Lockout Protection"] = CVSSMapping{5.3, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L", "Medium"} // a heuristic control gap, not a confirmed exploit
 	CheckCVSSMap["Username Enumeration"] = CVSSMapping{5.3, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N", "Medium"}
 	CheckCVSSMap["Login Transport Security"] = CVSSMapping{7.5, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N", "High"}
 
