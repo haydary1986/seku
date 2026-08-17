@@ -171,10 +171,6 @@ func SetupRoutes(app *fiber.App) {
 	// Domain Discovery (internet search)
 	protected.Get("/discover/domain", DiscoverDomains)
 
-	// Data Leak Scanner (standalone — not part of main scan)
-	protected.Post("/data-leak/scan", RunDataLeakScan)
-	protected.Get("/data-leak/results", GetDataLeakResults)
-
 	// OSINT — passive reconnaissance (rate-limited: makes outbound lookups)
 	protected.Get("/osint", rateLimit(20, time.Minute), RunOSINTReport)
 
