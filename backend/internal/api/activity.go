@@ -1,11 +1,21 @@
 package api
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 
 	"seku/internal/config"
 	"seku/internal/models"
 )
+
+// firstNonBlank returns a if non-empty (trimmed), else b.
+func firstNonBlank(a, b string) string {
+	if strings.TrimSpace(a) != "" {
+		return a
+	}
+	return b
+}
 
 // GetScanActivity returns a chronological log of scans with the user who ran
 // each — an admin view of "what did users scan". Admin-only (mounted under the
@@ -47,6 +57,8 @@ func GetScanActivity(c *fiber.Ctx) error {
 		Name        string   `json:"name"`
 		Policy      string   `json:"policy"`
 		Status      string   `json:"status"`
+		Source      string   `json:"source"`      // web | desktop | agent
+		DeviceInfo  string   `json:"device_info"` // machine, for desktop/agent scans
 		CreatedAt   string   `json:"created_at"`
 		EndedAt     string   `json:"ended_at"`
 		Targets     []string `json:"targets"`
@@ -80,6 +92,7 @@ func GetScanActivity(c *fiber.Ctx) error {
 		rows = append(rows, activityRow{
 			JobID: j.ID, UserID: j.UserID, Username: u.Username, FullName: u.FullName,
 			Name: j.Name, Policy: j.Policy, Status: j.Status,
+			Source: firstNonBlank(j.Source, "web"), DeviceInfo: j.DeviceInfo,
 			CreatedAt: created, EndedAt: ended,
 			Targets: targets, TargetCount: len(targets), ResultCount: len(j.Results),
 		})

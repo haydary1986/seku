@@ -133,6 +133,10 @@ type ScanJob struct {
 	EnableDalfox     bool         `json:"enable_dalfox"`
 	EnableFFUF       bool         `json:"enable_ffuf"`
 	EnableNucleiDast bool         `json:"enable_nuclei_dast"`
+	// Source records HOW the scan was launched (web, desktop, agent) and, for
+	// desktop/agent runs, which machine ran it — so activity shows who + from where.
+	Source           string       `json:"source"`      // web | desktop | agent
+	DeviceInfo       string       `json:"device_info"` // e.g. "MacBook-Pro · darwin/arm64"
 	Authorized       bool         `json:"authorized"`
 	AuthCookie       string       `json:"auth_cookie"`
 	AuthHeader       string       `json:"auth_header"`

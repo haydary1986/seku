@@ -484,8 +484,10 @@ type StartScanRequest struct {
 	EnableOOB        bool `json:"enable_oob"`
 	EnableDalfox     bool `json:"enable_dalfox"`
 	EnableFFUF       bool `json:"enable_ffuf"`
-	EnableNucleiDast bool `json:"enable_nuclei_dast"`
-	Authorized       bool `json:"authorized"`
+	EnableNucleiDast bool   `json:"enable_nuclei_dast"`
+	Source           string `json:"source"`      // web | desktop | agent (attribution)
+	DeviceInfo       string `json:"device_info"` // machine the desktop app ran on
+	Authorized       bool   `json:"authorized"`
 	// Authenticated scanning (optional): a session to inject so scanners reach
 	// pages behind login; AuthCookieB is a second identity for IDOR/BOLA testing.
 	AuthCookie  string `json:"auth_cookie"`
@@ -621,6 +623,8 @@ func StartScan(c *fiber.Ctx) error {
 		EnableDalfox:     req.EnableDalfox,
 		EnableFFUF:       req.EnableFFUF,
 		EnableNucleiDast: req.EnableNucleiDast,
+		Source:           firstNonBlank(req.Source, "web"),
+		DeviceInfo:       req.DeviceInfo,
 		Authorized:       req.Authorized,
 		AuthCookie:       req.AuthCookie,
 		AuthHeader:       req.AuthHeader,

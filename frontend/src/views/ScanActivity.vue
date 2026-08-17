@@ -81,7 +81,11 @@ onMounted(load)
                   class="border-b border-gray-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer transition-colors"
                   @click="router.push(`/scans/${row.job_id}`)">
                 <td class="px-4 py-3">
-                  <span class="font-medium text-slate-900 dark:text-white">{{ row.username || ('#' + row.user_id) }}</span>
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-medium text-slate-900 dark:text-white">{{ row.username || ('#' + row.user_id) }}</span>
+                    <span v-if="row.source && row.source !== 'web'" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 uppercase font-mono">{{ row.source }}</span>
+                  </div>
+                  <div v-if="row.device_info" class="text-[11px] text-slate-400 dark:text-slate-500 font-mono">{{ row.device_info }}</div>
                 </td>
                 <td class="px-4 py-3 max-w-xs">
                   <span class="font-mono text-xs text-slate-600 dark:text-slate-300 break-all">{{ (row.targets && row.targets[0]) || row.name || '—' }}</span>
