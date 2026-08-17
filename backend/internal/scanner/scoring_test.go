@@ -141,6 +141,7 @@ func TestNormalizeSeverities_DeinflatesScore(t *testing.T) {
 	mk := func() []models.CheckResult {
 		return []models.CheckResult{
 			chk("ssl", "TLS Version", "pass", 1000, 100),
+			chk("sqli", "SQL Injection Test", "pass", 1000, 70), // injection ran → no coverage cap masks the delta
 			chk("headers", "HSTS", "fail", 0, 100),
 		}
 	}
@@ -222,11 +223,51 @@ func TestComputeScores_ManyChecksDoNotDominate(t *testing.T) {
 func TestComputeScores_ErrorsExcluded(t *testing.T) {
 	checks := []models.CheckResult{
 		chk("ssl", "TLS Version", "pass", 1000, 100),
+		chk("sqli", "SQL Injection Test", "pass", 1000, 70), // injection ran → no coverage cap
 		chk("dns", "DNS Security Scanner (timeout)", "error", 0, 80),
 		chk("email_security", "Email Security Scanner (timeout)", "error", 0, 80),
 	}
 	r := ComputeScores(checks)
 	if r.Security < 900 {
 		t.Errorf("errored scanners must not lower the score, got %.0f", r.Security)
+	}
+}
+
+// A scan that never performed active vulnerability testing (no injection domains
+// ran) is capped at grade B — "not tested" must never read as "excellent".
+func TestComputeScores_CoverageCapLimitsGrade(t *testing.T) {
+	checks := []models.CheckResult{
+		chk("ssl", "TLS Version", "pass", 1000, 100),
+		chk("headers", "HSTS", "pass", 1000, 100),
+		chk("cookies", "Cookie Security", "pass", 1000, 100),
+		// no sqli/xss/ssrf/secrets/etc. → limited coverage
+	}
+	r := ComputeScores(checks)
+	if r.Security > 790 {
+		t.Errorf("a limited-coverage scan must be capped at B (<=790), got %.0f", r.Security)
+	}
+	if SecurityGrade(r.Security) == "A" || SecurityGrade(r.Security) == "A+" {
+		t.Errorf("limited coverage must not earn A/A+, got %s", SecurityGrade(r.Security))
+	}
+	if r.CapReason == "" {
+		t.Errorf("coverage cap should set a CapReason")
+	}
+}
+
+// The injection/exploit multiplier: a confirmed HIGH finding in an injection
+// domain must deduct more than the same-severity finding in a low domain.
+func TestComputeScores_InjectionWeightedHeavier(t *testing.T) {
+	withInjectionFail := []models.CheckResult{
+		chk("sqli", "SQL Injection Test", "pass", 1000, 70),
+		chk("ssrf", "SSRF Detection", "fail", 250, 90), // high sev, injection domain
+	}
+	withLowFail := []models.CheckResult{
+		chk("sqli", "SQL Injection Test", "pass", 1000, 70),
+		chk("server_info", "Server Header", "fail", 250, 90), // same score, low domain
+	}
+	inj := ComputeScores(withInjectionFail).Security
+	low := ComputeScores(withLowFail).Security
+	if !(inj < low) {
+		t.Errorf("an injection-domain failure should deduct more than a low-domain one, got inj=%.0f low=%.0f", inj, low)
 	}
 }

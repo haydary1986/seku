@@ -289,6 +289,23 @@ func CoverageNote(checks []models.CheckResult) string {
 	return ""
 }
 
+// severityRiskMult weights a category's penalty by its intrinsic risk class:
+// a failing finding in an injection/exploit domain hurts the grade more than a
+// hardening gap of the same finding-severity.
+func severityRiskMult(d domainSeverity) float64 {
+	switch d {
+	case sevCritical:
+		return 1.35
+	case sevHigh:
+		return 1.0
+	case sevMedium:
+		return 0.85
+	case sevLow:
+		return 0.65
+	}
+	return 1.0
+}
+
 // ComputeScores applies the scientific methodology to a set of checks. It is a
 // pure function (no I/O) so it is fully unit-testable.
 func ComputeScores(checks []models.CheckResult) ScoreResult {
@@ -340,7 +357,10 @@ func ComputeScores(checks []models.CheckResult) ScoreResult {
 				} else if conf > 1.0 {
 					conf = 1.0
 				}
-				catDeduction[c.Category] += base * factor * conf
+				// Weight the deduction by the category's intrinsic risk class so a
+				// failing injection/exploit finding hurts the grade more than a
+				// hardening gap of the same finding-severity.
+				catDeduction[c.Category] += base * factor * conf * severityRiskMult(sev)
 			}
 		}
 
@@ -379,6 +399,18 @@ func ComputeScores(checks []models.CheckResult) ScoreResult {
 	if critFail && res.Security > capCriticalFail {
 		res.Security = capCriticalFail
 		res.CapReason = "critical: " + critReason
+	}
+
+	// Coverage cap: a scan that did NOT perform active vulnerability testing
+	// (SQLi/XSS/SSRF/secrets…) cannot honestly claim an "excellent/very good"
+	// grade — a pentester never grades a site A without testing for injection.
+	// Limited-coverage results are capped at grade B (so "not tested" ≠ "secure").
+	capLimited := float64(envInt("SEKU_CAP_LIMITED_COVERAGE", 790))
+	if securityScored && res.Security > capLimited && CoverageNote(checks) != "" {
+		res.Security = capLimited
+		if res.CapReason == "" {
+			res.CapReason = "limited coverage: active vulnerability testing not performed"
+		}
 	}
 
 	res.Security = math.Round(res.Security)
