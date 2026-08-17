@@ -15,4 +15,4 @@ initAnalytics(router)
 
 // Build stamp — also bumps the bundle hash so a fresh asset URL is emitted
 // (bypasses any stale Cloudflare 404 cached for a prior asset during deploy swap).
-window.__SEKU_BUILD__ = '2026-08-17-rmleak'
+window.__SEKU_BUILD__ = '2026-08-17-offensive'

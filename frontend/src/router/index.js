@@ -27,6 +27,7 @@ import Directives from '../views/Directives.vue'
 import OSINT from '../views/OSINT.vue'
 import QuickScan from '../views/QuickScan.vue'
 import ScanActivity from '../views/ScanActivity.vue'
+import OffensiveTesting from '../views/OffensiveTesting.vue'
 import SEOSettings from '../views/SEOSettings.vue'
 import NucleiTool from '../views/NucleiTool.vue'
 import Downloads from '../views/Downloads.vue'
@@ -75,6 +76,7 @@ const routes = [
   { path: '/admin/orders', name: 'AdminOrders', component: AdminOrders, meta: { admin: true } },
   { path: '/admin/activity', name: 'ScanActivity', component: ScanActivity, meta: { admin: true } },
   { path: '/tools/nuclei', name: 'NucleiTool', component: NucleiTool, meta: { admin: true } },
+  { path: '/tools/offensive', name: 'OffensiveTesting', component: OffensiveTesting, meta: { admin: true } },
   { path: '/agents', name: 'Agents', component: Agents, meta: { admin: true } },
 ]
 

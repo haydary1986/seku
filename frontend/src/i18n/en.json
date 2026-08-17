@@ -76,7 +76,8 @@
     "seo": "SEO",
     "osint": "OSINT",
     "quickScan": "Quick Scan",
-    "scanActivity": "Scan Activity"
+    "scanActivity": "Scan Activity",
+    "offensive": "Offensive Testing"
   },
   "landing": {
     "badge": "Website Security Scanning Platform",
@@ -810,5 +811,29 @@
     "results": "Results",
     "none": "No activity yet",
     "failed": "Could not load activity"
+  },
+  "vOffensive": {
+    "title": "Offensive Testing (Authorized)",
+    "subtitle": "Intrusive tools on a target or all your sites",
+    "warnTitle": "Intrusive active testing",
+    "warnBody": "Sends real attack payloads (injection, login probing, OOB) and may impact the target. Run ONLY on systems you own or are authorized to test.",
+    "scope": "Scope",
+    "allTargets": "All my targets",
+    "allTargetsDesc": "Runs the offensive suite on every target you own",
+    "oneDomain": "A specific domain",
+    "oneDomainDesc": "One-off target (not added to your list)",
+    "tools": "Tools",
+    "toolDast": "Active fuzzing (SSTI/LFI/XXE/CMDi)",
+    "toolNuclei": "Nuclei templates (CVE/exposure)",
+    "toolDalfox": "Advanced XSS (dalfox)",
+    "toolOob": "Out-of-band SSRF (OOB)",
+    "toolLogin": "Login testing (lockout/brute/default)",
+    "authConfirm": "I confirm I own these targets or am authorized to actively test them, and accept responsibility.",
+    "launch": "Launch Offensive Scan",
+    "launching": "Launching...",
+    "invalid": "Enter a valid domain",
+    "paymentNeeded": "Deep scan is paid for non-admins.",
+    "forbidden": "Forbidden — verify domain ownership.",
+    "failed": "Could not launch the offensive scan."
   }
 }

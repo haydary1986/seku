@@ -120,6 +120,7 @@ const navGroups = computed(() => {
       items: [
         { name: t('nav.orderQueue'), path: '/admin/orders', icon: ic.orders },
         { name: t('nav.scanActivity'), path: '/admin/activity', icon: ic.activity },
+        { name: t('nav.offensive'), path: '/tools/offensive', icon: ic.quickScan },
         { name: t('nav.nuclei'), path: '/tools/nuclei', icon: ic.nuclei },
         { name: t('nav.agents'), path: '/agents', icon: ic.agents },
         { name: t('nav.directives'), path: '/directives', icon: ic.directives },
@@ -146,6 +147,7 @@ const pageTitles = computed(() => ({
   Targets: [t('nav.targets'), t('targets.subtitle')],
   QuickScan: [t('nav.quickScan'), t('vQuickScan.subtitle')],
   ScanActivity: [t('nav.scanActivity'), t('vActivity.subtitle')],
+  OffensiveTesting: [t('nav.offensive'), t('vOffensive.subtitle')],
   Scans: [t('nav.scans'), t('scans.subtitle')],
   Orders: [t('nav.orders'), ''],
   AdminOrders: [t('nav.orderQueue'), ''],
