@@ -468,6 +468,17 @@ const allChecks = computed(() => {
 const criticalCount = computed(() => allChecks.value.filter(c => c.severity === 'critical').length)
 const highCount = computed(() => allChecks.value.filter(c => c.severity === 'high').length)
 const mediumCount = computed(() => allChecks.value.filter(c => c.severity === 'medium').length)
+const lowCount = computed(() => allChecks.value.filter(c => c.severity === 'low').length)
+const passCount = computed(() => allChecks.value.filter(c => c.status === 'pass').length)
+
+// report tabs — group the sections so findings aren't buried under a wall of cards
+const tab = ref('findings')
+const tabs = [
+  { key: 'findings', label: 'النتائج' },
+  { key: 'overview', label: 'نظرة عامة' },
+  { key: 'remediation', label: 'الإصلاح' },
+  { key: 'ai', label: 'الذكاء (AI)' },
+]
 
 function filterChecksBySeverity(checks) {
   if (severityFilter.value === 'all') return checks
@@ -776,8 +787,26 @@ onMounted(async () => {
         </div>
       </div>
 
+      <!-- Severity summary + tab navigation -->
+      <div class="card p-4 mb-6">
+        <div class="flex flex-wrap items-center gap-2 mb-4">
+          <span class="sev sev-critical">{{ criticalCount }} حرِج</span>
+          <span class="sev sev-high">{{ highCount }} عالٍ</span>
+          <span class="sev sev-medium">{{ mediumCount }} متوسط</span>
+          <span class="sev sev-low">{{ lowCount }} منخفض</span>
+          <span class="ms-auto text-sm font-medium text-emerald-600 dark:text-emerald-400">✓ {{ passCount }} فحص ناجح</span>
+        </div>
+        <div class="flex flex-wrap gap-1.5 border-t border-gray-100 dark:border-slate-700/60 pt-3">
+          <button v-for="t in tabs" :key="t.key" @click="tab = t.key"
+            :class="['px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+              tab === t.key ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800']">
+            {{ t.label }}
+          </button>
+        </div>
+      </div>
+
       <!-- AI Analysis Panel -->
-      <div v-if="showAI" class="card p-6 mb-6">
+      <div v-show="tab === 'ai'" class="card p-6 mb-6">
         <div class="flex items-center gap-2 mb-4">
           <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
@@ -792,10 +821,14 @@ onMounted(async () => {
         <div v-else-if="aiAnalysis?.analysis" class="prose prose-sm max-w-none text-slate-800 dark:text-slate-200 whitespace-pre-wrap" dir="ltr" style="text-align: left;">
           {{ aiAnalysis.analysis }}
         </div>
+        <div v-else class="text-center py-10 text-slate-500 dark:text-slate-400 text-sm">
+          لم يُشغَّل تحليل الذكاء الاصطناعي بعد.
+          <button @click="runAIAnalysis" class="text-emerald-600 dark:text-emerald-400 font-medium hover:underline">شغّله الآن</button>
+        </div>
       </div>
 
       <!-- Score History -->
-      <div v-if="historyChartData" class="card p-6 mb-6">
+      <div v-if="tab === 'overview' && historyChartData" class="card p-6 mb-6">
         <div class="flex items-center gap-2 mb-4">
           <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
@@ -809,7 +842,7 @@ onMounted(async () => {
       </div>
 
       <!-- OWASP Top 10 Compliance -->
-      <div v-if="compliance && compliance.owasp_categories && compliance.owasp_categories.length" class="card p-6 mb-6">
+      <div v-if="tab === 'overview' && compliance && compliance.owasp_categories && compliance.owasp_categories.length" class="card p-6 mb-6">
         <div class="flex items-center gap-3 mb-6">
           <svg class="w-7 h-7 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
@@ -861,12 +894,12 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-      <div v-else-if="complianceLoading" class="card p-6 mb-6 flex justify-center">
+      <div v-else-if="tab === 'overview' && complianceLoading" class="card p-6 mb-6 flex justify-center">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
       </div>
 
       <!-- Smart Upgrade Suggestions -->
-      <div v-if="upgradeSuggestions.length" class="card p-6 mb-6">
+      <div v-if="tab === 'remediation' && upgradeSuggestions.length" class="card p-6 mb-6">
         <div class="flex items-center gap-3 mb-6">
           <div class="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
             <svg class="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -940,12 +973,12 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-      <div v-else-if="upgradesLoading" class="card p-6 mb-6 flex justify-center">
+      <div v-else-if="tab === 'remediation' && upgradesLoading" class="card p-6 mb-6 flex justify-center">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
       </div>
 
       <!-- Fix Priority Recommendations -->
-      <div v-if="fixPriority && fixPriority.recommendations?.length" class="card p-6 mb-6">
+      <div v-if="tab === 'remediation' && fixPriority && fixPriority.recommendations?.length" class="card p-6 mb-6">
         <div class="flex items-center gap-3 mb-4">
           <div class="p-2 bg-rose-500/15 rounded-lg">
             <svg class="w-6 h-6 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -978,7 +1011,7 @@ onMounted(async () => {
       </div>
 
       <!-- Timeline Comparison -->
-      <div v-if="timeline && timeline.timeline?.length > 1" class="card p-6 mb-6">
+      <div v-if="tab === 'overview' && timeline && timeline.timeline?.length > 1" class="card p-6 mb-6">
         <div class="flex items-center gap-3 mb-4">
           <div class="p-2 bg-sky-500/15 rounded-lg">
             <svg class="w-6 h-6 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1016,7 +1049,7 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div v-show="tab === 'findings'" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Radar Chart -->
         <div class="card p-6">
           <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Category Scores</h3>
