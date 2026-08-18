@@ -29,5 +29,9 @@ func RunPolicy(policy, url string, cfg *ScanConfig) []models.CheckResult {
 			all[i].CVSSRating = m.Rating
 		}
 	}
+	// Pin each finding's severity to its CVSS-map rating so hardcoded per-scanner
+	// severities can't inflate a finding on the standalone path (matches the
+	// server path, which calls this after scanning).
+	NormalizeSeverities(all)
 	return all
 }

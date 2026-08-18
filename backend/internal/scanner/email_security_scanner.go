@@ -23,7 +23,10 @@ func (s *EmailSecurityScanner) Weight() float64  { return 8.0 }
 var dkimSelectors = []string{"default", "selector1", "google"}
 
 func (s *EmailSecurityScanner) Scan(targetURL string) []models.CheckResult {
-	host := extractHost(targetURL)
+	// Email records (SPF/DMARC/DKIM/BIMI) are published at the registrable apex,
+	// not on www.* — strip www so a "www.example.edu" target isn't falsely
+	// reported as having no email security (matches dns_scanner.go behavior).
+	host := dnsRegistrableDomain(extractHost(targetURL))
 	return []models.CheckResult{
 		s.checkDKIM(host),
 		s.checkBIMI(host),

@@ -481,9 +481,16 @@ func (s *LoginScanner) loginSucceeded(t loginTarget, code int, body string, hdr 
 		}
 		return code >= 300 && code < 400 && strings.Contains(strings.ToLower(loc), "/wp-admin")
 	default: // laravel / generic
+		// A redirect ALONE is not proof of auth — a failed login often redirects
+		// (PRG back to /, captcha, rate-limit page). Require a real session/auth
+		// cookie to be set on that redirect, so we don't report a false
+		// "default credentials" critical for every app that redirects on failure.
 		if code >= 300 && code < 400 && loc != "" {
 			ll := strings.ToLower(loc)
-			return !strings.Contains(ll, "login") && !strings.Contains(ll, "signin")
+			redirectedAway := !strings.Contains(ll, "login") && !strings.Contains(ll, "signin")
+			hasSession := strings.Contains(setCookie, "session") || strings.Contains(setCookie, "auth") ||
+				strings.Contains(setCookie, "token") || strings.Contains(setCookie, "remember")
+			return redirectedAway && hasSession
 		}
 		return false
 	}

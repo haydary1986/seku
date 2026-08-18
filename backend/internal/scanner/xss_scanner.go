@@ -326,21 +326,24 @@ func (s *XSSScanner) checkDOMBasedXSS(body string) models.CheckResult {
 
 	sinkCount := len(found)
 
+	// DOM sinks (innerHTML/eval/document.write) are an INDICATOR only, not a
+	// confirmed vuln: there is no taint analysis, and vendor bundles (jQuery, GA,
+	// GTM, chat widgets) legitimately use them. Never rate this above low/info so
+	// a normal page's vendor JS can't produce a false critical DOM-XSS.
 	switch {
 	case sinkCount == 0:
 		check.Score = 1000
-	case sinkCount <= 2:
-		check.Score = 750
-	case sinkCount <= 5:
-		check.Score = 500
+		check.Status = "pass"
+		check.Severity = "info"
 	case sinkCount <= 10:
-		check.Score = 300
+		check.Score = 850
+		check.Status = "pass"
+		check.Severity = "info"
 	default:
-		check.Score = 100
+		check.Score = 700
+		check.Status = "warn"
+		check.Severity = "low"
 	}
-
-	check.Status = statusFromScore(check.Score)
-	check.Severity = severityFromScore(check.Score)
 	check.Details = toJSON(map[string]interface{}{
 		"message":         fmt.Sprintf("Found %d dangerous DOM sink pattern(s)", sinkCount),
 		"dangerous_sinks": found,
@@ -395,8 +398,10 @@ func (s *XSSScanner) checkInputSanitization(client *http.Client, targetURL strin
 			continue
 		}
 
-		// Blocked = server returned 403 or body doesn't contain payload at all.
-		if resp != nil && resp.StatusCode == 403 {
+		// Blocked = a WAF/edge block status (403/406/429/501/503), not only 403.
+		// Otherwise a block page on those codes that echoes the request is
+		// misread as a reflected (exploitable) XSS.
+		if resp != nil && isBlockedStatus(resp.StatusCode) {
 			results = append(results, payloadResult{
 				Label:   p.label,
 				Payload: p.value,

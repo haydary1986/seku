@@ -123,21 +123,32 @@ func (s *DalfoxScanner) run(bin, target string) []dalfoxFinding {
 
 func (s *DalfoxScanner) findingResult(f dalfoxFinding) models.CheckResult {
 	score, sevLabel, status := xssSeverity(f.Severity, f.Type)
+	verified := strings.EqualFold(f.Type, "V") // dalfox 'V' = browser-verified
+	if !verified {
+		// 'R' (reflected) / 'A' (AST) are UNCONFIRMED — don't report them like a
+		// verified exploit. Downgrade to a warning so a mere reflection isn't a
+		// false high/critical.
+		status = "warn"
+		if score < 550 {
+			score = 550
+		}
+		sevLabel = "medium"
+	}
 	name := "Dalfox XSS"
 	if f.Param != "" {
 		name = "Dalfox XSS: param " + f.Param
 	}
 	c := models.CheckResult{
-		Category:  s.Category(),
-		CheckName: name,
-		Weight:    6.0,
-		Status:    status,
-		Score:     score,
-		Severity:  sevLabel,
-		Confidence: 90,
+		Category:   s.Category(),
+		CheckName:  name,
+		Weight:     6.0,
+		Status:     status,
+		Score:      score,
+		Severity:   sevLabel,
+		Confidence: 55,
 	}
-	if strings.EqualFold(f.Type, "V") {
-		c.Confidence = 99 // verified
+	if verified {
+		c.Confidence = 99
 	}
 	details := map[string]interface{}{
 		"message":     f.MessageStr,

@@ -55,14 +55,14 @@ var sqliErrorSignatures = []string{
 	"ora-00921",
 	"ora-01756",
 	"oracle error",
-	// Generic
-	"sql syntax",
-	"sql error",
-	"database error",
+	// Driver/DB-specific only. Generic phrases ("sql error", "database error",
+	// "sql syntax") were removed: strongly-typed frameworks (e.g. Laravel
+	// route-model-binding) return a friendly generic error for ANY malformed
+	// input, not just SQL injection — a baseline diff can't tell them apart.
 	"odbc driver",
 	"jdbc error",
 	"pdo exception",
-	"sqlstate",
+	"sqlstate[",
 }
 
 // commonParams — focused set of parameters most likely to be vulnerable.

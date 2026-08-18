@@ -47,7 +47,13 @@ func (s *GraphQLScanner) Scan(rawURL string) []models.CheckResult {
 		resp.Body.Close()
 		bs := string(body)
 
-		if resp.StatusCode == 200 && strings.Contains(bs, "__schema") && strings.Contains(bs, "queryType") {
+		// Require a real GraphQL JSON response shape (data.__schema.queryType), not
+		// a raw substring — a soft-404/error handler that reflects our POSTed query
+		// back contains "__schema"/"queryType" without ever executing it.
+		ct := strings.ToLower(resp.Header.Get("Content-Type"))
+		introspected := strings.Contains(bs, "\"__schema\"") && strings.Contains(bs, "\"queryType\"") &&
+			strings.Contains(bs, "\"data\"") && strings.Contains(ct, "json")
+		if resp.StatusCode == 200 && introspected {
 			return []models.CheckResult{{
 				Category:   s.Category(),
 				CheckName:  "GraphQL Introspection Enabled",

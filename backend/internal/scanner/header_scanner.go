@@ -2,12 +2,17 @@ package scanner
 
 import (
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"seku/internal/models"
 )
+
+// cspAllowAllRe matches only a true allow-all default-src (`default-src *`),
+// not a scoped wildcard such as `default-src *.cdn.example.com`.
+var cspAllowAllRe = regexp.MustCompile(`default-src\s+\*(\s|;|$)`)
 
 type HeaderScanner struct{}
 
@@ -172,9 +177,9 @@ func (s *HeaderScanner) checkCSP(headers http.Header) models.CheckResult {
 		strings.Contains(lower, "sha512-") ||
 		strings.Contains(lower, "strict-dynamic")
 	penalizeUnsafeInline := hasUnsafeInline && !hasNonceHashOrStrictDynamic
-	tooPermissive := strings.Contains(lower, "default-src *") ||
-		strings.Contains(lower, "default-src *;") ||
-		strings.TrimSpace(lower) == "default-src *"
+	// Only an allow-ALL default-src (`default-src *`) is permissive; a scoped
+	// wildcard like `default-src *.cdn.example.com` must NOT match.
+	tooPermissive := cspAllowAllRe.MatchString(lower)
 
 	var score float64
 	var message string
@@ -560,13 +565,14 @@ func parseMaxAge(lower string) int64 {
 // A policy is considered permissive if it contains wildcard (*) allowlists or
 // if it lacks restriction directives (i.e. no "=()" self-restriction patterns).
 func isPermissivePP(value string) bool {
+	v := strings.ToLower(value)
 	// Wildcard means everything is allowed for that feature.
-	if strings.Contains(value, "=*") {
+	if strings.Contains(v, "=*") {
 		return true
 	}
-	// A restrictive policy typically contains "=()" to deny a feature entirely
-	// or "=(self)" to limit it. If there are none, the policy is likely permissive.
-	if !strings.Contains(value, "=()") && !strings.Contains(value, "=(self)") {
+	// Any allowlist directive — "=()", "=(self)", or "=(self \"https://x\")" —
+	// is a restriction. A policy is only permissive if it has NO allowlist at all.
+	if !strings.Contains(v, "=(") {
 		return true
 	}
 	return false

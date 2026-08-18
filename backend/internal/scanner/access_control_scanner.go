@@ -64,6 +64,18 @@ func (s *AccessControlScanner) ScanWithConfig(rawURL string, cfg *ScanConfig) []
 	}
 	sessionWorks := similarLen(len(aBody), len(anonBody)) == false // A and anon differ ⇒ auth likely effective
 
+	// If the session cookie isn't actually authenticating (A ≈ anonymous), both
+	// probe fetches are anonymous and any two similar public pages would be
+	// flagged as IDOR — a false positive caused by a broken/expired test session,
+	// not missing object-level auth. Stop here instead.
+	if !sessionWorks {
+		return []models.CheckResult{{
+			Category: s.Category(), CheckName: "Access Control (IDOR/BOLA)", Weight: 4.0,
+			Status: "warn", Score: 700, Severity: "low", Confidence: 60,
+			Details: toJSON(map[string]string{"message": "The provided session does not appear to authenticate (its response matches the anonymous one) — supply a valid, current session cookie and re-run; skipped IDOR probing to avoid false positives."}),
+		}}
+	}
+
 	// 2) Discover object-like URLs as session A (homepage links, capped).
 	candidates := s.candidates(base, baseHost, aBody)
 

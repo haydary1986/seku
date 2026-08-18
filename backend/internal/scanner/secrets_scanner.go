@@ -368,6 +368,12 @@ func (s *SecretsScanner) checkEmailPasswordExposure(body string) models.CheckRes
 	for _, p := range emailPasswordPatterns {
 		matches := p.FindAllString(body, 3)
 		for _, m := range matches {
+			// Skip documentation/sample values (APP_KEY=changeme, base64:..., etc.)
+			// the same way passwordAssignRe already does — otherwise a tutorial page
+			// showing a sample .env is a false "hardcoded password" critical.
+			if secretsIsPlaceholderPassword(m) {
+				continue
+			}
 			redacted := m
 			if len(m) > 15 {
 				redacted = m[:15] + "***"

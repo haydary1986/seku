@@ -280,7 +280,7 @@ func (s *WPDeepScanner) checkPlugins(client *http.Client, baseURL, homeBody stri
 
 			if cves, ok := pluginCVEs[slug]; ok && version != "" {
 				for _, cve := range cves {
-					if compareVersions(version, cve.maxAffected) <= 0 {
+					if versionDefinitelyAffected(version, cve.maxAffected) {
 						info.cves = append(info.cves, cve)
 					}
 				}
@@ -430,7 +430,7 @@ func (s *WPDeepScanner) checkThemes(client *http.Client, baseURL, homeBody strin
 		info := themeInfo{slug: slug, version: version}
 		if cves, ok := themeCVEs[slug]; ok && version != "" {
 			for _, cve := range cves {
-				if compareVersions(version, cve.maxAffected) <= 0 {
+				if versionDefinitelyAffected(version, cve.maxAffected) {
 					info.cves = append(info.cves, cve)
 				}
 			}

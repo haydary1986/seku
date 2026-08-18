@@ -85,11 +85,20 @@ func (s *CORSScanner) checkCORSWildcard(url string) models.CheckResult {
 			details["message"] = "CORS allows all origins (*) without credentials - safe for public, non-credentialed assets"
 		}
 	} else if acao == "https://cors-check.example.com" {
-		// Reflects arbitrary origins - critical vulnerability
-		check.Status = "fail"
-		check.Score = 0
-		check.Severity = "critical"
-		details["message"] = "CORS reflects arbitrary origins - highly insecure"
+		// Reflects arbitrary origins. Only critical WITH credentials (any site can
+		// then read authenticated responses); without credentials it is the same
+		// low risk as wildcard-without-credentials.
+		if acac == "true" {
+			check.Status = "fail"
+			check.Score = 0
+			check.Severity = "critical"
+			details["message"] = "CORS reflects arbitrary origins together with credentials - critical: any site can read authenticated responses"
+		} else {
+			check.Status = "warn"
+			check.Score = 600
+			check.Severity = "medium"
+			details["message"] = "CORS reflects arbitrary origins (no credentials) - weak validation; restrict to a trusted allowlist"
+		}
 	} else if acao == "" {
 		// No CORS header to foreign origins - most secure
 		check.Status = "pass"

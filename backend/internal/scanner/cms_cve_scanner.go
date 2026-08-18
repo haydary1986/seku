@@ -237,6 +237,12 @@ func (s *CMSCVEScanner) fetch(client *http.Client, url string) (string, http.Hea
 		return "", nil
 	}
 	defer resp.Body.Close()
+	// Only trust 200 — secondary version probes (readme.html, joomla.xml,
+	// CHANGELOG.txt, upgrade.txt) on a soft-404 host can otherwise echo digit.digit
+	// text and seed a spurious "vulnerable version".
+	if resp.StatusCode != 200 {
+		return "", resp.Header
+	}
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 512*1024))
 	return string(body), resp.Header
 }
