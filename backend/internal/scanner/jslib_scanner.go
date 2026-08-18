@@ -147,7 +147,7 @@ func parseVersion(version string) (int, int, int) {
 func jslibDetectJQueryVersion(lower string) string {
 	// 1. Core jQuery filename carrying a version, e.g. jquery-3.6.0.min.js,
 	//    jquery.3.6.0.js, jquery/3.6.0/. Reject jquery-ui / migrate / plugin refs.
-	fileRe := regexp.MustCompile(`jquery[/.\-](\d+\.\d+\.\d+)`)
+	fileRe := regexp.MustCompile(`\bjquery[/.\-](\d+\.\d+\.\d+)`)
 	for _, m := range fileRe.FindAllStringSubmatchIndex(lower, -1) {
 		ref := lower[m[0]:]
 		if len(ref) > 48 {
@@ -185,13 +185,13 @@ func (s *JSLibScanner) checkVulnerableLibraries(body string) models.CheckResult 
 	var vulnerableLibs []string
 
 	// Angular.js 1.x (any 1.x version) - known XSS vulnerabilities
-	angularRe := regexp.MustCompile(`(?i)angular[/.\-v]1\.\d+`)
+	angularRe := regexp.MustCompile(`(?i)\bangular[/.\-v]1\.\d+`)
 	if angularRe.MatchString(lower) {
 		vulnerableLibs = append(vulnerableLibs, "AngularJS 1.x (known XSS vulnerabilities)")
 	}
 
 	// Bootstrap < 3.4.1 or < 4.3.1 - XSS in tooltip/popover
-	bootstrapRe := regexp.MustCompile(`(?i)bootstrap[/.\-v](\d+)\.(\d+)\.(\d+)`)
+	bootstrapRe := regexp.MustCompile(`(?i)\bbootstrap[/.\-v](\d+)\.(\d+)\.(\d+)`)
 	if matches := bootstrapRe.FindStringSubmatch(lower); len(matches) > 3 {
 		bMajor, _ := strconv.Atoi(matches[1])
 		bMinor, _ := strconv.Atoi(matches[2])
@@ -210,7 +210,7 @@ func (s *JSLibScanner) checkVulnerableLibraries(body string) models.CheckResult 
 	}
 
 	// Lodash < 4.17.21 - prototype pollution
-	lodashRe := regexp.MustCompile(`(?i)lodash[/.\-v](\d+)\.(\d+)\.(\d+)`)
+	lodashRe := regexp.MustCompile(`(?i)\blodash[/.\-v](\d+)\.(\d+)\.(\d+)`)
 	if matches := lodashRe.FindStringSubmatch(lower); len(matches) > 3 {
 		lMajor, _ := strconv.Atoi(matches[1])
 		lMinor, _ := strconv.Atoi(matches[2])
@@ -223,7 +223,7 @@ func (s *JSLibScanner) checkVulnerableLibraries(body string) models.CheckResult 
 	// Moment.js - deprecation is NOT a vulnerability. Only flag a version with an
 	// actual CVE: ReDoS CVE-2022-31129 (<2.29.4) / path traversal CVE-2022-24785
 	// (<2.29.2). A bare moment.min.js with no parseable version is not flagged.
-	momentRe := regexp.MustCompile(`(?i)moment[/.\-v@](\d+)\.(\d+)\.(\d+)`)
+	momentRe := regexp.MustCompile(`(?i)\bmoment[/.\-v@](\d+)\.(\d+)\.(\d+)`)
 	if matches := momentRe.FindStringSubmatch(lower); len(matches) > 3 {
 		mMajor, _ := strconv.Atoi(matches[1])
 		mMinor, _ := strconv.Atoi(matches[2])
@@ -234,7 +234,7 @@ func (s *JSLibScanner) checkVulnerableLibraries(body string) models.CheckResult 
 	}
 
 	// Vue.js < 2.5.0 - XSS vulnerability
-	vueRe := regexp.MustCompile(`(?i)vue[@/.\-v](\d+)\.(\d+)`)
+	vueRe := regexp.MustCompile(`(?i)\bvue[@/.\-v](\d+)\.(\d+)`)
 	if matches := vueRe.FindStringSubmatch(lower); len(matches) > 2 {
 		vMajor, _ := strconv.Atoi(matches[1])
 		vMinor, _ := strconv.Atoi(matches[2])
@@ -244,7 +244,7 @@ func (s *JSLibScanner) checkVulnerableLibraries(body string) models.CheckResult 
 	}
 
 	// React < 16.4.0 - XSS vulnerability
-	reactRe := regexp.MustCompile(`(?i)react[/.\-v@](\d+)\.(\d+)`)
+	reactRe := regexp.MustCompile(`(?i)\breact[/.\-v@](\d+)\.(\d+)`)
 	if matches := reactRe.FindStringSubmatch(lower); len(matches) > 2 {
 		rMajor, _ := strconv.Atoi(matches[1])
 		rMinor, _ := strconv.Atoi(matches[2])

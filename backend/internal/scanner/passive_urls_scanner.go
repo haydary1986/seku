@@ -110,16 +110,18 @@ func (s *PassiveURLScanner) scan(rawURL string, cfg *ScanConfig) []models.CheckR
 		})
 	}
 
-	// Sensitive historical endpoints.
+	// Sensitive historical endpoints. These come from passive archives (Wayback/
+	// CommonCrawl) with NO liveness check — an endpoint archived years ago may be
+	// long gone. Cap at warn/medium (never live-confirmed critical) and flag it
+	// unverified, so a 2018 .env URL doesn't tank the score like a live exposure.
 	if len(hits) > 0 {
-		worst := worstEndpointSeverity(sevOf)
-		score, sevLabel, status := endpointScore(worst)
 		results = append(results, models.CheckResult{
 			Category: s.Category(), CheckName: "Sensitive Historical Endpoints", Weight: 6.0,
-			Status: status, Score: score, Severity: sevLabel, Confidence: 60,
+			Status: "warn", Score: 700, Severity: "medium", Confidence: 55,
 			Details: toJSON(map[string]interface{}{
-				"message":  "Passive sources reveal historically-exposed sensitive endpoints — verify they are not still reachable.",
-				"findings": hits,
+				"message":       "Passive archives list historically-exposed sensitive endpoints. NOT verified live — confirm current reachability before treating as an exposure.",
+				"verified_live": false,
+				"findings":      hits,
 			}),
 		})
 	}

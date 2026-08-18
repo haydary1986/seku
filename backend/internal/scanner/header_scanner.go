@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"io"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -55,6 +56,19 @@ func (s *HeaderScanner) Scan(url string) []models.CheckResult {
 		}
 	}
 	defer resp.Body.Close()
+
+	// If the edge served a bot-challenge instead of the real page, its headers are
+	// NOT the site's — reporting them as "missing" would be a false positive.
+	challengeBody, _ := io.ReadAll(io.LimitReader(resp.Body, 32*1024))
+	if looksLikeBotChallenge(resp.StatusCode, resp.Header, string(challengeBody)) {
+		return []models.CheckResult{{
+			Category: s.Category(), CheckName: "Security Headers", Status: "error",
+			Score: 0, Weight: s.Weight(), Severity: "info",
+			Details: toJSON(map[string]string{
+				"message": "The site returned a WAF/CDN bot-challenge to the scanner rather than the real response, so header results are unavailable. Verify from a browser, or use the Seku desktop app (scans from a clean IP).",
+			}),
+		}}
+	}
 
 	headers := resp.Header
 

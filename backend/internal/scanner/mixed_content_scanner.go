@@ -44,7 +44,10 @@ func (s *MixedContentScanner) Scan(url string) []models.CheckResult {
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 512*1024)) // Read up to 512KB
-	bodyStr := string(body)
+	// Strip HTML comments and non-rendered blocks (<pre>/<code>/<textarea>) so a
+	// documentation/code sample showing an old http:// snippet isn't flagged as
+	// live mixed content. <script> tags are kept (their src is real mixed content).
+	bodyStr := stripNonRendered(string(body))
 
 	// Check for HTTP resources in HTTPS page
 	results = append(results, s.checkMixedScripts(bodyStr))
@@ -52,6 +55,25 @@ func (s *MixedContentScanner) Scan(url string) []models.CheckResult {
 	results = append(results, s.checkMixedForms(bodyStr))
 
 	return results
+}
+
+var (
+	htmlCommentRe   = regexp.MustCompile(`(?s)<!--.*?-->`)
+	nonRenderedRes  = []*regexp.Regexp{
+		regexp.MustCompile(`(?is)<pre\b[^>]*>.*?</pre>`),
+		regexp.MustCompile(`(?is)<code\b[^>]*>.*?</code>`),
+		regexp.MustCompile(`(?is)<textarea\b[^>]*>.*?</textarea>`),
+	}
+)
+
+// stripNonRendered removes HTML comments and code-sample blocks so example
+// snippets aren't mistaken for live page resources.
+func stripNonRendered(body string) string {
+	body = htmlCommentRe.ReplaceAllString(body, "")
+	for _, re := range nonRenderedRes {
+		body = re.ReplaceAllString(body, "")
+	}
+	return body
 }
 
 func (s *MixedContentScanner) checkMixedScripts(body string) models.CheckResult {

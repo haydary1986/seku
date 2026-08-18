@@ -17,6 +17,50 @@ import (
 //      payload caused anything — only signatures that APPEAR because of the
 //      payload matter.
 
+// cdnFromHeaders returns the CDN/edge name if response headers indicate one,
+// else "". Shared so port/hosting/header checks classify the edge consistently.
+func cdnFromHeaders(h http.Header) string {
+	server := strings.ToLower(h.Get("Server"))
+	switch {
+	case h.Get("cf-ray") != "" || strings.Contains(server, "cloudflare"):
+		return "Cloudflare"
+	case strings.Contains(strings.ToLower(h.Get("Via")), "cloudfront") || h.Get("X-Amz-Cf-Id") != "":
+		return "AWS CloudFront"
+	case h.Get("X-Akamai-Transformed") != "" || strings.Contains(server, "akamai"):
+		return "Akamai"
+	case h.Get("X-Fastly-Request-ID") != "" || strings.HasPrefix(strings.ToLower(h.Get("X-Served-By")), "cache-"):
+		return "Fastly"
+	}
+	return ""
+}
+
+// looksLikeBotChallenge reports whether a response is a WAF/CDN bot-challenge or
+// block page (not the real site). Response-based checks should return "error"
+// instead of scoring a challenge page's headers/body as the site's own —
+// otherwise every header reads as "missing" and the body triggers false hits.
+func looksLikeBotChallenge(status int, h http.Header, body string) bool {
+	if h.Get("cf-mitigated") != "" {
+		return true
+	}
+	for k := range h {
+		if strings.HasPrefix(strings.ToLower(k), "cf-chl") {
+			return true
+		}
+	}
+	lb := strings.ToLower(body)
+	for _, m := range []string{
+		"just a moment...", "checking your browser", "cf-browser-verification",
+		"challenge-platform", "_cf_chl_opt", "__cf_chl", "attention required! | cloudflare",
+		"enable javascript and cookies to continue", "please turn javascript on",
+		"cf-error-details", "ray id:",
+	} {
+		if strings.Contains(lb, m) {
+			return true
+		}
+	}
+	return false
+}
+
 // isBlockedStatus reports whether a status code indicates the request was
 // blocked or refused rather than processed by the application.
 func isBlockedStatus(code int) bool {

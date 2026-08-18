@@ -3,7 +3,6 @@ package scanner
 import (
 	"fmt"
 	"net"
-	"strings"
 	"sync"
 	"time"
 
@@ -100,13 +99,19 @@ var cdnProxyPorts = map[int]bool{
 // detectCDN returns the CDN name if the host is fronted by one (so port results
 // can be interpreted as the edge, not the origin). Best-effort; "" if none/error.
 func detectCDN(host string) string {
-	resp, err := ScanGet(NewScanClient(6*time.Second), ensureHTTPS(host))
-	if err != nil {
-		return ""
-	}
-	defer resp.Body.Close()
-	if resp.Header.Get("cf-ray") != "" || strings.Contains(strings.ToLower(resp.Header.Get("Server")), "cloudflare") {
-		return "Cloudflare"
+	// Retry once — a single flaky self-probe timing out would otherwise leave a
+	// genuinely CDN-fronted host's edge ports (2082/2083/8080…) mislabeled.
+	for attempt := 0; attempt < 2; attempt++ {
+		resp, err := ScanGet(NewScanClient(6*time.Second), ensureHTTPS(host))
+		if err != nil {
+			continue
+		}
+		cdn := cdnFromHeaders(resp.Header)
+		resp.Body.Close()
+		if cdn != "" {
+			return cdn
+		}
+		return "" // reached the origin/edge fine, just no CDN signature
 	}
 	return ""
 }

@@ -363,7 +363,15 @@ func (s *LoginScanner) checkUsernameEnum(t loginTarget) models.CheckResult {
 	time.Sleep(300 * time.Millisecond)
 	cB, bB, _ := s.attemptLogin(client, t, invalidUser, "WrongPass!"+randHex(4))
 
-	distinct := cA != cB || significantlyDifferent(bA, bB)
+	// Establish a noise floor: two identical invalid attempts should look the
+	// same. If per-request dynamics (CSRF token, nonce, timestamp) already make
+	// them "significantly different", the valid-vs-invalid diff is unreliable —
+	// don't flag enumeration on page noise.
+	time.Sleep(300 * time.Millisecond)
+	cN, bN, _ := s.attemptLogin(client, t, invalidUser, "WrongPass!"+randHex(4))
+	noisy := cB != cN || significantlyDifferent(bB, bN)
+
+	distinct := !noisy && (cA != cB || significantlyDifferent(bA, bB))
 	if distinct {
 		c.Status, c.Score, c.Severity = "fail", 100, "medium"
 		c.Details = toJSON(map[string]interface{}{

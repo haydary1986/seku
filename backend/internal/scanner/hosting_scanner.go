@@ -32,6 +32,24 @@ func (s *HostingScanner) Scan(url string) []models.CheckResult {
 	results = append(results, s.checkKeepAlive(url))
 	results = append(results, s.checkDNSResolutionTime(url))
 
+	// Disclose when a CDN fronts the site: HTTP/2, Brotli and Keep-Alive above
+	// are then provided by the edge, not the origin — so these reflect delivery
+	// quality to the client, not the origin's own hosting stack.
+	if resp, err := ScanGet(NewScanClient(6*time.Second), ensureHTTPS(url)); err == nil {
+		cdn := cdnFromHeaders(resp.Header)
+		resp.Body.Close()
+		if cdn != "" {
+			results = append(results, models.CheckResult{
+				Category: s.Category(), CheckName: "CDN Edge Note", Weight: 0.1,
+				Status: "pass", Score: 1000, Severity: "info",
+				Details: toJSON(map[string]string{
+					"cdn":     cdn,
+					"message": "Site is served via " + cdn + " (CDN). The hosting-quality metrics above reflect the CDN edge, not necessarily the origin server.",
+				}),
+			})
+		}
+	}
+
 	return results
 }
 
