@@ -67,6 +67,22 @@ func (t *stealthTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	if req.Header.Get("Accept-Language") == "" {
 		req.Header.Set("Accept-Language", "en-US,en;q=0.9,ar;q=0.8")
 	}
+	// Full Chrome-like navigation headers. WAF/CDN bot heuristics (Cloudflare)
+	// otherwise serve datacenter/bot requests a response WITHOUT edge-added
+	// security headers, which made header checks falsely report them missing.
+	setIfEmpty := func(k, v string) {
+		if req.Header.Get(k) == "" {
+			req.Header.Set(k, v)
+		}
+	}
+	setIfEmpty("Upgrade-Insecure-Requests", "1")
+	setIfEmpty("Sec-Fetch-Dest", "document")
+	setIfEmpty("Sec-Fetch-Mode", "navigate")
+	setIfEmpty("Sec-Fetch-Site", "none")
+	setIfEmpty("Sec-Fetch-User", "?1")
+	setIfEmpty("Sec-Ch-Ua", `"Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"`)
+	setIfEmpty("Sec-Ch-Ua-Mobile", "?0")
+	setIfEmpty("Sec-Ch-Ua-Platform", `"macOS"`)
 
 	// Select transport: proxy (if enabled and allowed) or direct
 	transport := t.base
