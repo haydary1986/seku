@@ -377,6 +377,21 @@ function getScoreBg(score) {
   return 'bg-red-500'
 }
 
+function getGrade(score) {
+  if (score >= 950) return 'A+'
+  if (score >= 850) return 'A'
+  if (score >= 700) return 'B'
+  if (score >= 550) return 'C'
+  if (score >= 350) return 'D'
+  return 'F'
+}
+function getRiskLevel(score) {
+  if (score >= 850) return { label: 'مخاطر منخفضة', cls: 'text-emerald-600 dark:text-emerald-400' }
+  if (score >= 650) return { label: 'مخاطر معتدلة', cls: 'text-blue-600 dark:text-blue-400' }
+  if (score >= 400) return { label: 'مخاطر مرتفعة', cls: 'text-orange-600 dark:text-orange-400' }
+  return { label: 'مخاطر حرِجة', cls: 'text-rose-600 dark:text-rose-400' }
+}
+
 function toggleOwasp(id) {
   expandedOwasp.value = { ...expandedOwasp.value, [id]: !expandedOwasp.value[id] }
 }
@@ -470,6 +485,19 @@ const highCount = computed(() => allChecks.value.filter(c => c.severity === 'hig
 const mediumCount = computed(() => allChecks.value.filter(c => c.severity === 'medium').length)
 const lowCount = computed(() => allChecks.value.filter(c => c.severity === 'low').length)
 const passCount = computed(() => allChecks.value.filter(c => c.status === 'pass').length)
+
+// severity distribution bar (the signature pentest-report element)
+const sevBar = computed(() => {
+  const segs = [
+    { key: 'critical', count: criticalCount.value, color: '#f43f5e' },
+    { key: 'high', count: highCount.value, color: '#fb923c' },
+    { key: 'medium', count: mediumCount.value, color: '#f59e0b' },
+    { key: 'low', count: lowCount.value, color: '#38bdf8' },
+    { key: 'pass', count: passCount.value, color: '#22c55e' },
+  ]
+  const total = segs.reduce((a, s) => a + s.count, 0) || 1
+  return segs.filter(s => s.count > 0).map(s => ({ ...s, pct: (s.count / total * 100).toFixed(1) }))
+})
 
 // report tabs — group the sections so findings aren't buried under a wall of cards
 const tab = ref('findings')
@@ -710,58 +738,45 @@ onMounted(async () => {
               {{ result.scan_target?.url }}
             </a>
           </div>
-          <div class="text-center">
-            <div :class="['inline-flex items-center justify-center w-24 h-24 rounded-full text-3xl font-bold font-mono text-white', getScoreBg(result.overall_score)]">
-              {{ Math.round(result.overall_score) }}
-            </div>
-            <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">Overall Score</p>
-          </div>
-          <div class="mt-4 flex gap-2">
-            <button @click="downloadPDF" :disabled="pdfLoading"
-              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2 text-sm">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-              </svg>
-              {{ pdfLoading ? 'Generating...' : 'Download PDF' }}
-            </button>
-            <button @click="downloadSARIF" :disabled="sarifLoading"
-              class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2 text-sm">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
-              {{ sarifLoading ? 'Exporting...' : 'SARIF Export' }}
-            </button>
-            <button @click="downloadCSV" :disabled="csvLoading"
-              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2 text-sm">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-              </svg>
-              {{ csvLoading ? 'Exporting...' : 'CSV Export' }}
-            </button>
-            <button @click="runAIAnalysis" :disabled="aiLoading"
-              class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2 text-sm">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-              </svg>
-              {{ aiLoading ? 'Analyzing...' : 'AI Analysis' }}
-            </button>
-            <button v-if="aiAnalysis" @click="showAI = !showAI"
-              class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 text-sm">
-              {{ showAI ? 'Hide AI Report' : 'Show AI Report' }}
-            </button>
-            <button @click="shareThisReport" :disabled="shareLoading"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2 text-sm">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
-              </svg>
-              {{ shareLoading ? '...' : 'مشاركة عامة' }}
-            </button>
+          <div class="mt-4 flex flex-wrap items-center gap-2">
+            <!-- primary action -->
             <button @click="rescanSite" :disabled="rescanLoading"
-              class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 flex items-center gap-2 text-sm">
+              class="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-900 dark:bg-emerald-600 text-white hover:bg-slate-800 dark:hover:bg-emerald-500 disabled:opacity-50 flex items-center gap-2 transition-colors">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
               </svg>
-              {{ rescanLoading ? '...' : 'أعد الفحص / Re-scan' }}
+              {{ rescanLoading ? '...' : 'إعادة فحص' }}
+            </button>
+            <button @click="shareThisReport" :disabled="shareLoading"
+              class="px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 flex items-center gap-2 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+              </svg>
+              {{ shareLoading ? '...' : 'مشاركة' }}
+            </button>
+            <button @click="runAIAnalysis" :disabled="aiLoading"
+              class="px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 flex items-center gap-2 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+              </svg>
+              {{ aiLoading ? 'Analyzing...' : 'تحليل AI' }}
+            </button>
+
+            <span class="w-px h-6 bg-gray-200 dark:bg-slate-700 mx-1"></span>
+
+            <!-- export group -->
+            <span class="text-xs text-slate-400 dark:text-slate-500 me-1">تصدير:</span>
+            <button @click="downloadPDF" :disabled="pdfLoading"
+              class="px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors">
+              {{ pdfLoading ? '...' : 'PDF' }}
+            </button>
+            <button @click="downloadCSV" :disabled="csvLoading"
+              class="px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors">
+              {{ csvLoading ? '...' : 'CSV' }}
+            </button>
+            <button @click="downloadSARIF" :disabled="sarifLoading"
+              class="px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors">
+              {{ sarifLoading ? '...' : 'SARIF' }}
             </button>
           </div>
 
@@ -787,19 +802,36 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Severity summary + tab navigation -->
-      <div class="card p-4 mb-6">
-        <div class="flex flex-wrap items-center gap-2 mb-4">
-          <span class="sev sev-critical">{{ criticalCount }} حرِج</span>
-          <span class="sev sev-high">{{ highCount }} عالٍ</span>
-          <span class="sev sev-medium">{{ mediumCount }} متوسط</span>
-          <span class="sev sev-low">{{ lowCount }} منخفض</span>
-          <span class="ms-auto text-sm font-medium text-emerald-600 dark:text-emerald-400">✓ {{ passCount }} فحص ناجح</span>
+      <!-- Risk posture + tab navigation -->
+      <div class="card p-5 mb-6">
+        <div class="flex flex-wrap items-end justify-between gap-4 mb-4">
+          <div>
+            <p class="text-[11px] uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500 font-bold">مستوى المخاطر · Risk Posture</p>
+            <div class="flex items-baseline gap-2.5 mt-1.5">
+              <span class="text-4xl font-extrabold font-mono leading-none" :class="getScoreColor(result.overall_score)">{{ getGrade(result.overall_score) }}</span>
+              <span :class="['text-sm font-bold', getRiskLevel(result.overall_score).cls]">{{ getRiskLevel(result.overall_score).label }}</span>
+              <span class="text-xs text-slate-400 dark:text-slate-500 font-mono">{{ Math.round(result.overall_score) }}/1000</span>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="sev sev-critical">{{ criticalCount }} حرِج</span>
+            <span class="sev sev-high">{{ highCount }} عالٍ</span>
+            <span class="sev sev-medium">{{ mediumCount }} متوسط</span>
+            <span class="sev sev-low">{{ lowCount }} منخفض</span>
+            <span class="sev" style="color:#22c55e;background:color-mix(in srgb,#22c55e 14%,transparent)">{{ passCount }} ناجح</span>
+          </div>
         </div>
-        <div class="flex flex-wrap gap-1.5 border-t border-gray-100 dark:border-slate-700/60 pt-3">
+
+        <!-- severity distribution bar -->
+        <div class="flex h-2.5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800" role="img" aria-label="Severity distribution">
+          <div v-for="s in sevBar" :key="s.key" :style="{ width: s.pct + '%', background: s.color }" :title="s.key + ': ' + s.count"></div>
+        </div>
+
+        <!-- tabs -->
+        <div class="flex flex-wrap gap-1.5 border-t border-gray-100 dark:border-slate-700/60 pt-4 mt-4">
           <button v-for="t in tabs" :key="t.key" @click="tab = t.key"
-            :class="['px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-              tab === t.key ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800']">
+            :class="['px-4 py-2 rounded-lg text-sm font-semibold transition-colors',
+              tab === t.key ? 'bg-slate-800 dark:bg-slate-700 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800']">
             {{ t.label }}
           </button>
         </div>
