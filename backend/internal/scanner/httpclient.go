@@ -1,9 +1,7 @@
 package scanner
 
 import (
-	"crypto/tls"
 	"math/rand"
-	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -33,16 +31,7 @@ func RandomUA() string {
 // caused security-header checks to falsely report present headers as "missing".
 // Accuracy of the real response is more important than IP rotation for a scanner.
 var ScanTransport http.RoundTripper = &stealthTransport{
-	base: &http.Transport{
-		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
-		MaxIdleConns:      50,
-		IdleConnTimeout:   30 * time.Second,
-		DisableKeepAlives: false,
-		DialContext: (&net.Dialer{
-			Timeout:   10 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).DialContext,
-	},
+	base:    newUTLSTransport(), // Chrome-like TLS fingerprint to defeat CDN bot checks
 	ua:      RandomUA(),
 	noProxy: true,
 }
