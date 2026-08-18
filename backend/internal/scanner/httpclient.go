@@ -27,6 +27,11 @@ func RandomUA() string {
 // ScanTransport is a shared http.RoundTripper used by all scanners.
 // It injects realistic browser headers and rate-limits requests per host.
 // All scanner HTTP clients should use this instead of creating inline transports.
+//
+// IMPORTANT: it does NOT route through the free public proxy pool. Those proxies
+// make WAF/CDN sites (Cloudflare) return challenged/stripped responses, which
+// caused security-header checks to falsely report present headers as "missing".
+// Accuracy of the real response is more important than IP rotation for a scanner.
 var ScanTransport http.RoundTripper = &stealthTransport{
 	base: &http.Transport{
 		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
@@ -38,12 +43,14 @@ var ScanTransport http.RoundTripper = &stealthTransport{
 			KeepAlive: 30 * time.Second,
 		}).DialContext,
 	},
-	ua: RandomUA(),
+	ua:      RandomUA(),
+	noProxy: true,
 }
 
 type stealthTransport struct {
-	base http.RoundTripper
-	ua   string
+	base    http.RoundTripper
+	ua      string
+	noProxy bool // when true, never route through the public proxy pool
 }
 
 func (t *stealthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -61,9 +68,12 @@ func (t *stealthTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		req.Header.Set("Accept-Language", "en-US,en;q=0.9,ar;q=0.8")
 	}
 
-	// Select transport: proxy (if enabled) or direct
+	// Select transport: proxy (if enabled and allowed) or direct
 	transport := t.base
-	proxyURL := Pool.NextProxy()
+	var proxyURL = Pool.NextProxy()
+	if t.noProxy {
+		proxyURL = nil
+	}
 	if proxyURL != nil {
 		if pt := TransportForProxy(proxyURL.String()); pt != nil {
 			transport = pt
