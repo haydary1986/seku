@@ -208,6 +208,28 @@ body::before {
 .sev-low      { color:#38bdf8; background:color-mix(in srgb, #38bdf8 14%, transparent); }
 .sev-info     { color:#94a3b8; background:color-mix(in srgb, #94a3b8 14%, transparent); }
 
+/* ── Rendered Markdown (AI analysis) ──────────────────────────────────────── */
+.md-body { line-height: 1.7; font-size: .9rem; }
+.md-body > :first-child { margin-top: 0; }
+.md-body h2.md-h { font-size: 1.05rem; font-weight: 700; margin: 1.15em 0 .45em; line-height: 1.3;
+  padding-bottom: .3em; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
+.md-body h3.md-h { font-size: .98rem; font-weight: 700; margin: 1em 0 .4em; }
+.md-body h4.md-h, .md-body h5.md-h, .md-body h6.md-h { font-size: .92rem; font-weight: 600; margin: .9em 0 .35em; }
+.md-body p { margin: .6em 0; }
+.md-body ul.md-ul, .md-body ol.md-ol { margin: .5em 0; padding-inline-start: 1.5em; }
+.md-body ul.md-ul { list-style: disc; }
+.md-body ol.md-ol { list-style: decimal; }
+.md-body li { margin: .28em 0; padding-inline-start: .15em; }
+.md-body strong { font-weight: 700; }
+.md-body em { font-style: italic; }
+.md-body .md-code { font-family: var(--font-mono); font-size: .82em;
+  background: color-mix(in srgb, #94a3b8 20%, transparent); padding: .1em .35em; border-radius: .25rem; }
+.md-body .md-pre { background: color-mix(in srgb, #94a3b8 12%, transparent);
+  border: 1px solid color-mix(in srgb, #94a3b8 25%, transparent); border-radius: .5rem;
+  padding: .75rem .9rem; overflow-x: auto; margin: .7em 0; }
+.md-body .md-pre code { font-family: var(--font-mono); font-size: .82em; white-space: pre; }
+.md-body .md-hr { border: 0; border-top: 1px solid color-mix(in srgb, #94a3b8 30%, transparent); margin: 1.1em 0; }
+
 /* ── Polish details that add "soul" ───────────────────────────────────────── */
 ::selection { background: rgba(16, 185, 129, .28); }
 .scrollbar-thin { scrollbar-width: thin; scrollbar-color: rgba(148,163,184,.35) transparent; }

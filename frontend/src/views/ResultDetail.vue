@@ -392,6 +392,52 @@ function getRiskLevel(score) {
   return { label: 'مخاطر حرِجة', cls: 'text-rose-600 dark:text-rose-400' }
 }
 
+// Minimal, dependency-free Markdown → HTML for the AI analysis. HTML is escaped
+// FIRST, so the rendered output is XSS-safe (no tags survive from the model).
+function renderMarkdown(md) {
+  if (!md) return ''
+  let s = String(md).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  // fenced + inline code
+  s = s.replace(/```([\s\S]*?)```/g, (_, c) => `<pre class="md-pre"><code>${c.replace(/^\n+|\n+$/g, '')}</code></pre>`)
+  s = s.replace(/`([^`\n]+)`/g, '<code class="md-code">$1</code>')
+  // headings
+  s = s.replace(/^\s*######\s+(.*)$/gm, '<h6 class="md-h">$1</h6>')
+       .replace(/^\s*#####\s+(.*)$/gm, '<h5 class="md-h">$1</h5>')
+       .replace(/^\s*####\s+(.*)$/gm, '<h4 class="md-h">$1</h4>')
+       .replace(/^\s*###\s+(.*)$/gm, '<h3 class="md-h">$1</h3>')
+       .replace(/^\s*##\s+(.*)$/gm, '<h2 class="md-h">$1</h2>')
+       .replace(/^\s*#\s+(.*)$/gm, '<h2 class="md-h">$1</h2>')
+  // bold then italic
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+       .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+  // horizontal rule
+  s = s.replace(/^\s*(-{3,}|\*{3,}|_{3,})\s*$/gm, '<hr class="md-hr">')
+  // lists (group consecutive bullet / numbered lines)
+  const lines = s.split('\n')
+  const out = []
+  let listType = null
+  const closeList = () => { if (listType) { out.push(`</${listType}>`); listType = null } }
+  for (const line of lines) {
+    const ul = line.match(/^\s*[-*+]\s+(.*)$/)
+    const ol = line.match(/^\s*\d+[.)]\s+(.*)$/)
+    if (ul) {
+      if (listType !== 'ul') { closeList(); out.push('<ul class="md-ul">'); listType = 'ul' }
+      out.push(`<li>${ul[1]}</li>`)
+    } else if (ol) {
+      if (listType !== 'ol') { closeList(); out.push('<ol class="md-ol">'); listType = 'ol' }
+      out.push(`<li>${ol[1]}</li>`)
+    } else { closeList(); out.push(line) }
+  }
+  closeList()
+  // paragraphs
+  return out.join('\n').split(/\n{2,}/).map(b => {
+    const t = b.trim()
+    if (!t) return ''
+    if (/^<(h\d|ul|ol|pre|hr|blockquote)/.test(t)) return t
+    return `<p>${t.replace(/\n/g, '<br>')}</p>`
+  }).join('\n')
+}
+
 function toggleOwasp(id) {
   expandedOwasp.value = { ...expandedOwasp.value, [id]: !expandedOwasp.value[id] }
 }
@@ -850,9 +896,7 @@ onMounted(async () => {
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 ml-3"></div>
           <span class="text-emerald-600 dark:text-emerald-400">AI is analyzing the scan results...</span>
         </div>
-        <div v-else-if="aiAnalysis?.analysis" class="prose prose-sm max-w-none text-slate-800 dark:text-slate-200 whitespace-pre-wrap" dir="ltr" style="text-align: left;">
-          {{ aiAnalysis.analysis }}
-        </div>
+        <div v-else-if="aiAnalysis?.analysis" class="md-body text-slate-800 dark:text-slate-200" dir="auto" v-html="renderMarkdown(aiAnalysis.analysis)"></div>
         <div v-else class="text-center py-10 text-slate-500 dark:text-slate-400 text-sm">
           لم يُشغَّل تحليل الذكاء الاصطناعي بعد.
           <button @click="runAIAnalysis" class="text-emerald-600 dark:text-emerald-400 font-medium hover:underline">شغّله الآن</button>
