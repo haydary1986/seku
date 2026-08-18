@@ -3,6 +3,7 @@ package scanner
 import (
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -88,6 +89,28 @@ var commonPorts = []portInfo{
 	{15672, "RabbitMQ", "dangerous"},
 }
 
+// cdnProxyPorts are the HTTP/HTTPS ports a CDN (Cloudflare) accepts AT THE EDGE
+// for every zone, independent of the origin. A connect to these on a CDN-fronted
+// host says nothing about the origin — they are NOT origin services (cPanel/WHM).
+var cdnProxyPorts = map[int]bool{
+	80: true, 443: true, 8080: true, 8443: true, 8880: true,
+	2052: true, 2053: true, 2082: true, 2083: true, 2086: true, 2087: true, 2095: true, 2096: true,
+}
+
+// detectCDN returns the CDN name if the host is fronted by one (so port results
+// can be interpreted as the edge, not the origin). Best-effort; "" if none/error.
+func detectCDN(host string) string {
+	resp, err := ScanGet(NewScanClient(6*time.Second), ensureHTTPS(host))
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	if resp.Header.Get("cf-ray") != "" || strings.Contains(strings.ToLower(resp.Header.Get("Server")), "cloudflare") {
+		return "Cloudflare"
+	}
+	return ""
+}
+
 func (s *PortScanner) Scan(targetURL string) []models.CheckResult {
 	host := extractHost(targetURL)
 	return []models.CheckResult{
@@ -101,6 +124,8 @@ func (s *PortScanner) scanPorts(host string) models.CheckResult {
 		CheckName: "Open Port Detection",
 		Weight:    8.0,
 	}
+
+	cdn := detectCDN(host)
 
 	var (
 		mu        sync.Mutex
@@ -141,7 +166,24 @@ func (s *PortScanner) scanPorts(host string) models.CheckResult {
 		"open_count":    len(openPorts),
 	}
 
-	// Count dangerous ports
+	// Behind a CDN, its proxy ports answer at the edge for every zone and are NOT
+	// origin services — reclassify them so they aren't reported as cPanel/WHM etc.
+	cdnEdgeCount := 0
+	if cdn != "" {
+		for _, op := range openPorts {
+			if port, ok := op["port"].(int); ok && cdnProxyPorts[port] {
+				op["cdn_edge"] = true
+				op["service"] = cdn + " edge"
+				op["risk"] = "safe"
+				cdnEdgeCount++
+			}
+		}
+		details["cdn"] = cdn
+		details["cdn_edge_count"] = cdnEdgeCount
+		details["cdn_note"] = "Host is behind " + cdn + " (CDN). Open ports reflect the CDN edge, not the origin. CDN proxy ports (80/443/8080/8443/2082/2083/2086/2087/…) are accepted for every zone and are NOT origin services such as cPanel/WHM."
+	}
+
+	// Count risky ports (CDN edge ports were downgraded to "safe" above).
 	dangerousCount := 0
 	cautionCount := 0
 	var dangerousList []string
@@ -159,6 +201,8 @@ func (s *PortScanner) scanPorts(host string) models.CheckResult {
 	details["dangerous_count"] = dangerousCount
 	details["caution_count"] = cautionCount
 
+	originOpen := len(openPorts) - cdnEdgeCount // ports that actually reflect the origin
+
 	switch {
 	case dangerousCount > 0:
 		check.Status = "fail"
@@ -171,17 +215,21 @@ func (s *PortScanner) scanPorts(host string) models.CheckResult {
 		check.Status = "warn"
 		check.Score = 500
 		check.Severity = "medium"
-		details["message"] = fmt.Sprintf("%d ports open (%d need attention)", len(openPorts), cautionCount)
-	case len(openPorts) <= 3:
+		details["message"] = fmt.Sprintf("%d port(s) need attention", cautionCount)
+	case originOpen <= 3:
 		check.Status = "pass"
 		check.Score = MaxScore
 		check.Severity = "info"
-		details["message"] = fmt.Sprintf("Minimal attack surface: %d port(s) open", len(openPorts))
+		if cdn != "" {
+			details["message"] = fmt.Sprintf("Minimal origin attack surface (%d) behind %s; %d CDN edge port(s) are expected", originOpen, cdn, cdnEdgeCount)
+		} else {
+			details["message"] = fmt.Sprintf("Minimal attack surface: %d port(s) open", originOpen)
+		}
 	default:
 		check.Status = "pass"
 		check.Score = 800
 		check.Severity = "low"
-		details["message"] = fmt.Sprintf("%d port(s) open — review if all are necessary", len(openPorts))
+		details["message"] = fmt.Sprintf("%d port(s) open — review if all are necessary", originOpen)
 	}
 
 	check.Details = toJSON(details)
